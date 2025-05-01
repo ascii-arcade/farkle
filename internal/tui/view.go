@@ -4,10 +4,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func stylePool() lipgloss.Style {
+func stylePool(height int) lipgloss.Style {
 	return lipgloss.NewStyle().
 		Width(66).
-		Height(5).
+		Height(height).
 		Align(lipgloss.Center).
 		Border(lipgloss.RoundedBorder())
 }
@@ -20,9 +20,9 @@ func (m model) View() string {
 
 	panes := lipgloss.JoinVertical(
 		lipgloss.Left,
-		stylePool().Render(m.poolRoll.render()),
-		stylePool().Render(m.poolHeld.render()),
-		stylePool().Render(m.poolLocked.render()),
+		stylePool(5).Render(m.poolRoll.render(false)),
+		stylePool(7).Render(m.poolHeld.render(true)),
+		stylePool(7).Render(m.poolLocked.render(true)),
 		// viewScores,
 		// viewLog,
 	)
