@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"strings"
 )
@@ -18,7 +18,7 @@ func newDicePool(size int) dicePool {
 
 func (p *dicePool) roll() {
 	for i := range *p {
-		(*p)[i] = rand.Intn(6) + 1
+		(*p)[i] = rand.IntN(6) + 1
 	}
 }
 
