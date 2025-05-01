@@ -36,17 +36,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.handleNumber(5)
 		case "6":
 			m.handleNumber(6)
+		case "n":
+			m.bust()
+		case "y":
+			m.bank()
 		case "l":
-			if len(m.poolHeld) > 0 {
-				score, err := score.Calculate(m.poolHeld)
-				if err == nil {
-					m.lockedInScore += score
-					m.poolHeld = newDicePool(0)
-				}
-				if len(m.poolRoll) == 0 {
-					m.poolRoll = newDicePool(6)
-				}
-			}
+			m.lock()
 		case "u":
 			if len(m.poolHeld) > 0 {
 				die := m.poolHeld[len(m.poolHeld)-1]
@@ -79,5 +74,40 @@ func (m *model) handleNumber(n int) {
 	if m.poolRoll.contains(n) {
 		m.poolRoll.remove(n)
 		m.poolHeld.add(n)
+	}
+}
+
+func (m *model) bust() {
+	m.nextTurn()
+}
+
+func (m *model) nextTurn() {
+	m.lockedInScore = 0
+	m.poolHeld = newDicePool(0)
+	m.poolRoll = newDicePool(6)
+
+	if m.currentPlayerIndex == len(m.players)-1 {
+		m.currentPlayerIndex = 0
+	} else {
+		m.currentPlayerIndex++
+	}
+}
+
+func (m *model) bank() {
+	m.lock()
+	m.players[m.currentPlayerIndex].score += m.lockedInScore
+	m.nextTurn()
+}
+
+func (m *model) lock() {
+	if len(m.poolHeld) > 0 {
+		score, err := score.Calculate(m.poolHeld)
+		if err == nil {
+			m.lockedInScore += score
+			m.poolHeld = newDicePool(0)
+		}
+		if len(m.poolRoll) == 0 {
+			m.poolRoll = newDicePool(6)
+		}
 	}
 }

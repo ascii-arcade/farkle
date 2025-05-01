@@ -22,11 +22,14 @@ func (m model) View() string {
 
 	panes := lipgloss.JoinVertical(
 		lipgloss.Left,
+		"",
 		stylePool().Render(m.poolRoll.render()),
+		"",
 		stylePool().Render(m.poolHeld.render()),
-		strconv.Itoa(m.lockedInScore),
-		// viewScores,
-		// viewLog,
+		"",
+		"Locked In: "+strconv.Itoa(m.lockedInScore),
+		"",
+		m.playerScores(),
 	)
 
 	return style.Render(panes)

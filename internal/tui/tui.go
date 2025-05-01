@@ -33,10 +33,15 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func Run() {
+func Run(playerNames []string) {
+	players := make([]player, len(playerNames))
+	for i, name := range playerNames {
+		players[i] = player{name: name}
+	}
+
 	tea.NewProgram(
 		model{
-			players:  []player{},
+			players:  players,
 			poolHeld: newDicePool(0),
 			poolRoll: newDicePool(6),
 		},
