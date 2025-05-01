@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kthibodeaux/go-farkle/internal/score"
 )
 
 type tickMsg struct{}
@@ -37,10 +38,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.handleNumber(6)
 		case "l":
 			if len(m.poolHeld) > 0 {
-				for _, die := range m.poolHeld {
-					m.poolLocked.add(die)
+				score, err := score.Calculate(m.poolHeld)
+				if err == nil {
+					m.lockedInScore += score
+					m.poolHeld = newDicePool(0)
 				}
-				m.poolHeld = newDicePool(0)
+				if len(m.poolRoll) == 0 {
+					m.poolRoll = newDicePool(6)
+				}
 			}
 		case "u":
 			if len(m.poolHeld) > 0 {

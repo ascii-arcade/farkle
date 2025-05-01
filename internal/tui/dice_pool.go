@@ -3,10 +3,7 @@ package tui
 import (
 	"math/rand"
 	"slices"
-	"strconv"
 	"strings"
-
-	"github.com/kthibodeaux/go-farkle/internal/score"
 )
 
 type dicePool []int
@@ -42,20 +39,12 @@ func (p *dicePool) remove(face int) {
 	}
 }
 
-func (p *dicePool) render(showPoints bool) string {
+func (p *dicePool) render() string {
 	var lines = make([]string, len(diceFaces[1]))
 
 	for _, n := range *p {
 		for i, line := range diceFaces[n] {
 			lines[i] += line + "  "
-		}
-	}
-
-	if showPoints {
-		score, err := score.Calculate(*p)
-		if err == nil {
-			lines = append(lines, "")
-			lines = append(lines, "Score: "+strconv.Itoa(score))
 		}
 	}
 
