@@ -22,6 +22,7 @@ func (m model) View() string {
 		lipgloss.Left,
 		stylePool().Render(m.poolRoll.render()),
 		stylePool().Render(m.poolHeld.render()),
+		stylePool().Render(m.poolLocked.render()),
 		// viewScores,
 		// viewLog,
 	)

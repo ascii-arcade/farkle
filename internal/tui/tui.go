@@ -16,6 +16,7 @@ type model struct {
 	isRolling          bool
 	players            []player
 	poolHeld           dicePool
+	poolLocked         dicePool
 	poolRoll           dicePool
 	tickCount          int
 
@@ -35,9 +36,10 @@ func (m model) Init() tea.Cmd {
 func Run() {
 	tea.NewProgram(
 		model{
-			players:  []player{},
-			poolHeld: newDicePool(0),
-			poolRoll: newDicePool(6),
+			players:    []player{},
+			poolHeld:   newDicePool(0),
+			poolLocked: newDicePool(0),
+			poolRoll:   newDicePool(6),
 		},
 		tea.WithAltScreen(),
 	).Run()

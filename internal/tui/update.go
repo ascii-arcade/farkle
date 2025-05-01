@@ -35,6 +35,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.handleNumber(5)
 		case "6":
 			m.handleNumber(6)
+		case "l":
+			if len(m.poolHeld) > 0 {
+				for _, die := range m.poolHeld {
+					m.poolLocked.add(die)
+				}
+				m.poolHeld = newDicePool(0)
+			}
 		case "u":
 			if len(m.poolHeld) > 0 {
 				die := m.poolHeld[len(m.poolHeld)-1]
