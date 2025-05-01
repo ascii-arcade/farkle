@@ -30,6 +30,9 @@ func (m model) View() string {
 		"Locked In: "+strconv.Itoa(m.lockedInScore),
 		"",
 		m.playerScores(),
+		"",
+		"",
+		"r to roll, l to lock, n to bust, y to bank, u to undo",
 	)
 
 	return style.Render(panes)
