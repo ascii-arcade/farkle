@@ -10,7 +10,7 @@ import (
 func main() {
 	playerNames := os.Args[1:]
 	if len(playerNames) == 0 {
-		fmt.Println("Usage: program item1 item2 item3 ...")
+		fmt.Println("Usage: go-farkle player1 player2 ...")
 		return
 	}
 
