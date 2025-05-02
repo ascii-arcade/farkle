@@ -98,7 +98,7 @@ func (m *model) nextTurn() {
 func (m *model) bank() {
 	m.lock()
 
-	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore <= 500 {
+	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore < 500 {
 		return
 	}
 
