@@ -39,12 +39,26 @@ func (p *dicePool) remove(face int) {
 	}
 }
 
-func (p *dicePool) render() string {
+func (p *dicePool) render(start int, end int) string {
+	if len(*p) == 0 {
+		return ""
+	}
+	if end > len(*p) {
+		end = len(*p)
+	}
+	if start >= end {
+		return ""
+	}
+
 	var lines = make([]string, len(diceFaces[1]))
 
-	for _, n := range *p {
-		for i, line := range diceFaces[n] {
-			lines[i] += line + "  "
+	for i, n := range (*p)[start:end] {
+		for j, line := range diceFaces[n] {
+			if i == len((*p)[start:end])-1 {
+				lines[j] += line
+			} else {
+				lines[j] += line + "  "
+			}
 		}
 	}
 

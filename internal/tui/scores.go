@@ -10,11 +10,11 @@ func (m *model) playerScores() string {
 
 	for i, player := range m.players {
 		if i == m.currentPlayerIndex {
-			scores[i] = player.name + ": " + strconv.Itoa(player.score) + " (current)"
+			scores[i] = "> " + player.name + ": " + strconv.Itoa(player.score)
 		} else {
-			scores[i] = player.name + ": " + strconv.Itoa(player.score)
+			scores[i] = "  " + player.name + ": " + strconv.Itoa(player.score)
 		}
 	}
 
-	return strings.Join(scores, "\n\n")
+	return strings.Join(scores, "\n")
 }

@@ -8,32 +8,51 @@ import (
 
 func stylePool() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Width(66).
-		Height(5).
-		Align(lipgloss.Center).
-		Border(lipgloss.RoundedBorder())
+		Width(36).
+		Height(12).
+		Align(lipgloss.Center)
 }
 
 func (m model) View() string {
 	style := lipgloss.NewStyle().
-		Align(lipgloss.Center).
 		Width(m.width).
 		Height(m.height)
 
-	panes := lipgloss.JoinVertical(
-		lipgloss.Left,
-		"",
-		stylePool().Render(m.poolRoll.render()),
-		"",
-		stylePool().Render(m.poolHeld.render()),
+	poolRollPane := stylePool().Render(m.poolRoll.render(0, 3) + "\n\n" + m.poolRoll.render(3, 6))
+	poolHeldPane := stylePool().Render(m.poolHeld.render(0, 3) + "\n\n" + m.poolHeld.render(3, 6))
+
+	poolPanes := lipgloss.JoinVertical(
+		lipgloss.Center,
+		lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			poolRollPane,
+			poolHeldPane,
+		),
 		"",
 		"Locked In: "+strconv.Itoa(m.lockedInScore),
-		"",
-		m.playerScores(),
-		"",
-		"",
+	)
+
+	panes := lipgloss.JoinVertical(
+		lipgloss.Center,
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			"",
+			poolPanes,
+			"",
+			m.playerScores(),
+			"",
+			"",
+		),
 		"r to roll, l to lock, n to bust, y to bank, u to undo",
 	)
 
-	return style.Render(panes)
+	return style.Render(
+		lipgloss.Place(
+			m.width,
+			m.height,
+			lipgloss.Center,
+			lipgloss.Center,
+			panes,
+		),
+	)
 }
