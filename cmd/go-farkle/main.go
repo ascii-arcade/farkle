@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"os"
 
 	"github.com/kthibodeaux/go-farkle/internal/tui"
@@ -14,5 +15,8 @@ func main() {
 		return
 	}
 
+	rand.Shuffle(len(playerNames), func(i, j int) {
+		playerNames[i], playerNames[j] = playerNames[j], playerNames[i]
+	})
 	tui.Run(playerNames)
 }
