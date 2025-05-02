@@ -31,6 +31,11 @@ func TestCalculate(t *testing.T) {
 			wantError: "invalid die face: 7",
 		},
 		{
+			dieFaces:  []int{1, 1, 1, 1, 2, 5},
+			want:      0,
+			wantError: "useless dice detected",
+		},
+		{
 			dieFaces: []int{4, 4, 4, 4, 4, 4},
 			want:     3000,
 		},
@@ -43,7 +48,7 @@ func TestCalculate(t *testing.T) {
 			want:     2050,
 		},
 		{
-			dieFaces: []int{1, 1, 1, 1, 2, 5},
+			dieFaces: []int{1, 1, 1, 1, 5},
 			want:     1050,
 		},
 		{
@@ -75,23 +80,23 @@ func TestCalculate(t *testing.T) {
 			want:     2050,
 		},
 		{
-			dieFaces: []int{1, 1, 1, 1, 1, 3},
+			dieFaces: []int{1, 1, 1, 1, 1},
 			want:     2000,
 		},
 		{
-			dieFaces: []int{1, 1, 1, 1, 3},
+			dieFaces: []int{1, 1, 1, 1},
 			want:     1000,
 		},
 		{
-			dieFaces: []int{1, 1, 1, 1, 3, 5},
+			dieFaces: []int{1, 1, 1, 1, 5},
 			want:     1050,
 		},
 		{
-			dieFaces: []int{1, 1, 1, 3, 5},
+			dieFaces: []int{1, 1, 1, 5},
 			want:     350,
 		},
 		{
-			dieFaces: []int{5, 5, 3, 5},
+			dieFaces: []int{5, 5, 5},
 			want:     500,
 		},
 		{

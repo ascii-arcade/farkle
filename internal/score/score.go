@@ -47,7 +47,14 @@ func Calculate(dieFaces []int) (int, error) {
 	}
 
 	score += roll[1] * 100
+	roll[1] = 0
+
 	score += roll[5] * 50
+	roll[5] = 0
+
+	if roll[0] > 0 || roll[2] > 0 || roll[3] > 0 || roll[4] > 0 || roll[6] > 0 {
+		return 0, errors.New("useless dice detected")
+	}
 
 	return score, nil
 }

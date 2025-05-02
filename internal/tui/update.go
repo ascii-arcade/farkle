@@ -17,6 +17,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		m.error = ""
+
 		switch msg.String() {
 		case "r":
 			m.isRolling = true
@@ -107,10 +109,14 @@ func (m *model) bank() {
 func (m *model) lock() {
 	if len(m.poolHeld) > 0 {
 		score, err := score.Calculate(m.poolHeld)
-		if err == nil {
-			m.lockedInScore += score
-			m.poolHeld = newDicePool(0)
+		if err != nil {
+			m.error = err.Error()
+			return
 		}
+
+		m.lockedInScore += score
+		m.poolHeld = newDicePool(0)
+
 		if len(m.poolRoll) == 0 {
 			m.poolRoll = newDicePool(6)
 		}

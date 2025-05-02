@@ -13,6 +13,7 @@ type player struct {
 
 type model struct {
 	currentPlayerIndex int
+	error              string
 	isRolling          bool
 	lockedInScore      int
 	players            []player

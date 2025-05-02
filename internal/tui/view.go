@@ -21,6 +21,11 @@ func (m model) View() string {
 	poolRollPane := stylePool().Render(m.poolRoll.render(0, 3) + "\n\n" + m.poolRoll.render(3, 6))
 	poolHeldPane := stylePool().Render(m.poolHeld.render(0, 3) + "\n\n" + m.poolHeld.render(3, 6))
 
+	centeredText := "Locked In: " + strconv.Itoa(m.lockedInScore)
+	if m.error != "" {
+		centeredText = lipgloss.NewStyle().Foreground(lipgloss.Color("#9E1A1A")).Render(m.error)
+	}
+
 	poolPanes := lipgloss.JoinVertical(
 		lipgloss.Center,
 		lipgloss.JoinHorizontal(
@@ -29,7 +34,7 @@ func (m model) View() string {
 			poolHeldPane,
 		),
 		"",
-		"Locked In: "+strconv.Itoa(m.lockedInScore),
+		centeredText,
 	)
 
 	panes := lipgloss.JoinVertical(
