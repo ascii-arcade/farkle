@@ -64,7 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.isRolling = false
-		m.log.add(m.players[m.currentPlayerIndex].name + " rolled: " + m.poolRoll.renderCharacters())
+		m.log.add(m.players[m.currentPlayerIndex].name + " rolled " + m.poolRoll.renderCharacters())
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -119,7 +119,7 @@ func (m *model) lock() {
 		}
 
 		m.lockedInScore += score
-		m.log.add(m.players[m.currentPlayerIndex].name + " locked " + m.poolHeld.renderCharacters() + " (+" + strconv.Itoa(score) + ": " + strconv.Itoa(m.lockedInScore) + ")")
+		m.log.add(m.players[m.currentPlayerIndex].name + " locked " + m.poolHeld.renderCharacters() + " (+" + strconv.Itoa(score) + ", " + strconv.Itoa(m.lockedInScore) + ")")
 		m.poolHeld = newDicePool(0)
 
 		if len(m.poolRoll) == 0 {
