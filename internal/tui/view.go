@@ -21,7 +21,7 @@ func (m model) View() string {
 
 	centeredText := ""
 	if m.error != "" {
-		centeredText = lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Render(m.error)
+		centeredText = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colorError)).Render(m.error)
 	}
 
 	poolPanes := lipgloss.JoinVertical(
