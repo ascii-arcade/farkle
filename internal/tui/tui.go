@@ -11,11 +11,14 @@ type player struct {
 	score int
 }
 
+type log []string
+
 type model struct {
 	currentPlayerIndex int
 	error              string
 	isRolling          bool
 	lockedInScore      int
+	log                log
 	players            []player
 	poolHeld           dicePool
 	poolRoll           dicePool
@@ -28,6 +31,9 @@ type model struct {
 const (
 	rollFrames   = 15
 	rollInterval = 200 * time.Millisecond
+
+	colorCurrentTurn = "#FF9E1A"
+	colorError       = "#9E1A1A"
 )
 
 func (m model) Init() tea.Cmd {

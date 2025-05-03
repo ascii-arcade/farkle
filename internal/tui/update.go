@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -63,6 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.isRolling = false
+		m.log.add(m.players[m.currentPlayerIndex].name + " rolled: " + m.poolRoll.renderCharacters())
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -80,6 +82,7 @@ func (m *model) handleNumber(n int) {
 }
 
 func (m *model) bust() {
+	m.log.add(m.players[m.currentPlayerIndex].name + " busted")
 	m.nextTurn()
 }
 
@@ -102,6 +105,7 @@ func (m *model) bank() {
 		return
 	}
 
+	m.log.add(m.players[m.currentPlayerIndex].name + " banked " + strconv.Itoa(m.lockedInScore) + " points")
 	m.players[m.currentPlayerIndex].score += m.lockedInScore
 	m.nextTurn()
 }
@@ -115,6 +119,7 @@ func (m *model) lock() {
 		}
 
 		m.lockedInScore += score
+		m.log.add(m.players[m.currentPlayerIndex].name + " locked " + m.poolHeld.renderCharacters() + " (+" + strconv.Itoa(score) + ": " + strconv.Itoa(m.lockedInScore) + ")")
 		m.poolHeld = newDicePool(0)
 
 		if len(m.poolRoll) == 0 {

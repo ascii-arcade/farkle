@@ -39,6 +39,19 @@ func (p *dicePool) remove(face int) {
 	}
 }
 
+func (p *dicePool) renderCharacters() string {
+	if len(*p) == 0 {
+		return ""
+	}
+
+	output := ""
+	for _, n := range *p {
+		output += diceCharacters[n] + " "
+	}
+
+	return strings.TrimSpace(output)
+}
+
 func (p *dicePool) render(start int, end int) string {
 	if len(*p) == 0 {
 		return ""
