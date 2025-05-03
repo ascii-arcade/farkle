@@ -100,7 +100,10 @@ func (m *model) nextTurn() {
 }
 
 func (m *model) bank() {
-	m.lock()
+	if len(m.poolHeld) > 0 {
+		m.error = "must lock in held dice before banking"
+		return
+	}
 
 	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore < 500 {
 		m.error = "must bank at least 500 points on the first turn"
