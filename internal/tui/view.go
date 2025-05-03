@@ -11,6 +11,12 @@ func stylePool() lipgloss.Style {
 		Align(lipgloss.Center)
 }
 
+func (m *model) styledPlayerName(i int) string {
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(m.playerColors[i]))
+
+	return style.Render(m.players[i].name)
+}
+
 func (m model) View() string {
 	style := lipgloss.NewStyle().
 		Width(m.width).

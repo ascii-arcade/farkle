@@ -15,14 +15,13 @@ func (m *model) playerScores() string {
 	scores := make([]string, len(m.players))
 
 	for i, player := range m.players {
-		content := player.name + ": " + strconv.Itoa(player.score)
+		content := m.styledPlayerName(i) + ": " + strconv.Itoa(player.score)
+		isCurrentPlayer := m.currentPlayerIndex == i
 
-		if i == m.currentPlayerIndex {
-			scores[i] = content
-			scores[i] = styleScore().Bold(true).Foreground(lipgloss.Color(colorCurrentTurn)).Render(content)
-		} else {
-			scores[i] = styleScore().Render(content)
-		}
+		scores[i] = styleScore().
+			Bold(isCurrentPlayer).
+			Italic(isCurrentPlayer).
+			Render(content)
 	}
 
 	return lipgloss.JoinHorizontal(

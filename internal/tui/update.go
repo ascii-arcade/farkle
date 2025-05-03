@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/kthibodeaux/go-farkle/internal/score"
 )
 
@@ -64,7 +65,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.isRolling = false
-		m.log.add(m.players[m.currentPlayerIndex].name + " rolled " + m.poolRoll.renderCharacters())
+		m.log.add(m.styledPlayerName(m.currentPlayerIndex) + " rolled " + m.poolRoll.renderCharacters())
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -82,7 +83,7 @@ func (m *model) handleNumber(n int) {
 }
 
 func (m *model) bust() {
-	m.log.add(m.players[m.currentPlayerIndex].name + " busted")
+	m.log.add(m.styledPlayerName(m.currentPlayerIndex) + lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Render(" busted"))
 	m.nextTurn()
 }
 
@@ -105,7 +106,7 @@ func (m *model) bank() {
 		return
 	}
 
-	m.log.add(m.players[m.currentPlayerIndex].name + " banked " + strconv.Itoa(m.lockedInScore) + " points")
+	m.log.add(m.styledPlayerName(m.currentPlayerIndex) + " banked " + strconv.Itoa(m.lockedInScore) + " points")
 	m.players[m.currentPlayerIndex].score += m.lockedInScore
 	m.nextTurn()
 }
@@ -119,7 +120,7 @@ func (m *model) lock() {
 		}
 
 		m.lockedInScore += score
-		m.log.add(m.players[m.currentPlayerIndex].name + " locked " + m.poolHeld.renderCharacters() + " (+" + strconv.Itoa(score) + ", " + strconv.Itoa(m.lockedInScore) + ")")
+		m.log.add(m.styledPlayerName(m.currentPlayerIndex) + " locked " + m.poolHeld.renderCharacters() + " (+" + strconv.Itoa(score) + ", " + strconv.Itoa(m.lockedInScore) + ")")
 		m.poolHeld = newDicePool(0)
 
 		if len(m.poolRoll) == 0 {

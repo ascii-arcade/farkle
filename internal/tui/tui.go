@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"math/rand/v2"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,6 +20,7 @@ type model struct {
 	isRolling          bool
 	lockedInScore      int
 	log                log
+	playerColors       []string
 	players            []player
 	poolHeld           dicePool
 	poolRoll           dicePool
@@ -46,11 +48,26 @@ func Run(playerNames []string) {
 		players[i] = player{name: name}
 	}
 
+	colors := []string{
+		"#3B82F6", // Blue
+		"#10B981", // Green
+		"#FACC15", // Yellow
+		"#8B5CF6", // Purple
+		"#06B6D4", // Cyan
+		"#F97316", // Orange
+	}
+
+	// Shuffle
+	rand.Shuffle(len(colors), func(i, j int) {
+		colors[i], colors[j] = colors[j], colors[i]
+	})
+
 	tea.NewProgram(
 		model{
-			players:  players,
-			poolHeld: newDicePool(0),
-			poolRoll: newDicePool(6),
+			playerColors: colors,
+			players:      players,
+			poolHeld:     newDicePool(0),
+			poolRoll:     newDicePool(6),
 		},
 		tea.WithAltScreen(),
 	).Run()
