@@ -103,6 +103,7 @@ func (m *model) bank() {
 	m.lock()
 
 	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore < 500 {
+		m.error = "must bank at least 500 points on the first turn"
 		return
 	}
 
