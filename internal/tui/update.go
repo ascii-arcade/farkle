@@ -24,6 +24,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "r":
 			m.isRolling = true
+			m.justRolled = true
 			m.tickCount = 0
 			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return tickMsg{}
@@ -77,12 +78,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) handleNumber(n int) {
 	if m.poolRoll.contains(n) {
+		m.justRolled = false
 		m.poolRoll.remove(n)
 		m.poolHeld.add(n)
 	}
 }
 
 func (m *model) bust() {
+	m.justRolled = false
 	m.log.add(m.styledPlayerName(m.currentPlayerIndex) + lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Render(" busted"))
 	m.nextTurn()
 }
@@ -100,6 +103,10 @@ func (m *model) nextTurn() {
 }
 
 func (m *model) bank() {
+	if m.justRolled {
+		m.error = "cannot bank immediately after rolling"
+		return
+	}
 	if len(m.poolHeld) > 0 {
 		m.error = "must lock in held dice before banking"
 		return
@@ -116,7 +123,14 @@ func (m *model) bank() {
 }
 
 func (m *model) lock() {
-	if len(m.poolHeld) > 0 {
+	if m.justRolled {
+		m.error = "cannot lock immediately after rolling"
+		return
+	}
+	if len(m.poolHeld) == 0 {
+		m.error = "cannot lock with 0 held dice"
+		return
+	} else {
 		score, err := score.Calculate(m.poolHeld)
 		if err != nil {
 			m.error = err.Error()

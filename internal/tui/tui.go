@@ -18,6 +18,7 @@ type model struct {
 	currentPlayerIndex int
 	error              string
 	isRolling          bool
+	justRolled         bool
 	lockedInScore      int
 	log                log
 	playerColors       []string
