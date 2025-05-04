@@ -23,6 +23,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.String() {
 		case "r":
+			if len(m.poolHeld) > 0 {
+				m.error = "cannot roll with held dice"
+				return m, nil
+			}
 			m.isRolling = true
 			m.justRolled = true
 			m.tickCount = 0
