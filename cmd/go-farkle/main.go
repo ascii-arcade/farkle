@@ -5,8 +5,8 @@ import (
 	"math/rand/v2"
 	"os"
 
-	splashScreen "github.com/kthibodeaux/go-farkle/internal/splash_screen"
-	"github.com/kthibodeaux/go-farkle/internal/tui"
+	splashScreen "github.com/ascii-arcade/farkle/internal/splash_screen"
+	"github.com/ascii-arcade/farkle/internal/tui"
 )
 
 func main() {

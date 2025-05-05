@@ -1,4 +1,4 @@
-module github.com/kthibodeaux/go-farkle
+module github.com/ascii-arcade/farkle
 
 go 1.24.1
 

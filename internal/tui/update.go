@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/score"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kthibodeaux/go-farkle/internal/score"
 )
 
 type tickMsg struct{}
