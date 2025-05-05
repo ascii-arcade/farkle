@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"os"
 
+	splashScreen "github.com/kthibodeaux/go-farkle/internal/splash_screen"
 	"github.com/kthibodeaux/go-farkle/internal/tui"
 )
 
@@ -18,5 +19,6 @@ func main() {
 	rand.Shuffle(len(playerNames), func(i, j int) {
 		playerNames[i], playerNames[j] = playerNames[j], playerNames[i]
 	})
+	splashScreen.Run()
 	tui.Run(playerNames)
 }
