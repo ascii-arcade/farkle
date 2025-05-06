@@ -5,9 +5,9 @@ import "time"
 func (h *hub) monitorConnections() {
 	for {
 		if len(h.clients) > 0 {
-			h.broadcast <- message{
-				channel: ChannelPing,
-				sentAt:  time.Now(),
+			h.broadcast <- Message{
+				Channel: ChannelPing,
+				SentAt:  time.Now(),
 			}
 		}
 
@@ -15,9 +15,11 @@ func (h *hub) monitorConnections() {
 
 		for c := range h.clients {
 			if time.Since(c.lastSeen) > 10*time.Second {
+				h.mu.Lock()
 				h.logger.Info("client inactive, closing connection", "client", c)
 				c.conn.Close()
 				delete(h.clients, c)
+				h.mu.Unlock()
 			}
 		}
 	}

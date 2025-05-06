@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type player struct {
-	name  string
-	score int
+type Player struct {
+	Name  string
+	Score int
 }
 
 type log []string
@@ -22,7 +22,7 @@ type model struct {
 	lockedInScore      int
 	log                log
 	playerColors       []string
-	players            []player
+	players            []Player
 	poolHeld           dicePool
 	poolRoll           dicePool
 	tickCount          int
@@ -44,9 +44,9 @@ func (m model) Init() tea.Cmd {
 }
 
 func Run(playerNames []string) {
-	players := make([]player, len(playerNames))
+	players := make([]Player, len(playerNames))
 	for i, name := range playerNames {
-		players[i] = player{name: name}
+		players[i] = Player{Name: name}
 	}
 
 	colors := []string{

@@ -33,13 +33,13 @@ func (c *client) handleMessages(h *hub) {
 	}()
 
 	for {
-		var msg message
+		var msg Message
 		if err := websocket.JSON.Receive(c.conn, &msg); err != nil {
 			h.logger.Error("Failed to receive message", "error", err)
 			break
 		}
 
-		switch msg.channel {
+		switch msg.Channel {
 		case ChannelPing:
 			h.logger.Info("Received ping from client", "clientId", c.id)
 			c.lastSeen = time.Now()

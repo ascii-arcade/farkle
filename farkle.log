@@ -1,0 +1,1 @@
+time=2025-05-06T07:49:50.751-04:00 level=ERROR source=/home/douglas/git/ascii-arcade/farkle/cmd/go-farkle/main.go:44 msg="Error connecting to server" error="websocket.Dial ws://localhost:8080/ws: dial tcp 127.0.0.1:8080: connect: connection refused"

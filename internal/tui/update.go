@@ -116,13 +116,13 @@ func (m *model) bank() {
 		return
 	}
 
-	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore < 500 {
+	if m.players[m.currentPlayerIndex].Score == 0 && m.lockedInScore < 500 {
 		m.error = "must bank at least 500 points on the first turn"
 		return
 	}
 
 	m.log.add(m.styledPlayerName(m.currentPlayerIndex) + " banked " + strconv.Itoa(m.lockedInScore) + " points")
-	m.players[m.currentPlayerIndex].score += m.lockedInScore
+	m.players[m.currentPlayerIndex].Score += m.lockedInScore
 	m.nextTurn()
 }
 

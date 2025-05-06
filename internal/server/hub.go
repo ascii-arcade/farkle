@@ -7,7 +7,7 @@ import (
 
 type hub struct {
 	clients    map[*client]bool
-	broadcast  chan message
+	broadcast  chan Message
 	register   chan *client
 	unregister chan *client
 
@@ -18,7 +18,7 @@ type hub struct {
 func newHub(logger *slog.Logger) *hub {
 	h := &hub{
 		clients:    make(map[*client]bool),
-		broadcast:  make(chan message),
+		broadcast:  make(chan Message),
 		logger:     logger,
 		register:   make(chan *client),
 		unregister: make(chan *client),
@@ -61,7 +61,7 @@ func (h *hub) removeClient(c *client) {
 	}
 }
 
-func (h *hub) broadcastMessage(msg message) {
+func (h *hub) broadcastMessage(msg Message) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for c := range h.clients {

@@ -7,7 +7,6 @@ import (
 
 var logger *slog.Logger
 var h *hub
-var lobbies map[string]*lobby
 
 func Run(l *slog.Logger, debug bool) {
 	logger = l
@@ -16,8 +15,6 @@ func Run(l *slog.Logger, debug bool) {
 	go h.monitorBroadcast()
 	go h.monitorConnections()
 	go h.run()
-
-	lobbies = make(map[string]*lobby)
 
 	http.HandleFunc("/ws", wsHandler)
 

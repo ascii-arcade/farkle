@@ -15,7 +15,7 @@ func (m *model) playerScores() string {
 	scores := make([]string, len(m.players))
 
 	for i, player := range m.players {
-		content := m.styledPlayerName(i) + ": " + strconv.Itoa(player.score)
+		content := m.styledPlayerName(i) + ": " + strconv.Itoa(player.Score)
 		isCurrentPlayer := m.currentPlayerIndex == i
 
 		scores[i] = styleScore().
