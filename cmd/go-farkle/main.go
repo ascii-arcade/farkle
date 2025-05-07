@@ -35,8 +35,6 @@ func init() {
 
 	loggerHandler := slog.NewTextHandler(logFile, &logOpts)
 	logger = slog.New(loggerHandler)
-
-	logger.Info(serverUrl)
 }
 
 func main() {

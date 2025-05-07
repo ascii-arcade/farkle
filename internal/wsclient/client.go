@@ -2,7 +2,6 @@ package wsclient
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -11,9 +10,10 @@ import (
 )
 
 type Client struct {
-	url    string
-	conn   *websocket.Conn
-	logger *slog.Logger
+	url       string
+	conn      *websocket.Conn
+	connected bool
+	logger    *slog.Logger
 }
 
 func NewWsClient(logger *slog.Logger, url string) *Client {
@@ -24,48 +24,37 @@ func NewWsClient(logger *slog.Logger, url string) *Client {
 	}
 }
 
-func (c *Client) Connect() error {
-	attempts := 0
-TRYAGAIN:
-	conn, err := websocket.Dial(c.url, "", "http://localhost/")
-	if err != nil {
-		if attempts < 5 {
-			attempts++
-			goto TRYAGAIN
-		}
-		return err
-	}
-	c.conn = conn
-
+func (c *Client) Connect() {
+	c.logger.Debug("Connecting to server", "url", c.url)
 	go func() {
 		for {
+			conn, err := websocket.Dial(c.url, "", "http://localhost/")
+			if err != nil {
+				c.logger.Error("Error connecting to server", "error", err)
+				goto RECONNECT
+			}
+			c.connected = true
+			c.conn = conn
+
 			if err := c.MonitorMessages(); err != nil {
 				c.logger.Error("Error monitoring messages", "error", err)
-
-				time.Sleep(5 * time.Second)
-				c.logger.Debug("Attempting to reconnect...")
-
-				if err := c.Connect(); err != nil {
-					c.logger.Error("Error reconnecting", "error", err)
-				}
-				return
 			}
+
+		RECONNECT:
+			c.connected = false
+			c.logger.Debug("Retrying connection...")
+			time.Sleep(5 * time.Second)
 		}
 	}()
-
-	return nil
 }
 
-func (c *Client) Connected() bool {
-	if c.conn == nil {
-		return false
-	}
-	return c.conn.IsServerConn()
+func (c *Client) IsConnected() bool {
+	return c.connected
 }
 
 func (c *Client) Close() {
 	if err := c.conn.Close(); err != nil {
-		fmt.Println("Error closing connection:", err)
+		c.logger.Error("Error closing connection", "error", err)
 	}
 }
 
@@ -114,7 +103,7 @@ func (c *Client) MonitorMessages() error {
 
 		switch msg.Channel {
 		case server.ChannelPing:
-			fmt.Println("Received ping from server")
+			c.logger.Debug("Received ping from server")
 			if err := c.Ping(); err != nil {
 				return err
 			}

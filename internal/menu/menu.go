@@ -40,10 +40,13 @@ func Run(logger *slog.Logger) {
 }
 
 func new(logger *slog.Logger) *model {
+	wsClient := wsclient.NewWsClient(logger, "ws://localhost:8080/ws")
+	wsClient.Connect()
+
 	return &model{
 		cursor:          1,
 		numberOfPlayers: 3,
-		wsClient:        wsclient.NewWsClient(logger, "ws://localhost:8080/ws"),
+		wsClient:        wsClient,
 		choices: []menuChoice{
 			{
 				actionKeys: []string{"left", "right"},
@@ -73,11 +76,11 @@ func new(logger *slog.Logger) *model {
 				render: func(m model) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 
-					if !m.wsClient.Connected() {
+					if !m.wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 					}
 
-					return style.Render("New Online Game (n)")
+					return style.Render("New Online Game (o)")
 				},
 			},
 			{
@@ -88,7 +91,7 @@ func new(logger *slog.Logger) *model {
 				render: func(m model) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 
-					if !m.wsClient.Connected() {
+					if !m.wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 					}
 
@@ -115,7 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			if m.cursor == 2 && !m.wsClient.Connected() {
+			if m.cursor == 2 && !m.wsClient.IsConnected() {
 				return m, nil
 			}
 			return m.choices[m.cursor].action(m)
