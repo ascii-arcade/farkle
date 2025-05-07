@@ -68,7 +68,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 			{
 				actionKeys: []string{"n"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					return newPlayerNameInputModel(m), nil
+					return newLocalGameInputModel(m), nil
 				},
 				render: func(m menuModel) string {
 					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("New Game (n)")
@@ -80,7 +80,8 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 					if !m.wsClient.IsConnected() {
 						return m, nil
 					}
-					return m, nil
+
+					return newOnlineGameInputModel(m), nil
 				},
 				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))

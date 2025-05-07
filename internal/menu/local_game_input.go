@@ -1,7 +1,6 @@
 package menu
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,16 +10,20 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type playerNameInput struct {
+type localGameInputModel struct {
+	width      int
+	height     int
 	focusIndex int
 	inputs     []textinput.Model
-	prevModel  menuModel
+	menuModel  menuModel
 }
 
-func newPlayerNameInputModel(prevModel menuModel) playerNameInput {
-	m := playerNameInput{
-		inputs:    make([]textinput.Model, prevModel.numberOfPlayers),
-		prevModel: prevModel,
+func newLocalGameInputModel(menuModel menuModel) localGameInputModel {
+	m := localGameInputModel{
+		inputs:    make([]textinput.Model, menuModel.numberOfPlayers),
+		menuModel: menuModel,
+		width:     menuModel.width,
+		height:    menuModel.height,
 	}
 
 	var t textinput.Model
@@ -28,6 +31,7 @@ func newPlayerNameInputModel(prevModel menuModel) playerNameInput {
 		t = textinput.New()
 		t.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 		t.CharLimit = 25
+		t.Width = 25
 
 		if i == 0 {
 			t.Placeholder = "Player 1"
@@ -46,11 +50,11 @@ func newPlayerNameInputModel(prevModel menuModel) playerNameInput {
 	return m
 }
 
-func (m playerNameInput) Init() tea.Cmd {
+func (m localGameInputModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m playerNameInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -65,9 +69,9 @@ func (m playerNameInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					playerNames = append(playerNames, m.inputs[input].Value())
 				}
 
-				tui.Run(playerNames, m.prevModel.debug)
+				tui.Run(playerNames, m.menuModel.debug)
 
-				return m.prevModel, nil
+				return m.menuModel, nil
 			}
 
 			if s == "up" || s == "shift+tab" {
@@ -106,32 +110,40 @@ func (m playerNameInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m playerNameInput) View() string {
-	var b strings.Builder
-	for i := range m.inputs {
-		b.WriteString(m.inputs[i].View())
-		if i < len(m.inputs)-1 {
-			b.WriteString("\n")
-		}
+func (m localGameInputModel) View() string {
+	paneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).Align(lipgloss.Center, lipgloss.Center)
+
+	if m.height < 15 || m.width < 100 {
+		return paneStyle.Render("Window too small, please resize to something larger.")
 	}
 
-	submit := lipgloss.NewStyle().
+	inputStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).
-		Bold(true).
-		Align(lipgloss.Center).
-		Render("Submit")
+		Border(lipgloss.NormalBorder()).
+		Margin(1).
+		Padding(1, 2).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	rows := make([]string, 0)
+	for i := range m.inputs {
+		rows = append(rows, m.inputs[i].View())
+	}
+	rows = append(rows, "\n\n")
+	submitStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	if m.focusIndex == len(m.inputs) {
-		submit = lipgloss.NewStyle().
+		submitStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("205")).
 			Bold(true).
-			Align(lipgloss.Center).
-			Render("Submit")
+			Align(lipgloss.Center)
 	}
-	fmt.Fprintf(&b, "\n\n%s", submit)
-	return b.String()
+
+	rows = append(rows, submitStyle.Render("Start Game"))
+
+	inputPane := lipgloss.JoinVertical(lipgloss.Center, inputStyle.Render(strings.Join(rows, "\n")))
+	return paneStyle.Render(inputPane)
 }
 
-func (m *playerNameInput) updateInputs(msg tea.Msg) tea.Cmd {
+func (m *localGameInputModel) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputs))
 	for i := range m.inputs {
 		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
