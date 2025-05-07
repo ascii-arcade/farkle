@@ -1,1 +1,3 @@
 "go-farkle"
+*.log
+__debug*

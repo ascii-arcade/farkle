@@ -13,9 +13,9 @@ import (
 )
 
 type menuChoice struct {
-	s         string
-	shortKeys []string
-	action    func(m model) (tea.Model, tea.Cmd)
+	actionKeys []string
+	action     func(m model) (tea.Model, tea.Cmd)
+	render     func(m model) string
 }
 
 type model struct {
@@ -46,38 +46,62 @@ func new(logger *slog.Logger) *model {
 		wsClient:        wsclient.NewWsClient(logger, "ws://localhost:8080/ws"),
 		choices: []menuChoice{
 			{
-				s:         "Number of Players",
-				shortKeys: []string{"←", "→"},
+				actionKeys: []string{"left", "right"},
 				action: func(m model) (tea.Model, tea.Cmd) {
 					return m, nil
 				},
+				render: func(m model) string {
+					return lipgloss.NewStyle().
+						Foreground(lipgloss.Color("#fff")).
+						Render(fmt.Sprintf("Number of Players: %d (←/→)", m.numberOfPlayers))
+				},
 			},
 			{
-				s:         "New Game",
-				shortKeys: []string{"n"},
+				actionKeys: []string{"n"},
 				action: func(m model) (tea.Model, tea.Cmd) {
 					return newPlayerNameInputModel(m), nil
 				},
-			},
-			{
-				s:         "New Online Game",
-				shortKeys: []string{"n"},
-				action: func(m model) (tea.Model, tea.Cmd) {
-					return m, nil
+				render: func(m model) string {
+					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("New Game (n)")
 				},
 			},
 			{
-				s:         "Join Game",
-				shortKeys: []string{"j"},
+				actionKeys: []string{"o"},
 				action: func(m model) (tea.Model, tea.Cmd) {
 					return m, nil
 				},
+				render: func(m model) string {
+					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+
+					if !m.wsClient.Connected() {
+						style = style.Foreground(lipgloss.Color("#ff0000"))
+					}
+
+					return style.Render("New Online Game (n)")
+				},
 			},
 			{
-				s:         "Exit",
-				shortKeys: []string{"e"},
+				actionKeys: []string{"j"},
+				action: func(m model) (tea.Model, tea.Cmd) {
+					return m, nil
+				},
+				render: func(m model) string {
+					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+
+					if !m.wsClient.Connected() {
+						style = style.Foreground(lipgloss.Color("#ff0000"))
+					}
+
+					return style.Render("Join Game (j)")
+				},
+			},
+			{
+				actionKeys: []string{"e"},
 				action: func(m model) (tea.Model, tea.Cmd) {
 					return m, tea.Quit
+				},
+				render: func(m model) string {
+					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("Exit (e)")
 				},
 			},
 		},
@@ -103,7 +127,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			default:
 				for _, choice := range m.choices {
-					if strings.Contains(choice.s, string(msg.Runes)) {
+					if slices.Contains(choice.actionKeys, string(msg.Runes)) {
 						return choice.action(m)
 					}
 				}
@@ -150,13 +174,6 @@ func (m model) View() string {
 	title := menuBaseStyle.Border(lipgloss.NormalBorder()).Margin(1).Padding(1, 2).Align(lipgloss.Center, lipgloss.Center).Render("Farkle")
 	menu := make([]string, 0, 4)
 	for i, choice := range m.choices {
-		sk := strings.Join(choice.shortKeys, "/")
-		if i == 0 {
-			menu = append(menu, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#fff")).
-				Render(fmt.Sprintf("Number of Players: %d (%s)", m.numberOfPlayers, sk)))
-			continue
-		}
 
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#fff"))
 		prefix := "   "
@@ -166,12 +183,7 @@ func (m model) View() string {
 			prefix = "-> "
 		}
 
-		if slices.Contains([]int{2, 3}, i) && !m.wsClient.Connected() {
-			style = style.Foreground(lipgloss.Color("#ff0000"))
-			menu = append(menu, style.Render(fmt.Sprintf("%s%s (connecting)", prefix, choice.s)))
-		} else {
-			menu = append(menu, style.Render(fmt.Sprintf("%s%s (%s)", prefix, choice.s, sk)))
-		}
+		menu = append(menu, style.Render(prefix+choice.render(m)))
 	}
 
 	menuJoin := lipgloss.JoinVertical(
