@@ -25,11 +25,18 @@ type model struct {
 	players            []Player
 	poolHeld           dicePool
 	poolRoll           dicePool
-	tickCount          int
+	rollTickCount      int
+
+	globalTicks int
+	startTime   time.Time
+	tps         float64
+	debug       bool
 
 	height int
 	width  int
 }
+
+type tick time.Time
 
 const (
 	rollFrames   = 15
@@ -42,10 +49,12 @@ const (
 var players []Player
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return tea.Tick(16*time.Millisecond+6*time.Microsecond, func(t time.Time) tea.Msg {
+		return tick(t)
+	})
 }
 
-func Run(playerNames []string) {
+func Run(playerNames []string, debug bool) {
 	players = []Player{}
 	for _, name := range playerNames {
 		players = append(players, Player{Name: name})
@@ -71,6 +80,9 @@ func Run(playerNames []string) {
 			players:      players,
 			poolHeld:     newDicePool(0),
 			poolRoll:     newDicePool(6),
+			debug:        debug,
+			startTime:    time.Now(),
+			tps:          0,
 		},
 		tea.WithAltScreen(),
 	).Run(); err != nil {

@@ -14,10 +14,10 @@ import (
 type playerNameInput struct {
 	focusIndex int
 	inputs     []textinput.Model
-	prevModel  tea.Model
+	prevModel  menuModel
 }
 
-func newPlayerNameInputModel(prevModel model) playerNameInput {
+func newPlayerNameInputModel(prevModel menuModel) playerNameInput {
 	m := playerNameInput{
 		inputs:    make([]textinput.Model, prevModel.numberOfPlayers),
 		prevModel: prevModel,
@@ -65,7 +65,7 @@ func (m playerNameInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					playerNames = append(playerNames, m.inputs[input].Value())
 				}
 
-				tui.Run(playerNames)
+				tui.Run(playerNames, m.prevModel.debug)
 
 				return m.prevModel, nil
 			}

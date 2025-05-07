@@ -14,12 +14,14 @@ import (
 
 var (
 	serverUrl = "ws://localhost:8080/ws"
+	debug     = false
 
 	logger *slog.Logger
 )
 
 func init() {
 	flag.StringVar(&serverUrl, "server", serverUrl, "WebSocket server URL")
+	flag.BoolVar(&debug, "debug", debug, "Enable debug mode")
 	flag.Parse()
 
 	logFile, err := os.OpenFile("farkle.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -44,10 +46,10 @@ func main() {
 			playerNames[i], playerNames[j] = playerNames[j], playerNames[i]
 		})
 		splashScreen.Run()
-		tui.Run(playerNames)
+		tui.Run(playerNames, debug)
 		return
 	}
 
 	splashScreen.Run()
-	menu.Run(logger)
+	menu.Run(logger, debug)
 }

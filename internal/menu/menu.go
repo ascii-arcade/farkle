@@ -14,46 +14,52 @@ import (
 
 type menuChoice struct {
 	actionKeys []string
-	action     func(m model) (tea.Model, tea.Cmd)
-	render     func(m model) string
+	action     func(m menuModel) (tea.Model, tea.Cmd)
+	render     func(m menuModel) string
 }
 
-type model struct {
+type menuModel struct {
 	width           int
 	height          int
 	cursor          int
 	numberOfPlayers int
 	choices         []menuChoice
 	wsClient        *wsclient.Client
+	ticks           int
+
+	debug bool
 }
 
-func (m model) Init() tea.Cmd {
+type tick time.Time
+
+func (m menuModel) Init() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tMsg(t)
+		return tick(t)
 	})
 }
 
-func Run(logger *slog.Logger) {
-	if _, err := tea.NewProgram(new(logger)).Run(); err != nil {
+func Run(logger *slog.Logger, debug bool) {
+	if _, err := tea.NewProgram(new(logger, debug)).Run(); err != nil {
 		fmt.Println("Error starting program:", err)
 	}
 }
 
-func new(logger *slog.Logger) *model {
+func new(logger *slog.Logger, debug bool) *menuModel {
 	wsClient := wsclient.NewWsClient(logger, "ws://localhost:8080/ws")
 	wsClient.Connect()
 
-	return &model{
+	return &menuModel{
 		cursor:          1,
 		numberOfPlayers: 3,
 		wsClient:        wsClient,
+		debug:           debug,
 		choices: []menuChoice{
 			{
 				actionKeys: []string{"left", "right"},
-				action: func(m model) (tea.Model, tea.Cmd) {
+				action: func(m menuModel) (tea.Model, tea.Cmd) {
 					return m, nil
 				},
-				render: func(m model) string {
+				render: func(m menuModel) string {
 					return lipgloss.NewStyle().
 						Foreground(lipgloss.Color("#fff")).
 						Render(fmt.Sprintf("Number of Players: %d (←/→)", m.numberOfPlayers))
@@ -61,49 +67,59 @@ func new(logger *slog.Logger) *model {
 			},
 			{
 				actionKeys: []string{"n"},
-				action: func(m model) (tea.Model, tea.Cmd) {
+				action: func(m menuModel) (tea.Model, tea.Cmd) {
 					return newPlayerNameInputModel(m), nil
 				},
-				render: func(m model) string {
+				render: func(m menuModel) string {
 					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("New Game (n)")
 				},
 			},
 			{
 				actionKeys: []string{"o"},
-				action: func(m model) (tea.Model, tea.Cmd) {
+				action: func(m menuModel) (tea.Model, tea.Cmd) {
+					if !m.wsClient.IsConnected() {
+						return m, nil
+					}
 					return m, nil
 				},
-				render: func(m model) string {
+				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+					details := "o"
 
 					if !m.wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
+						details = "connecting..."
 					}
 
-					return style.Render("New Online Game (o)")
+					return style.Render(fmt.Sprintf("New Online Game (%s)", details))
 				},
 			},
 			{
 				actionKeys: []string{"j"},
-				action: func(m model) (tea.Model, tea.Cmd) {
+				action: func(m menuModel) (tea.Model, tea.Cmd) {
+					if !m.wsClient.IsConnected() {
+						return m, nil
+					}
 					return m, nil
 				},
-				render: func(m model) string {
+				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+					details := "j"
 
 					if !m.wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
+						details = "connecting..."
 					}
 
-					return style.Render("Join Game (j)")
+					return style.Render(fmt.Sprintf("Join Game (%s)", details))
 				},
 			},
 			{
 				actionKeys: []string{"e"},
-				action: func(m model) (tea.Model, tea.Cmd) {
+				action: func(m menuModel) (tea.Model, tea.Cmd) {
 					return m, tea.Quit
 				},
-				render: func(m model) string {
+				render: func(m menuModel) string {
 					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("Exit (e)")
 				},
 			},
@@ -113,8 +129,16 @@ func new(logger *slog.Logger) *model {
 
 type tMsg time.Time
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tick:
+		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
+			m.ticks++
+			if m.ticks%60 == 0 {
+				m.ticks = 0
+			}
+			return tick(t)
+		})
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
@@ -164,7 +188,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m menuModel) View() string {
 	if m.height < 15 || m.width < 100 {
 		return "Window too small, please resize to something larger."
 	}

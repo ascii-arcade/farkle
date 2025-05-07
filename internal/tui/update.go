@@ -13,7 +13,15 @@ type tickMsg struct{}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
+	case tick:
+		m.globalTicks++
+		elaspsed := time.Since(m.startTime).Seconds()
+		if elaspsed > 0 {
+			m.tps = float64(m.globalTicks) / elaspsed
+		}
+		return m, tea.Tick(16*time.Millisecond+6*time.Microsecond, func(t time.Time) tea.Msg {
+			return tick(t)
+		})
 	case tea.KeyMsg:
 		if m.isRolling {
 			return m, nil
@@ -29,7 +37,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.isRolling = true
 			m.justRolled = true
-			m.tickCount = 0
+			m.rollTickCount = 0
 			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return tickMsg{}
 			})
@@ -62,8 +70,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tickMsg:
-		if m.tickCount < rollFrames {
-			m.tickCount++
+		if m.rollTickCount < rollFrames {
+			m.rollTickCount++
 			m.poolRoll.roll()
 			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return tickMsg{}
