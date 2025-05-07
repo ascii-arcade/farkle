@@ -51,5 +51,5 @@ func main() {
 	}
 
 	splashScreen.Run()
-	menu.Run()
+	menu.Run(logger)
 }

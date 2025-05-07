@@ -39,14 +39,16 @@ const (
 	colorError       = "#9E1A1A"
 )
 
+var players []Player
+
 func (m model) Init() tea.Cmd {
 	return nil
 }
 
 func Run(playerNames []string) {
-	players := make([]Player, len(playerNames))
-	for i, name := range playerNames {
-		players[i] = Player{Name: name}
+	players = []Player{}
+	for _, name := range playerNames {
+		players = append(players, Player{Name: name})
 	}
 
 	colors := []string{
@@ -63,7 +65,7 @@ func Run(playerNames []string) {
 		colors[i], colors[j] = colors[j], colors[i]
 	})
 
-	tea.NewProgram(
+	if _, err := tea.NewProgram(
 		model{
 			playerColors: colors,
 			players:      players,
@@ -71,5 +73,7 @@ func Run(playerNames []string) {
 			poolRoll:     newDicePool(6),
 		},
 		tea.WithAltScreen(),
-	).Run()
+	).Run(); err != nil {
+		panic(err)
+	}
 }

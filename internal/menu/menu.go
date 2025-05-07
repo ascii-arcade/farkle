@@ -2,10 +2,11 @@ package menu
 
 import (
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/tui"
 	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -32,17 +33,17 @@ func (m model) Init() tea.Cmd {
 	})
 }
 
-func Run() {
-	if _, err := tea.NewProgram(new()).Run(); err != nil {
+func Run(logger *slog.Logger) {
+	if _, err := tea.NewProgram(new(logger)).Run(); err != nil {
 		fmt.Println("Error starting program:", err)
 	}
 }
 
-func new() *model {
+func new(logger *slog.Logger) *model {
 	return &model{
 		cursor:          1,
 		numberOfPlayers: 3,
-		wsClient:        wsclient.NewWsClient(nil, "ws://localhost:8080/ws"),
+		wsClient:        wsclient.NewWsClient(logger, "ws://localhost:8080/ws"),
 		choices: []menuChoice{
 			{
 				s:         "Number of Players",
@@ -55,7 +56,13 @@ func new() *model {
 				s:         "New Game",
 				shortKeys: []string{"n"},
 				action: func(m model) (tea.Model, tea.Cmd) {
-					tui.Run([]string{"Test", "Test2"})
+					return newPlayerNameInputModel(m), nil
+				},
+			},
+			{
+				s:         "New Online Game",
+				shortKeys: []string{"n"},
+				action: func(m model) (tea.Model, tea.Cmd) {
 					return m, nil
 				},
 			},
@@ -114,7 +121,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.numberOfPlayers--
 			}
 		case tea.KeyRight:
-			if m.numberOfPlayers < 5 {
+			if m.numberOfPlayers < 6 {
 				m.numberOfPlayers++
 			}
 		default:
@@ -139,7 +146,7 @@ func (m model) View() string {
 
 	menuBaseStyle := lipgloss.NewStyle().Foreground(logoColor).BorderForeground(logoColor).Align(lipgloss.Center)
 
-	logo := menuBaseStyle.Width(m.width / 3).AlignVertical(lipgloss.Center).Render("")
+	logo := menuBaseStyle.Width(m.width / 3).AlignVertical(lipgloss.Center).Render(logo)
 	title := menuBaseStyle.Border(lipgloss.NormalBorder()).Margin(1).Padding(1, 2).Align(lipgloss.Center, lipgloss.Center).Render("Farkle")
 	menu := make([]string, 0, 4)
 	for i, choice := range m.choices {
@@ -159,7 +166,7 @@ func (m model) View() string {
 			prefix = "-> "
 		}
 
-		if i == 2 && !m.wsClient.Connected() {
+		if slices.Contains([]int{2, 3}, i) && !m.wsClient.Connected() {
 			style = style.Foreground(lipgloss.Color("#ff0000"))
 			menu = append(menu, style.Render(fmt.Sprintf("%s%s (connecting)", prefix, choice.s)))
 		} else {
