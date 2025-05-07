@@ -115,7 +115,10 @@ func (m *model) bank() {
 		m.error = "must lock in held dice before banking"
 		return
 	}
-
+	if m.lockedInScore == 0 {
+		m.error = "cannot bank 0 points"
+		return
+	}
 	if m.players[m.currentPlayerIndex].score == 0 && m.lockedInScore < 500 {
 		m.error = "must bank at least 500 points on the first turn"
 		return
