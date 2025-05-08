@@ -1,12 +1,10 @@
 package menu
 
 import (
-	"encoding/json"
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/server"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,8 +15,8 @@ type joinGameModel struct {
 	height     int
 	focusIndex int
 
-	playerName textinput.Model
-	changeName bool
+	inputs []textinput.Model
+	errors string
 
 	menuModel menuModel
 	logger    *slog.Logger
@@ -26,26 +24,39 @@ type joinGameModel struct {
 }
 
 func newJoinGameModel(menuModel menuModel) joinGameModel {
-	t := textinput.New()
-	t.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	t.CharLimit = 25
-	t.Width = 25
-
-	return joinGameModel{
+	m := joinGameModel{
 		width:      menuModel.width,
 		height:     menuModel.height,
 		focusIndex: 0,
 		menuModel:  menuModel,
 		logger:     menuModel.logger.With("component", "join_game"),
 		debug:      menuModel.debug,
-		playerName: t,
+		inputs:     make([]textinput.Model, 2),
 	}
+
+	var t textinput.Model
+	for i := range m.inputs {
+		t = textinput.New()
+		t.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+		t.CharLimit = 25
+		t.Width = 25
+
+		switch i {
+		case 0:
+			t.Placeholder = "Your name"
+			t.Focus()
+		case 1:
+			t.Placeholder = "Lobby code"
+		}
+
+		m.inputs[i] = t
+	}
+
+	return m
 }
 
 func (m joinGameModel) Init() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tick(t)
-	})
+	return nil
 }
 
 func (m joinGameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -62,51 +73,49 @@ func (m joinGameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		case "tab", "down":
 			m.focusIndex++
-			if m.focusIndex >= len(lobbies) {
-				m.focusIndex = len(lobbies) - 1
+			if m.focusIndex > len(m.inputs) {
+				m.focusIndex = len(m.inputs)
 			}
 		case "shift+tab", "up":
 			m.focusIndex--
 			if m.focusIndex < 0 {
 				m.focusIndex = 0
 			}
-		case "n":
-			m.changeName = true
-			m.playerName.Focus()
-			return m, nil
 		case "enter":
-			if m.changeName {
-				m.changeName = false
-				return m, nil
+			if m.focusIndex == len(m.inputs) {
+				if m.inputs[0].Value() == "" {
+					m.errors = "Please enter your name"
+					m.inputs[0].Focus()
+					m.focusIndex = 0
+					return m, nil
+				}
+				if m.inputs[1].Value() == "" {
+					m.errors = "Please enter a lobby code"
+					m.inputs[1].Focus()
+					m.focusIndex = 1
+					return m, nil
+				}
 			}
 
-			currentLobbyId = lobbies[m.focusIndex].Id
-
-			msg := map[string]any{
-				"lobby": currentLobbyId,
-				"name":  m.playerName.Value(),
-			}
-			b, err := json.Marshal(msg)
-			if err != nil {
-				m.logger.Error("failed to marshal join game message", "error", err)
-				return m, nil
-			}
-			wsClient.SendMessage(server.Message{
-				Channel: server.ChannelLobby,
-				Type:    server.MessageTypeJoin,
-				Data:    b,
-			})
-			return fromLobby(m.menuModel, getLobby(currentLobbyId)), nil
+			return m, nil
 		}
-	case tick:
-		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
-			return tick(t)
-		})
 	}
 
-	m.playerName, cmd = m.playerName.Update(msg)
+	cmd = m.updateInputs(msg)
 
 	return m, cmd
+}
+
+func (m *joinGameModel) updateInputs(msg tea.Msg) tea.Cmd {
+	cmds := make([]tea.Cmd, len(m.inputs))
+
+	for i := range m.inputs {
+		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
+	}
+
+	m.errors = ""
+
+	return tea.Batch(cmds...)
 }
 
 func (m joinGameModel) View() string {
@@ -119,21 +128,25 @@ func (m joinGameModel) View() string {
 		return paneStyle.Render("Window too small, please resize to something larger.")
 	}
 
-	if m.changeName {
-		m.playerName.Placeholder = "Enter Player Name"
-		m.playerName.Focus()
-		return m.playerName.View()
-	}
-
-	lobbiesPaneStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#fff")).
+	inputsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
 		Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
 		Padding(1, 2)
+
 	controlsStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#666666")).
 		Align(lipgloss.Left, lipgloss.Bottom).
 		Width(m.width)
+
+	buttonStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00ff00")).
+		Align(lipgloss.Left, lipgloss.Bottom)
+
+	errorsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ff0000")).
+		Align(lipgloss.Left, lipgloss.Bottom)
 
 	if m.debug {
 		paneStyle = paneStyle.
@@ -141,30 +154,37 @@ func (m joinGameModel) View() string {
 			BorderStyle(lipgloss.ASCIIBorder()).
 			Height(m.height - 3).
 			Width(m.width - 2)
+		controlsStyle = controlsStyle.
+			Foreground(lipgloss.Color("#ff0000")).
+			Align(lipgloss.Left, lipgloss.Bottom).
+			Width(m.width - 2)
 	}
 
-	lobbyNames := make([]string, 0, len(lobbies))
-	lobbyNames = append(lobbyNames, "Available Lobbies:")
-	for i, lobby := range lobbies {
-		prefix := "   "
-		if i == m.focusIndex {
-			prefix = "-> "
+	inputs := []string{}
+	for i := range m.inputs {
+		if m.focusIndex == i {
+			m.inputs[i].Focus()
+		} else {
+			m.inputs[i].Blur()
 		}
-		lobbyNames = append(lobbyNames, prefix+lobby.Name)
+		inputs = append(inputs, m.inputs[i].View())
 	}
 
-	if len(lobbyNames) == 0 {
-		lobbyNames = append(lobbyNames, "No lobbies available")
+	buttonPrefix := "   "
+	if m.focusIndex == len(m.inputs) {
+		buttonPrefix = "-> "
 	}
+	inputs = append(inputs, buttonStyle.Render(buttonPrefix+"Join Game"))
 
-	lobbiesPane := lipgloss.JoinVertical(
+	inputPane := lipgloss.JoinVertical(
 		lipgloss.Center,
-		lobbiesPaneStyle.Render(strings.Join(lobbyNames, "\n")),
+		inputsStyle.Render(strings.Join(inputs, "\n")),
+		errorsStyle.Render(m.errors),
 	)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Center,
-		paneStyle.Render(lobbiesPane),
-		controlsStyle.Render("ESC to exit, Enter to join the game"),
+		paneStyle.Render(inputPane),
+		controlsStyle.Render("ESC to go back to menu"),
 	)
 }
