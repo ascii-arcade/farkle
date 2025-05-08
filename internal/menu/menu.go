@@ -57,8 +57,6 @@ func Run(logger *slog.Logger, debug bool) {
 }
 
 func new(logger *slog.Logger, debug bool) *menuModel {
-	wsClient = newWsClient(logger, "ws://localhost:8080/ws")
-
 	return &menuModel{
 		cursor:          1,
 		numberOfPlayers: 3,
@@ -66,27 +64,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 		logger:          logger.With("component", "menu"),
 		choices: []menuChoice{
 			{
-				actionKeys: []string{"left", "right"},
-				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					return m, nil
-				},
-				render: func(m menuModel) string {
-					return lipgloss.NewStyle().
-						Foreground(lipgloss.Color("#fff")).
-						Render(fmt.Sprintf("Number of Players: %d (←/→)", m.numberOfPlayers))
-				},
-			},
-			{
 				actionKeys: []string{"n"},
-				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					return newLocalGameInputModel(m), nil
-				},
-				render: func(m menuModel) string {
-					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("New Game (n)")
-				},
-			},
-			{
-				actionKeys: []string{"o"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
 					if !serverHealth {
 						return m, nil
@@ -96,7 +74,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 				},
 				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-					details := "o"
+					details := "n"
 
 					if !serverHealth {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
@@ -210,7 +188,6 @@ func (m menuModel) View() string {
 	title := menuBaseStyle.Border(lipgloss.NormalBorder()).Margin(1).Padding(1, 2).Align(lipgloss.Center, lipgloss.Center).Render("Farkle")
 	menu := make([]string, 0, 4)
 	for i, choice := range m.choices {
-
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#fff"))
 		prefix := "   "
 
@@ -236,21 +213,3 @@ func (m menuModel) View() string {
 		menuJoin,
 	)
 }
-
-// func (m *menuModel) monitorMessages() {
-// 	for msg := range wsClient.GetMessage() {
-// 		switch msg.Channel {
-// 		case server.ChannelLobby:
-// 			switch msg.Type {
-// 			case server.MessageTypeList:
-// 				var lobbies []lobby.Lobby
-// 				if err := json.Unmarshal(msg.Data, &lobbies); err != nil {
-// 					m.logger.Error("Failed to unmarshal lobby list", "error", err)
-// 					continue
-// 				}
-// 				m.logger.Debug("Received lobby list", "lobbies", lobbies)
-
-// 			}
-// 		}
-// 	}
-// }
