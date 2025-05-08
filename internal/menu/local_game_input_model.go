@@ -116,7 +116,10 @@ func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m localGameInputModel) View() string {
-	paneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).Align(lipgloss.Center, lipgloss.Center)
+	paneStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center)
 
 	if m.height < 15 || m.width < 100 {
 		return paneStyle.Render("Window too small, please resize to something larger.")

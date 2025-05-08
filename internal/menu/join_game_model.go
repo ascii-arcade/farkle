@@ -2,6 +2,7 @@ package menu
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,6 +46,16 @@ func (m joinGameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 				return tick(t)
 			})
+		case "tab", "down":
+			m.focusIndex++
+			if m.focusIndex >= len(lobbies) {
+				m.focusIndex = len(lobbies) - 1
+			}
+		case "shift+tab", "up":
+			m.focusIndex--
+			if m.focusIndex < 0 {
+				m.focusIndex = 0
+			}
 		case "enter":
 			return m.menuModel, nil
 		}
@@ -58,23 +69,34 @@ func (m joinGameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m joinGameModel) View() string {
-	paneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).Align(lipgloss.Center, lipgloss.Center)
+	paneStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height-1).
+		Align(lipgloss.Center, lipgloss.Center)
 
 	if m.height < 15 || m.width < 100 {
 		return paneStyle.Render("Window too small, please resize to something larger.")
 	}
 
 	lobbiesPaneStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(lipgloss.Color("#fff")).
+		Align(lipgloss.Center, lipgloss.Center).
 		BorderStyle(lipgloss.NormalBorder()).
-		Padding(1, 2).
-		Align(lipgloss.Center, lipgloss.Center)
+		Padding(1, 2)
+	controlsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Align(lipgloss.Left, lipgloss.Bottom).
+		Width(m.width)
+
+	if m.debug {
+		paneStyle = paneStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Height(m.height - 3).Width(m.width - 2)
+	}
 
 	lobbyNames := make([]string, 0, len(lobbies))
 	for i, lobby := range lobbies {
-		prefix := "  "
+		prefix := "   "
 		if i == m.focusIndex {
-			prefix = "> "
+			prefix = "-> "
 		}
 		lobbyNames = append(lobbyNames, prefix+lobby.Name)
 	}
@@ -83,7 +105,14 @@ func (m joinGameModel) View() string {
 		lobbyNames = append(lobbyNames, "No lobbies available")
 	}
 
-	lobbiesPane := lipgloss.JoinVertical(lipgloss.Center, lobbiesPaneStyle.Render(lobbyNames...))
+	lobbiesPane := lipgloss.JoinVertical(
+		lipgloss.Center,
+		lobbiesPaneStyle.Render(strings.Join(lobbyNames, "\n")),
+	)
 
-	return paneStyle.Render(lobbiesPane)
+	return lipgloss.JoinVertical(
+		lipgloss.Center,
+		paneStyle.Render(lobbiesPane),
+		controlsStyle.Render("ESC to exit, Enter to join the game"),
+	)
 }

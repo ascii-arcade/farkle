@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -88,7 +89,7 @@ func (h *hub) broadcastMessage(msg Message) {
 func (h *hub) addLobby(lobby *lobby.Lobby) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.lobbies[lobby.Name] = lobby
+	h.lobbies[lobby.Id] = lobby
 }
 
 func (h *hub) startTimedBroadcast() {
@@ -98,6 +99,15 @@ func (h *hub) startTimedBroadcast() {
 		for _, lobby := range h.lobbies {
 			lobbies = append(lobbies, lobby)
 		}
+		slices.SortFunc(lobbies, func(a, b *lobby.Lobby) int {
+			if a.CreatedAt.Before(b.CreatedAt) {
+				return -1
+			}
+			if a.CreatedAt.After(b.CreatedAt) {
+				return 1
+			}
+			return 0
+		})
 		b, err := json.Marshal(lobbies)
 		if err != nil {
 			h.logger.Error("Failed to marshal lobby", "error", err)

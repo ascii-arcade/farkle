@@ -2,34 +2,47 @@ package lobby
 
 import (
 	"encoding/json"
+	"slices"
+	"time"
 
 	"github.com/ascii-arcade/farkle/internal/tui"
+	"github.com/rs/xid"
 )
 
 type Lobby struct {
-	Name    string
-	Players map[string]*tui.Player
-	Started bool
+	Id        string
+	Name      string
+	Players   []*tui.Player
+	Started   bool
+	CreatedAt time.Time
 }
 
-func NewLobby(lobbyName string, hostName string) *Lobby {
-	players := make(map[string]*tui.Player)
-	players[hostName] = &tui.Player{
+func NewLobby(lobbyName, hostName string, playerCount int) *Lobby {
+	players := make([]*tui.Player, playerCount)
+	players[0] = &tui.Player{
 		Name:  hostName,
 		Score: 0,
 		Host:  true,
 	}
 
 	return &Lobby{
-		Name:    lobbyName,
-		Players: players,
+		Id:        xid.New().String(),
+		Name:      lobbyName,
+		Players:   players,
+		Started:   false,
+		CreatedAt: time.Now(),
 	}
 }
 
 func (l *Lobby) AddPlayer(name string) {}
 
 func (l *Lobby) RemovePlayer(name string) {
-	delete(l.Players, name)
+	for i, player := range l.Players {
+		if player.Name == name {
+			l.Players = slices.Delete(l.Players, i, i+1)
+			break
+		}
+	}
 }
 
 func (l *Lobby) Ready() bool {

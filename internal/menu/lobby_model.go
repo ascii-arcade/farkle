@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
@@ -26,7 +27,7 @@ func newLobbyModel(menuModel menuModel, name string, hostName string, playerCoun
 		menuModel: menuModel,
 	}
 
-	l := lobby.NewLobby(name, hostName)
+	l := lobby.NewLobby(name, hostName, playerCount)
 	b, err := l.ToBytes()
 	if err != nil {
 		return lm
@@ -97,16 +98,18 @@ func (m lobbyModel) View() string {
 	l := []string{}
 	l = append(l, "Lobby: "+m.lobby.Name)
 
-	for name, player := range m.lobby.Players {
-		if player.Host {
-			l = append(l, name+" (Host)")
+	for i, player := range m.lobby.Players {
+		if player != nil && player.Host {
+			l = append(l, fmt.Sprintf("%d) %s (Host)", i, player.Name))
 			continue
 		}
 
-		if player == nil || player.Name == "" {
-			l = append(l, name+" (Waiting for player to join...)")
+		if player == nil {
+			l = append(l, fmt.Sprintf("%d) (Waiting for player to join...)", i))
 			continue
 		}
+
+		l = append(l, fmt.Sprintf("%d) %s", i, player.Name))
 	}
 
 	lobbyRender := lobbyStyle.Render(
