@@ -18,6 +18,7 @@ func Run(l *slog.Logger, debug bool) {
 	go h.run()
 
 	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/health", healthHandler)
 
 	logger.Info("Starting server", "debug", debug)
 	if err := http.ListenAndServe(":8080", nil); err != nil {

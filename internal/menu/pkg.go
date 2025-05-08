@@ -14,6 +14,7 @@ var wsClient *client
 var lobbies = []*lobby.Lobby{}
 var currentLobbyId string
 var myPlayer *player.Player
+var serverHealth bool
 
 func getLobby(id string) *lobby.Lobby {
 	for _, l := range lobbies {

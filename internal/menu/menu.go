@@ -3,6 +3,7 @@ package menu
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -30,9 +31,23 @@ type menuModel struct {
 }
 
 func (m menuModel) Init() tea.Cmd {
+	go m.checkHealth()
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tick(t)
 	})
+}
+
+func (m *menuModel) checkHealth() {
+	c := http.Client{}
+	for {
+		resp, err := c.Get("http://localhost:8080/health")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			serverHealth = true
+			continue
+		}
+
+		serverHealth = false
+	}
 }
 
 func Run(logger *slog.Logger, debug bool) {
@@ -73,7 +88,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 			{
 				actionKeys: []string{"o"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					if !wsClient.IsConnected() {
+					if !serverHealth {
 						return m, nil
 					}
 
@@ -83,7 +98,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 					details := "o"
 
-					if !wsClient.IsConnected() {
+					if !serverHealth {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 						details = "connecting..."
 					}
@@ -94,7 +109,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 			{
 				actionKeys: []string{"j"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					if !wsClient.IsConnected() {
+					if !serverHealth {
 						return m, nil
 					}
 
@@ -104,7 +119,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 					details := "j"
 
-					if !wsClient.IsConnected() {
+					if !serverHealth {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 						details = "connecting..."
 					}
@@ -138,7 +153,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			if m.cursor == 2 && !wsClient.IsConnected() {
+			if m.cursor == 2 && !serverHealth {
 				return m, nil
 			}
 			return m.choices[m.cursor].action(m)
