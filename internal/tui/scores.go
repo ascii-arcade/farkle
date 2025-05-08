@@ -12,9 +12,9 @@ func styleScore() lipgloss.Style {
 }
 
 func (m *model) playerScores() string {
-	scores := make([]string, len(m.players))
+	scores := make([]string, len(players))
 
-	for i, player := range m.players {
+	for i, player := range players {
 		content := m.styledPlayerName(i) + ": " + strconv.Itoa(player.Score)
 		isCurrentPlayer := m.currentPlayerIndex == i
 

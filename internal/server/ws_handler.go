@@ -10,7 +10,7 @@ import (
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	s := websocket.Server{
 		Handler: websocket.Handler(func(ws *websocket.Conn) {
-			logger.Info("webSocket connection established", "remoteAddr", ws.RemoteAddr())
+			logger.Info("webSocket connection established")
 			defer ws.Close()
 
 			client := h.newClient(ws)

@@ -13,4 +13,8 @@ const (
 	MessageTypeCreated MessageType = "created"
 	MessageTypeDeleted MessageType = "deleted"
 	MessageTypeUpdated MessageType = "updated"
+	MessageTypeJoin    MessageType = "join"
+	MessageTypeLeave   MessageType = "leave"
+
+	MessageTypeMe MessageType = "me"
 )

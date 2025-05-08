@@ -4,14 +4,10 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/player"
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-type Player struct {
-	Name  string
-	Score int
-	Host  bool
-}
 
 type log []string
 
@@ -23,10 +19,10 @@ type model struct {
 	lockedInScore      int
 	log                log
 	playerColors       []string
-	players            []Player
-	poolHeld           dicePool
-	poolRoll           dicePool
-	rollTickCount      int
+	// players            []player.Player
+	poolHeld      dicePool
+	poolRoll      dicePool
+	rollTickCount int
 
 	globalTicks int
 	startTime   time.Time
@@ -47,7 +43,7 @@ const (
 	colorError       = "#9E1A1A"
 )
 
-var players []Player
+var players []*player.Player
 
 func (m model) Init() tea.Cmd {
 	return tea.Tick(16*time.Millisecond+6*time.Microsecond, func(t time.Time) tea.Msg {
@@ -56,9 +52,9 @@ func (m model) Init() tea.Cmd {
 }
 
 func Run(playerNames []string, debug bool) {
-	players = []Player{}
+	players = []*player.Player{}
 	for _, name := range playerNames {
-		players = append(players, Player{Name: name})
+		players = append(players, &player.Player{Name: name})
 	}
 
 	colors := []string{
@@ -78,14 +74,45 @@ func Run(playerNames []string, debug bool) {
 	if _, err := tea.NewProgram(
 		model{
 			playerColors: colors,
-			players:      players,
-			poolHeld:     newDicePool(0),
-			poolRoll:     newDicePool(6),
-			debug:        debug,
-			startTime:    time.Now(),
-			tps:          0,
+			// players:      players,
+			poolHeld:  newDicePool(0),
+			poolRoll:  newDicePool(6),
+			debug:     debug,
+			startTime: time.Now(),
+			tps:       0,
 		},
 		tea.WithAltScreen(),
+	).Run(); err != nil {
+		panic(err)
+	}
+}
+
+func RunFromLobby(l *lobby.Lobby) {
+	players = l.Players
+	colors := []string{
+		"#3B82F6", // Blue
+		"#10B981", // Green
+		"#FACC15", // Yellow
+		"#8B5CF6", // Purple
+		"#06B6D4", // Cyan
+		"#F97316", // Orange
+	}
+
+	// Shuffle
+	rand.Shuffle(len(colors), func(i, j int) {
+		colors[i], colors[j] = colors[j], colors[i]
+	})
+
+	if _, err := tea.NewProgram(
+		model{
+			playerColors: colors,
+			// players:      players,
+			poolHeld:  newDicePool(0),
+			poolRoll:  newDicePool(6),
+			debug:     false,
+			startTime: time.Now(),
+			tps:       0,
+		},
 	).Run(); err != nil {
 		panic(err)
 	}

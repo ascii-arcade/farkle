@@ -3,23 +3,26 @@ package lobby
 import (
 	"encoding/json"
 	"slices"
+	"sync"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/tui"
+	"github.com/ascii-arcade/farkle/internal/player"
 	"github.com/rs/xid"
 )
 
 type Lobby struct {
 	Id        string
 	Name      string
-	Players   []*tui.Player
+	Players   []*player.Player
 	Started   bool
 	CreatedAt time.Time
+
+	mu sync.Mutex
 }
 
 func NewLobby(lobbyName, hostName string, playerCount int) *Lobby {
-	players := make([]*tui.Player, playerCount)
-	players[0] = &tui.Player{
+	players := make([]*player.Player, playerCount)
+	players[0] = &player.Player{
 		Name:  hostName,
 		Score: 0,
 		Host:  true,
@@ -34,9 +37,31 @@ func NewLobby(lobbyName, hostName string, playerCount int) *Lobby {
 	}
 }
 
-func (l *Lobby) AddPlayer(name string) {}
+func (l *Lobby) AddPlayer(name string) *player.Player {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	emptyIndex := 0
+	for i, player := range l.Players {
+		if player == nil {
+			emptyIndex = i
+			break
+		}
+	}
+	if emptyIndex == 0 && len(l.Players) == cap(l.Players) {
+		return nil
+	}
+	newPlayer := &player.Player{
+		Id:    xid.New().String(),
+		Name:  name,
+		Score: 0,
+	}
+	l.Players[emptyIndex] = newPlayer
+	return newPlayer
+}
 
 func (l *Lobby) RemovePlayer(name string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	for i, player := range l.Players {
 		if player.Name == name {
 			l.Players = slices.Delete(l.Players, i, i+1)
@@ -46,6 +71,8 @@ func (l *Lobby) RemovePlayer(name string) {
 }
 
 func (l *Lobby) Ready() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	return len(l.Players) > 2
 }
 

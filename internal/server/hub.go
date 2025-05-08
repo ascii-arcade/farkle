@@ -80,8 +80,6 @@ func (h *hub) broadcastMessage(msg Message) {
 
 		if _, err := c.conn.Write(msg.toBytes()); err != nil {
 			logger.Error("Failed to send message", "error", err)
-			c.conn.Close()
-			delete(h.clients, c)
 		}
 	}
 }
@@ -118,9 +116,20 @@ func (h *hub) startTimedBroadcast() {
 			Type:    MessageTypeList,
 			Data:    b,
 		}
-		h.broadcast <- msg
 		h.mu.Unlock()
+
+		h.broadcast <- msg
 
 		time.Sleep(time.Second)
 	}
+}
+
+func (h *hub) getLobby(id string) *lobby.Lobby {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	lobby, ok := h.lobbies[id]
+	if !ok {
+		return nil
+	}
+	return lobby
 }

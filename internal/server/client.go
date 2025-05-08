@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/player"
 	"github.com/rs/xid"
 	"golang.org/x/net/websocket"
 )
@@ -14,6 +15,7 @@ type client struct {
 	active   bool
 	lastSeen time.Time
 	conn     *websocket.Conn
+	player   *player.Player
 }
 
 func (h *hub) newClient(conn *websocket.Conn) *client {
@@ -47,14 +49,52 @@ func (c *client) handleMessages(h *hub) {
 			c.lastSeen = time.Now()
 		case ChannelLobby:
 			h.logger.Info("Received lobby message from client", "clientId", c.id)
-			if msg.Type == MessageTypeCreate {
+			switch msg.Type {
+			case MessageTypeCreate:
 				lobby := &lobby.Lobby{}
 				if err := json.Unmarshal(msg.Data, lobby); err != nil {
 					h.logger.Error("Failed to unmarshal lobby", "error", err)
 					continue
 				}
 				h.addLobby(lobby)
+			case MessageTypeJoin:
+				data := map[string]any{}
+				if err := json.Unmarshal(msg.Data, &data); err != nil {
+					h.logger.Error("Failed to unmarshal join message", "error", err)
+					continue
+				}
+				lobbyId, ok := data["lobby"].(string)
+				if !ok {
+					h.logger.Error("Invalid lobby ID in join message")
+					continue
+				}
+				lobby := h.getLobby(lobbyId)
+				if lobby == nil {
+					h.logger.Error("Lobby not found", "lobbyId", lobbyId)
+					continue
+				}
+				name, ok := data["name"].(string)
+				if !ok {
+					h.logger.Error("Invalid name in join message")
+					continue
+				}
+				newPlayer := lobby.AddPlayer(name)
+				if newPlayer == nil {
+					h.logger.Error("Failed to add player to lobby", "lobbyId", lobbyId, "name", name)
+					continue
+				}
+				c.player = newPlayer
+				newPlayerMsg := Message{
+					Channel: ChannelPlayer,
+					Type:    MessageTypeMe,
+					Data:    newPlayer.ToBytes(),
+				}
+				if _, err := c.conn.Write(newPlayerMsg.toBytes()); err != nil {
+					h.logger.Error("Failed to send new player message", "error", err)
+					continue
+				}
 			}
+
 		}
 	}
 }

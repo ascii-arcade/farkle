@@ -107,7 +107,7 @@ func (m *model) nextTurn() {
 	m.poolHeld = newDicePool(0)
 	m.poolRoll = newDicePool(6)
 
-	if m.currentPlayerIndex == len(m.players)-1 {
+	if m.currentPlayerIndex == len(players)-1 {
 		m.currentPlayerIndex = 0
 	} else {
 		m.currentPlayerIndex++
@@ -124,13 +124,13 @@ func (m *model) bank() {
 		return
 	}
 
-	if m.players[m.currentPlayerIndex].Score == 0 && m.lockedInScore < 500 {
+	if players[m.currentPlayerIndex].Score == 0 && m.lockedInScore < 500 {
 		m.error = "must bank at least 500 points on the first turn"
 		return
 	}
 
 	m.log.add(m.styledPlayerName(m.currentPlayerIndex) + " banked " + strconv.Itoa(m.lockedInScore) + " points")
-	m.players[m.currentPlayerIndex].Score += m.lockedInScore
+	players[m.currentPlayerIndex].Score += m.lockedInScore
 	m.nextTurn()
 }
 

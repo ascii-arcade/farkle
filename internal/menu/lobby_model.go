@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/player"
 	"github.com/ascii-arcade/farkle/internal/server"
 	"github.com/ascii-arcade/farkle/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
@@ -44,21 +45,16 @@ func newLobbyModel(menuModel menuModel, name string, hostName string, playerCoun
 	return lm
 }
 
-func (m lobbyModel) Init() tea.Cmd {
-	lobbyData, err := m.lobby.ToBytes()
-	if err != nil {
-		// TODO: need to handle this error
-		return nil
+func fromLobby(menuModel menuModel, l *lobby.Lobby) lobbyModel {
+	return lobbyModel{
+		width:     menuModel.width,
+		height:    menuModel.height,
+		menuModel: menuModel,
+		lobby:     l,
 	}
-	if err := wsClient.SendMessage(server.Message{
-		Channel: server.ChannelLobby,
-		Type:    server.MessageTypeCreate,
-		Data:    lobbyData,
-	}); err != nil {
-		// TODO: need to handle this error
-		return nil
-	}
+}
 
+func (m lobbyModel) Init() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tick(t)
 	})
@@ -71,12 +67,20 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
+			wsClient.SendMessage(server.Message{
+				Channel: server.ChannelLobby,
+				Type:    server.MessageTypeLeave,
+			})
 			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 				return tick(t)
 			})
 		case "enter":
+			if m.lobby.Ready() {
+				tui.RunFromLobby(m.lobby)
+				return m.menuModel, nil
+			}
 
-			return m.menuModel, nil
+			return m, nil
 		}
 	case tick:
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
@@ -128,7 +132,7 @@ func (m lobbyModel) View() string {
 	)
 }
 
-func missingPlayers(players map[string]*tui.Player) int {
+func missingPlayers(players []*player.Player) int {
 	missing := len(players)
 	for _, player := range players {
 		if player == nil || player.Name == "" {
