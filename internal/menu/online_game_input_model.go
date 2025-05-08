@@ -3,6 +3,7 @@ package menu
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -68,7 +69,9 @@ func (m onlineGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			return m.menuModel, nil
+			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
+				return tick(t)
+			})
 		case "tab", "shift+tab", "enter", "up", "down":
 			s := msg.String()
 

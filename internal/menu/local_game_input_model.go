@@ -3,6 +3,7 @@ package menu
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ascii-arcade/farkle/internal/tui"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -58,8 +59,12 @@ func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
+		case "esc":
+			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
+				return tick(t)
+			})
 		case "tab", "shift+tab", "enter", "up", "down":
 			s := msg.String()
 
