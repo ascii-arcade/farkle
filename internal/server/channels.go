@@ -1,7 +1,8 @@
 package server
 
-type channel string
+type Channel string
 
 const (
-	ChannelPing channel = "ping"
+	ChannelPing  Channel = "ping"
+	ChannelLobby Channel = "lobby"
 )

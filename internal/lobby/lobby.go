@@ -1,23 +1,54 @@
 package lobby
 
-import "github.com/ascii-arcade/farkle/internal/tui"
+import (
+	"encoding/json"
+
+	"github.com/ascii-arcade/farkle/internal/tui"
+)
 
 type Lobby struct {
-	players map[string]*tui.Player
-	started bool
+	Name    string
+	Players map[string]*tui.Player
+	Started bool
 }
 
-func NewLobby(playerCount int, names []string) *Lobby {
-	players := make(map[string]*tui.Player, playerCount)
-	for _, name := range names {
-		players[name] = &tui.Player{
-			Name:  name,
-			Score: 0,
-		}
+func NewLobby(lobbyName string, hostName string) *Lobby {
+	players := make(map[string]*tui.Player)
+	players[hostName] = &tui.Player{
+		Name:  hostName,
+		Score: 0,
+		Host:  true,
 	}
 
 	return &Lobby{
-		players: make(map[string]*tui.Player, playerCount),
-		started: false,
+		Name:    lobbyName,
+		Players: players,
 	}
+}
+
+func (l *Lobby) AddPlayer(name string) {}
+
+func (l *Lobby) RemovePlayer(name string) {
+	delete(l.Players, name)
+}
+
+func (l *Lobby) Ready() bool {
+	return len(l.Players) > 2
+}
+
+func (l *Lobby) ToBytes() ([]byte, error) {
+	b, err := json.Marshal(l)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func FromBytes(b []byte) (*Lobby, error) {
+	lobby := &Lobby{}
+	if err := json.Unmarshal(b, &lobby); err != nil {
+		return nil, err
+	}
+
+	return lobby, nil
 }

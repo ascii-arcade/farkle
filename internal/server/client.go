@@ -1,8 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/lobby"
 	"github.com/rs/xid"
 	"golang.org/x/net/websocket"
 )
@@ -43,6 +45,16 @@ func (c *client) handleMessages(h *hub) {
 		case ChannelPing:
 			h.logger.Info("Received ping from client", "clientId", c.id)
 			c.lastSeen = time.Now()
+		case ChannelLobby:
+			h.logger.Info("Received lobby message from client", "clientId", c.id)
+			if msg.Type == MessageTypeCreate {
+				lobby := &lobby.Lobby{}
+				if err := json.Unmarshal(msg.Data, lobby); err != nil {
+					h.logger.Error("Failed to unmarshal lobby", "error", err)
+					continue
+				}
+				h.addLobby(lobby)
+			}
 		}
 	}
 }

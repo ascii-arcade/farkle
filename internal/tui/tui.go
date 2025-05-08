@@ -10,6 +10,7 @@ import (
 type Player struct {
 	Name  string
 	Score int
+	Host  bool
 }
 
 type log []string

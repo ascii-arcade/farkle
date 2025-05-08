@@ -6,9 +6,12 @@ import (
 )
 
 type Message struct {
-	Channel channel   `json:"channel"`
-	Data    []byte    `json:"data"`
-	SentAt  time.Time `json:"sent_at"`
+	Channel Channel     `json:"channel"`
+	Type    MessageType `json:"type"`
+	Data    []byte      `json:"data"`
+	SentAt  time.Time   `json:"sent_at"`
+
+	from *client `json:"-"`
 }
 
 func (m *Message) toBytes() []byte {

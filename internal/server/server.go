@@ -14,6 +14,7 @@ func Run(l *slog.Logger, debug bool) {
 	h = newHub(logger)
 	go h.monitorBroadcast()
 	go h.monitorConnections()
+	go h.startTimedBroadcast()
 	go h.run()
 
 	http.HandleFunc("/ws", wsHandler)

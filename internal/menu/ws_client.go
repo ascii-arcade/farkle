@@ -1,30 +1,33 @@
-package wsclient
+package menu
 
 import (
 	"encoding/json"
 	"log/slog"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/lobby"
 	"github.com/ascii-arcade/farkle/internal/server"
 	"golang.org/x/net/websocket"
 )
 
-type Client struct {
+type client struct {
 	url       string
 	conn      *websocket.Conn
 	connected bool
 	logger    *slog.Logger
 }
 
-func NewWsClient(logger *slog.Logger, url string) *Client {
+func newWsClient(logger *slog.Logger, url string) *client {
 	l := logger.With("component", "wsclient", "url", url)
-	return &Client{
+	c := &client{
 		url:    url,
 		logger: l,
 	}
+	c.connect()
+	return c
 }
 
-func (c *Client) Connect() {
+func (c *client) connect() {
 	c.logger.Debug("Connecting to server", "url", c.url)
 	go func() {
 		for {
@@ -36,7 +39,7 @@ func (c *Client) Connect() {
 			c.connected = true
 			c.conn = conn
 
-			if err := c.MonitorMessages(); err != nil {
+			if err := c.monitorMessages(); err != nil {
 				c.logger.Error("Error monitoring messages", "error", err)
 			}
 
@@ -48,26 +51,17 @@ func (c *Client) Connect() {
 	}()
 }
 
-func (c *Client) IsConnected() bool {
+func (c *client) IsConnected() bool {
 	return c.connected
 }
 
-func (c *Client) Close() {
+func (c *client) Close() {
 	if err := c.conn.Close(); err != nil {
 		c.logger.Error("Error closing connection", "error", err)
 	}
 }
 
-func (c *Client) Reconnect(url string) error {
-	conn, err := websocket.Dial(url, "", "http://localhost/")
-	if err != nil {
-		return err
-	}
-	c.conn = conn
-	return nil
-}
-
-func (c *Client) SendMessage(msg server.Message) error {
+func (c *client) SendMessage(msg server.Message) error {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -80,7 +74,7 @@ func (c *Client) SendMessage(msg server.Message) error {
 	return nil
 }
 
-func (c *Client) Ping() error {
+func (c *client) ping() error {
 	msg := server.Message{
 		Channel: server.ChannelPing,
 		SentAt:  time.Now(),
@@ -88,7 +82,7 @@ func (c *Client) Ping() error {
 	return c.SendMessage(msg)
 }
 
-func (c *Client) MonitorMessages() error {
+func (c *client) monitorMessages() error {
 	for {
 		var msgRaw = make([]byte, 512)
 		n, err := c.conn.Read(msgRaw)
@@ -104,8 +98,19 @@ func (c *Client) MonitorMessages() error {
 		switch msg.Channel {
 		case server.ChannelPing:
 			c.logger.Debug("Received ping from server")
-			if err := c.Ping(); err != nil {
+			if err := c.ping(); err != nil {
 				return err
+			}
+		case server.ChannelLobby:
+			switch msg.Type {
+			case server.MessageTypeList:
+				c.logger.Debug("Received lobby list from server")
+				var l []*lobby.Lobby
+				if err := json.Unmarshal(msg.Data, &l); err != nil {
+					c.logger.Error("Error unmarshalling lobby list", "error", err)
+					continue
+				}
+				lobbies = l
 			}
 		}
 	}

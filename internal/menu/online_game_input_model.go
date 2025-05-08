@@ -89,9 +89,7 @@ func (m onlineGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 
-				lobbyModel := newLobbyModel(m.menuModel, lobbyName, playerName, numberOfPlayersInt)
-
-				return lobbyModel, nil
+				return newLobbyModel(m.menuModel, lobbyName, playerName, numberOfPlayersInt), nil
 			}
 
 			if s == "up" || s == "shift+tab" {

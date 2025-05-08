@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -24,13 +23,11 @@ type menuModel struct {
 	cursor          int
 	numberOfPlayers int
 	choices         []menuChoice
-	wsClient        *wsclient.Client
 	ticks           int
 
-	debug bool
+	logger *slog.Logger
+	debug  bool
 }
-
-type tick time.Time
 
 func (m menuModel) Init() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
@@ -45,14 +42,13 @@ func Run(logger *slog.Logger, debug bool) {
 }
 
 func new(logger *slog.Logger, debug bool) *menuModel {
-	wsClient := wsclient.NewWsClient(logger, "ws://localhost:8080/ws")
-	wsClient.Connect()
+	wsClient = newWsClient(logger, "ws://localhost:8080/ws")
 
 	return &menuModel{
 		cursor:          1,
 		numberOfPlayers: 3,
-		wsClient:        wsClient,
 		debug:           debug,
+		logger:          logger.With("component", "menu"),
 		choices: []menuChoice{
 			{
 				actionKeys: []string{"left", "right"},
@@ -77,7 +73,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 			{
 				actionKeys: []string{"o"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					if !m.wsClient.IsConnected() {
+					if !wsClient.IsConnected() {
 						return m, nil
 					}
 
@@ -87,7 +83,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 					details := "o"
 
-					if !m.wsClient.IsConnected() {
+					if !wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 						details = "connecting..."
 					}
@@ -98,16 +94,17 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 			{
 				actionKeys: []string{"j"},
 				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					if !m.wsClient.IsConnected() {
+					if !wsClient.IsConnected() {
 						return m, nil
 					}
-					return m, nil
+
+					return newJoinGameModel(m), nil
 				},
 				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 					details := "j"
 
-					if !m.wsClient.IsConnected() {
+					if !wsClient.IsConnected() {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 						details = "connecting..."
 					}
@@ -128,8 +125,6 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 	}
 }
 
-type tMsg time.Time
-
 func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tick:
@@ -143,7 +138,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			if m.cursor == 2 && !m.wsClient.IsConnected() {
+			if m.cursor == 2 && !wsClient.IsConnected() {
 				return m, nil
 			}
 			return m.choices[m.cursor].action(m)
@@ -182,8 +177,6 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-	case tMsg:
-		return m, nil
 	}
 
 	return m, nil
@@ -228,3 +221,21 @@ func (m menuModel) View() string {
 		menuJoin,
 	)
 }
+
+// func (m *menuModel) monitorMessages() {
+// 	for msg := range wsClient.GetMessage() {
+// 		switch msg.Channel {
+// 		case server.ChannelLobby:
+// 			switch msg.Type {
+// 			case server.MessageTypeList:
+// 				var lobbies []lobby.Lobby
+// 				if err := json.Unmarshal(msg.Data, &lobbies); err != nil {
+// 					m.logger.Error("Failed to unmarshal lobby list", "error", err)
+// 					continue
+// 				}
+// 				m.logger.Debug("Received lobby list", "lobbies", lobbies)
+
+// 			}
+// 		}
+// 	}
+// }
