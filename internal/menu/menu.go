@@ -27,7 +27,6 @@ type menuModel struct {
 	ticks           int
 
 	logger *slog.Logger
-	debug  bool
 }
 
 func (m menuModel) Init() tea.Cmd {
@@ -43,10 +42,12 @@ func (m *menuModel) checkHealth() {
 		resp, err := c.Get("http://localhost:8080/health")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			serverHealth = true
-			continue
+			goto CONTINUE
 		}
-
 		serverHealth = false
+
+	CONTINUE:
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -56,11 +57,11 @@ func Run(logger *slog.Logger, debug bool) {
 	}
 }
 
-func new(logger *slog.Logger, debug bool) *menuModel {
+func new(logger *slog.Logger, d bool) *menuModel {
+	debug = d
 	return &menuModel{
-		cursor:          1,
+		cursor:          0,
 		numberOfPlayers: 3,
-		debug:           debug,
 		logger:          logger.With("component", "menu"),
 		choices: []menuChoice{
 			{
@@ -70,7 +71,7 @@ func new(logger *slog.Logger, debug bool) *menuModel {
 						return m, nil
 					}
 
-					return newOnlineGameInputModel(m), nil
+					return newLobbyInputModel(m), nil
 				},
 				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
@@ -149,20 +150,12 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case tea.KeyUp:
-			if m.cursor > 1 {
+			if m.cursor > 0 {
 				m.cursor--
 			}
 		case tea.KeyDown:
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
-			}
-		case tea.KeyLeft:
-			if m.numberOfPlayers > 2 {
-				m.numberOfPlayers--
-			}
-		case tea.KeyRight:
-			if m.numberOfPlayers < 6 {
-				m.numberOfPlayers++
 			}
 		default:
 			return m, nil
@@ -180,12 +173,19 @@ func (m menuModel) View() string {
 		return "Window too small, please resize to something larger."
 	}
 
-	logoColor := lipgloss.Color("#0000ff")
+	panelStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).AlignVertical(lipgloss.Center)
+	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#0000ff")).Margin(1, 2)
+	titleStyle := lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1, 2)
+	menuStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left)
 
-	menuBaseStyle := lipgloss.NewStyle().Foreground(logoColor).BorderForeground(logoColor).Align(lipgloss.Center)
+	if debug {
+		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width-3).Height(m.height-2).Margin(0, 1)
+		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
+		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())
+	}
 
-	logo := menuBaseStyle.Width(m.width / 3).AlignVertical(lipgloss.Center).Render(logo)
-	title := menuBaseStyle.Border(lipgloss.NormalBorder()).Margin(1).Padding(1, 2).Align(lipgloss.Center, lipgloss.Center).Render("Farkle")
+	logoPanel := logoStyle.Render(logo)
+	titlePanel := titleStyle.Render("Farkle")
 	menu := make([]string, 0, 4)
 	for i, choice := range m.choices {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#fff"))
@@ -201,15 +201,19 @@ func (m menuModel) View() string {
 
 	menuJoin := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
-		menuBaseStyle.AlignHorizontal(lipgloss.Left).Render(strings.Join(menu, "\n")),
+		titlePanel,
+		menuStyle.Render(strings.Join(menu, "\n")),
 	)
 
-	menuJoin = lipgloss.NewStyle().Width((m.width / 3) * 2).Height(m.height).AlignVertical(lipgloss.Center).Render(menuJoin)
+	logoWidth := lipgloss.Width(logoPanel)
+	restOfPanelWidth := max(m.width-logoWidth, 0)
+	menuMargin := max((restOfPanelWidth/2)-lipgloss.Width(menuJoin), 0)
 
-	return lipgloss.JoinHorizontal(
+	menuPanel := lipgloss.NewStyle().MarginLeft(menuMargin).Align(lipgloss.Center, lipgloss.Center).Render(menuJoin)
+
+	return panelStyle.Render(lipgloss.JoinHorizontal(
 		lipgloss.Center,
-		logo,
-		menuJoin,
-	)
+		logoPanel,
+		menuPanel,
+	))
 }

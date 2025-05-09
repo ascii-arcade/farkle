@@ -2,11 +2,10 @@ package menu
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
-	"github.com/ascii-arcade/farkle/internal/player"
-	"github.com/ascii-arcade/farkle/internal/server"
 	"github.com/ascii-arcade/farkle/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,48 +15,29 @@ type lobbyModel struct {
 	width  int
 	height int
 
+	errors    string
 	menuModel menuModel
-
-	lobby *lobby.Lobby
 }
 
-func newLobbyModel(menuModel menuModel, name string, hostName string, playerCount int) lobbyModel {
+func newLobbyModel(menuModel menuModel, name string, hostName string) lobbyModel {
 	lm := lobbyModel{
 		width:     menuModel.width,
 		height:    menuModel.height,
 		menuModel: menuModel,
 	}
 
-	l := lobby.NewLobby(name, hostName, playerCount)
-	b, err := l.ToBytes()
-	if err != nil {
-		return lm
-	}
-
-	lm.lobby = l
-
-	wsClient.SendMessage(server.Message{
-		Channel: server.ChannelLobby,
-		Type:    server.MessageTypeCreate,
-		Data:    b,
-	})
+	currentLobby = lobby.NewLobby(name, hostName)
+	// b, err := currentLobby.ToBytes()
+	// if err != nil {
+	// 	return lm
+	// }
+	lm.errors = "TEST"
 
 	return lm
 }
 
-func fromLobby(menuModel menuModel, l *lobby.Lobby) lobbyModel {
-	return lobbyModel{
-		width:     menuModel.width,
-		height:    menuModel.height,
-		menuModel: menuModel,
-		lobby:     l,
-	}
-}
-
 func (m lobbyModel) Init() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tick(t)
-	})
+	return nil
 }
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -67,16 +47,12 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			wsClient.SendMessage(server.Message{
-				Channel: server.ChannelLobby,
-				Type:    server.MessageTypeLeave,
-			})
 			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 				return tick(t)
 			})
 		case "enter":
-			if m.lobby.Ready() {
-				tui.RunFromLobby(m.lobby)
+			if currentLobby.Ready() {
+				tui.RunFromLobby(currentLobby)
 				return m.menuModel, nil
 			}
 
@@ -95,49 +71,52 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m lobbyModel) View() string {
-	fullPaneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).Align(lipgloss.Center, lipgloss.Center)
-	lobbyStyle := lipgloss.NewStyle().Margin(1, 2).Padding(1, 2).Border(lipgloss.NormalBorder(), true)
+	fullPaneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height-1).Align(lipgloss.Center, lipgloss.Center)
+	lobbyStyle := lipgloss.NewStyle().Padding(1, 2).Margin(1).BorderStyle(lipgloss.NormalBorder())
 	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width)
+	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).Margin(1)
 
-	l := []string{}
-	l = append(l, "Lobby: "+m.lobby.Name)
+	if debug {
+		fullPaneStyle = fullPaneStyle.BorderStyle(lipgloss.ASCIIBorder()).BorderForeground(lipgloss.Color("#0000ff")).Width(m.width - 2).Height(m.height - 3)
+		controlsStyle = controlsStyle.Background(lipgloss.Color("#0000ff")).Foreground(lipgloss.Color("#ffffff"))
+		errorsStyle = errorsStyle.BorderStyle(lipgloss.ASCIIBorder()).BorderForeground(lipgloss.Color("#0000ff")).Margin(0)
+	}
 
-	for i, player := range m.lobby.Players {
+	lobbyContent := []string{}
+
+	for i, player := range currentLobby.Players {
 		if player != nil && player.Host {
-			l = append(l, fmt.Sprintf("%d) %s (Host)", i, player.Name))
+			lobbyContent = append(lobbyContent, fmt.Sprintf("%d) %s (Host)", i, player.Name))
 			continue
 		}
 
 		if player == nil {
-			l = append(l, fmt.Sprintf("%d) (Waiting for player to join...)", i))
+			lobbyContent = append(lobbyContent, fmt.Sprintf("%d) (Waiting for player to join...)", i))
 			continue
 		}
 
-		l = append(l, fmt.Sprintf("%d) %s", i, player.Name))
+		lobbyContent = append(lobbyContent, fmt.Sprintf("%d) %s", i, player.Name))
 	}
 
-	lobbyRender := lobbyStyle.Render(
+	lobbyPane := lobbyStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			l...,
+			lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render("Lobby: "+currentLobby.Name),
+			strings.Join(lobbyContent, "\n"),
 		),
+	)
+
+	controlsPane := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		controlsStyle.Render("ESC to exit, Enter to start the game"),
 	)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Center,
 		fullPaneStyle.Render(
-			lobbyRender,
+			lobbyPane,
+			errorsStyle.Render(m.errors),
 		),
-		controlsStyle.Render("ESC to exit, Enter to start the game"),
+		controlsPane,
 	)
-}
-
-func missingPlayers(players []*player.Player) int {
-	missing := len(players)
-	for _, player := range players {
-		if player == nil || player.Name == "" {
-			missing--
-		}
-	}
-	return missing
 }

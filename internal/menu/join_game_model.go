@@ -30,7 +30,6 @@ func newJoinGameModel(menuModel menuModel) joinGameModel {
 		focusIndex: 0,
 		menuModel:  menuModel,
 		logger:     menuModel.logger.With("component", "join_game"),
-		debug:      menuModel.debug,
 		inputs:     make([]textinput.Model, 2),
 	}
 
@@ -153,10 +152,6 @@ func (m joinGameModel) View() string {
 			BorderForeground(lipgloss.Color("#ff0000")).
 			BorderStyle(lipgloss.ASCIIBorder()).
 			Height(m.height - 3).
-			Width(m.width - 2)
-		controlsStyle = controlsStyle.
-			Foreground(lipgloss.Color("#ff0000")).
-			Align(lipgloss.Left, lipgloss.Bottom).
 			Width(m.width - 2)
 	}
 

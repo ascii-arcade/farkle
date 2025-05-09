@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
-	"github.com/ascii-arcade/farkle/internal/player"
 	"github.com/ascii-arcade/farkle/internal/server"
 	"golang.org/x/net/websocket"
 )
@@ -104,27 +103,16 @@ func (c *client) monitorMessages() error {
 			}
 		case server.ChannelLobby:
 			switch msg.Type {
-			case server.MessageTypeList:
+			case server.MessageTypeUpdated:
 				c.logger.Debug("Received lobby list from server")
-				var l []*lobby.Lobby
+				var l *lobby.Lobby
 				if err := json.Unmarshal(msg.Data, &l); err != nil {
 					c.logger.Error("Error unmarshalling lobby list", "error", err)
 					continue
 				}
-				for _, lobby := range l {
-					updateLobby(lobby)
+				if l != nil {
+					currentLobby = l
 				}
-			}
-		case server.ChannelPlayer:
-			switch msg.Type {
-			case server.MessageTypeMe:
-				c.logger.Debug("Received player info from server")
-				var player *player.Player
-				if err := json.Unmarshal(msg.Data, &player); err != nil {
-					c.logger.Error("Error unmarshalling player info", "error", err)
-					continue
-				}
-				myPlayer = player
 			}
 		}
 	}

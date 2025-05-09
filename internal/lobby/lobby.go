@@ -20,13 +20,14 @@ type Lobby struct {
 	mu sync.Mutex
 }
 
-func NewLobby(lobbyName, hostName string, playerCount int) *Lobby {
-	players := make([]*player.Player, playerCount)
-	players[0] = &player.Player{
+func NewLobby(lobbyName, hostName string) *Lobby {
+	players := make([]*player.Player, 0, 6)
+	host := &player.Player{
 		Name:  hostName,
 		Score: 0,
 		Host:  true,
 	}
+	players = append(players, host)
 
 	return &Lobby{
 		Id:        xid.New().String(),

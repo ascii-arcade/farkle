@@ -1,17 +1,15 @@
 package menu
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/tui"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type localGameInputModel struct {
+type lobbyInputModel struct {
 	width      int
 	height     int
 	focusIndex int
@@ -19,47 +17,46 @@ type localGameInputModel struct {
 	menuModel  menuModel
 }
 
-func newLocalGameInputModel(menuModel menuModel) localGameInputModel {
-	m := localGameInputModel{
-		inputs:    make([]textinput.Model, menuModel.numberOfPlayers),
+func newLobbyInputModel(menuModel menuModel) lobbyInputModel {
+	m := lobbyInputModel{
+		inputs:    make([]textinput.Model, 0),
 		menuModel: menuModel,
 		width:     menuModel.width,
 		height:    menuModel.height,
 	}
 
-	var t textinput.Model
-	for i := range m.inputs {
-		t = textinput.New()
-		t.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-		t.CharLimit = 25
-		t.Width = 25
+	playerNameInput := textinput.New()
+	playerNameInput.Width = 25
+	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	playerNameInput.CharLimit = 25
+	playerNameInput.Placeholder = "Your name"
+	playerNameInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	playerNameInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	playerNameInput.Focus()
 
-		if i == 0 {
-			t.Placeholder = "Player 1"
-			t.Focus()
-			t.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-			t.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	lobbyNameInput := textinput.New()
+	lobbyNameInput.Width = 25
+	lobbyNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	lobbyNameInput.CharLimit = 25
+	lobbyNameInput.Placeholder = "Lobby name"
+	lobbyNameInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	lobbyNameInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-			m.inputs[i] = t
-			continue
-		}
-
-		t.Placeholder = "Player " + strconv.Itoa(i+1)
-		m.inputs[i] = t
-	}
+	m.inputs = append(m.inputs, playerNameInput)
+	m.inputs = append(m.inputs, lobbyNameInput)
 
 	return m
 }
 
-func (m localGameInputModel) Init() tea.Cmd {
+func (m lobbyInputModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m lobbyInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
 			return m.menuModel, tea.Tick(time.Second, func(t time.Time) tea.Msg {
@@ -69,14 +66,14 @@ func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			s := msg.String()
 
 			if s == "enter" && m.focusIndex == len(m.inputs) {
-				playerNames := make([]string, 0, len(m.inputs))
-				for input := range m.inputs {
-					playerNames = append(playerNames, m.inputs[input].Value())
+				playerName := m.inputs[0].Value()
+				lobbyName := m.inputs[1].Value()
+
+				if playerName == "" || lobbyName == "" {
+					return m, nil
 				}
 
-				tui.Run(playerNames, m.menuModel.debug)
-
-				return m.menuModel, nil
+				return newLobbyModel(m.menuModel, lobbyName, playerName), nil
 			}
 
 			if s == "up" || s == "shift+tab" {
@@ -115,14 +112,15 @@ func (m localGameInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m localGameInputModel) View() string {
-	paneStyle := lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center)
+func (m lobbyInputModel) View() string {
+	paneStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).Align(lipgloss.Center, lipgloss.Center)
 
 	if m.height < 15 || m.width < 100 {
 		return paneStyle.Render("Window too small, please resize to something larger.")
+	}
+
+	if debug {
+		paneStyle = paneStyle.BorderStyle(lipgloss.ASCIIBorder()).BorderForeground(lipgloss.Color("#0000ff")).Width(m.width - 2).Height(m.height - 2)
 	}
 
 	inputStyle := lipgloss.NewStyle().
@@ -136,22 +134,21 @@ func (m localGameInputModel) View() string {
 	for i := range m.inputs {
 		rows = append(rows, m.inputs[i].View())
 	}
-	rows = append(rows, "\n\n")
-	submitStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	submitStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).MarginTop(1)
 	if m.focusIndex == len(m.inputs) {
-		submitStyle = lipgloss.NewStyle().
+		submitStyle = submitStyle.
 			Foreground(lipgloss.Color("205")).
 			Bold(true).
 			Align(lipgloss.Center)
 	}
 
-	rows = append(rows, submitStyle.Render("Start Game"))
+	rows = append(rows, submitStyle.Render("Create Lobby"))
 
 	inputPane := lipgloss.JoinVertical(lipgloss.Center, inputStyle.Render(strings.Join(rows, "\n")))
 	return paneStyle.Render(inputPane)
 }
 
-func (m *localGameInputModel) updateInputs(msg tea.Msg) tea.Cmd {
+func (m *lobbyInputModel) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputs))
 	for i := range m.inputs {
 		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
