@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/player"
 )
 
 type hub struct {
@@ -82,6 +83,13 @@ func (h *hub) broadcastMessage(msg Message) {
 			logger.Error("Failed to send message", "error", err)
 		}
 	}
+}
+
+func (h *hub) createLobby(host *player.Player, lobbyName string) *lobby.Lobby {
+	lobby := lobby.NewLobby(lobbyName, host)
+	h.lobbies[lobby.Id] = lobby
+	h.addLobby(lobby)
+	return lobby
 }
 
 func (h *hub) addLobby(lobby *lobby.Lobby) {

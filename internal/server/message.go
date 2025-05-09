@@ -8,7 +8,7 @@ import (
 type Message struct {
 	Channel Channel     `json:"channel"`
 	Type    MessageType `json:"type"`
-	Data    []byte      `json:"data"`
+	Data    any         `json:"data"`
 	SentAt  time.Time   `json:"sent_at"`
 
 	from *client `json:"-"`

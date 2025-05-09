@@ -72,8 +72,9 @@ func (m lobbyInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if playerName == "" || lobbyName == "" {
 					return m, nil
 				}
+				nm := newLobbyModel(m.menuModel, lobbyName, playerName)
 
-				return newLobbyModel(m.menuModel, lobbyName, playerName), nil
+				return nm, nm.Init()
 			}
 
 			if s == "up" || s == "shift+tab" {

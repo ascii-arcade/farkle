@@ -9,9 +9,12 @@ import (
 
 type tick time.Time
 
-var wsClient *client
-
-var currentLobby *lobby.Lobby
-var myPlayer *player.Player
-var serverHealth bool
-var debug bool
+var (
+	wsClient     *client
+	currentLobby *lobby.Lobby
+	me           *player.Player
+	serverHealth bool
+	debug        bool
+	serverURL    string = "localhost"
+	serverPort   string = "8080"
+)

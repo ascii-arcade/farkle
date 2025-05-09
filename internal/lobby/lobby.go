@@ -20,14 +20,9 @@ type Lobby struct {
 	mu sync.Mutex
 }
 
-func NewLobby(lobbyName, hostName string) *Lobby {
-	players := make([]*player.Player, 0, 6)
-	host := &player.Player{
-		Name:  hostName,
-		Score: 0,
-		Host:  true,
-	}
-	players = append(players, host)
+func NewLobby(lobbyName string, host *player.Player) *Lobby {
+	players := make([]*player.Player, 6)
+	players[0] = host
 
 	return &Lobby{
 		Id:        xid.New().String(),
@@ -74,15 +69,22 @@ func (l *Lobby) RemovePlayer(name string) {
 func (l *Lobby) Ready() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return len(l.Players) > 2
+	playerCount := 0
+	for _, player := range l.Players {
+		if player != nil {
+			playerCount++
+			if playerCount > 2 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
-func (l *Lobby) ToBytes() ([]byte, error) {
-	b, err := json.Marshal(l)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
+func (l *Lobby) ToBytes() []byte {
+	b, _ := json.Marshal(l)
+	return b
 }
 
 func FromBytes(b []byte) (*Lobby, error) {

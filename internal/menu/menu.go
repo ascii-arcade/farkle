@@ -24,7 +24,6 @@ type menuModel struct {
 	cursor          int
 	numberOfPlayers int
 	choices         []menuChoice
-	ticks           int
 
 	logger *slog.Logger
 }
@@ -52,12 +51,12 @@ func (m *menuModel) checkHealth() {
 }
 
 func Run(logger *slog.Logger, debug bool) {
-	if _, err := tea.NewProgram(new(logger, debug)).Run(); err != nil {
+	if _, err := tea.NewProgram(newMenu(logger, debug)).Run(); err != nil {
 		fmt.Println("Error starting program:", err)
 	}
 }
 
-func new(logger *slog.Logger, d bool) *menuModel {
+func newMenu(logger *slog.Logger, d bool) *menuModel {
 	debug = d
 	return &menuModel{
 		cursor:          0,
@@ -71,7 +70,9 @@ func new(logger *slog.Logger, d bool) *menuModel {
 						return m, nil
 					}
 
-					return newLobbyInputModel(m), nil
+					nm := newLobbyInputModel(m)
+
+					return nm, nm.Init()
 				},
 				render: func(m menuModel) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
@@ -123,10 +124,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tick:
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
-			m.ticks++
-			if m.ticks%60 == 0 {
-				m.ticks = 0
-			}
+			m.logger.Debug("Tick")
 			return tick(t)
 		})
 	case tea.KeyMsg:

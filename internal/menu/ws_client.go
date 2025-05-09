@@ -2,36 +2,34 @@ package menu
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/lobby"
 	"github.com/ascii-arcade/farkle/internal/server"
 	"golang.org/x/net/websocket"
 )
 
 type client struct {
-	url       string
 	conn      *websocket.Conn
 	connected bool
 	logger    *slog.Logger
 }
 
-func newWsClient(logger *slog.Logger, url string) *client {
-	l := logger.With("component", "wsclient", "url", url)
+func newWsClient(logger *slog.Logger) *client {
+	l := logger.With("component", "wsclient")
 	c := &client{
-		url:    url,
 		logger: l,
 	}
-	c.connect()
-	return c
+	return c.connect()
 }
 
-func (c *client) connect() {
-	c.logger.Debug("Connecting to server", "url", c.url)
+func (c *client) connect() *client {
+	url := fmt.Sprintf("ws://%s:%s/ws", serverURL, serverPort)
+	c.logger.Debug("Connecting to server", "url", url)
 	go func() {
 		for {
-			conn, err := websocket.Dial(c.url, "", "http://localhost/")
+			conn, err := websocket.Dial(url, "", "http://localhost/")
 			if err != nil {
 				c.logger.Error("Error connecting to server", "error", err)
 				goto RECONNECT
@@ -49,6 +47,7 @@ func (c *client) connect() {
 			time.Sleep(5 * time.Second)
 		}
 	}()
+	return c
 }
 
 func (c *client) IsConnected() bool {
@@ -62,6 +61,10 @@ func (c *client) Close() {
 }
 
 func (c *client) SendMessage(msg server.Message) error {
+	if !c.connected {
+		c.waitForConnection()
+	}
+
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -72,6 +75,12 @@ func (c *client) SendMessage(msg server.Message) error {
 	}
 
 	return nil
+}
+
+func (c *client) waitForConnection() {
+	for !c.connected {
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (c *client) ping() error {
@@ -101,17 +110,29 @@ func (c *client) monitorMessages() error {
 			if err := c.ping(); err != nil {
 				return err
 			}
+		case server.ChannelPlayer:
+			c.logger.Debug("Received player message from server")
+			switch msg.Type {
+			case server.MessageTypeMe:
+				c.logger.Debug("Received player message from server")
+				if err := json.Unmarshal(msg.Data.([]byte), &me); err != nil {
+					c.logger.Error("Error unmarshalling player message", "error", err)
+					continue
+				}
+			}
 		case server.ChannelLobby:
 			switch msg.Type {
 			case server.MessageTypeUpdated:
 				c.logger.Debug("Received lobby list from server")
-				var l *lobby.Lobby
-				if err := json.Unmarshal(msg.Data, &l); err != nil {
+				if err := json.Unmarshal(msg.Data.([]byte), &currentLobby); err != nil {
 					c.logger.Error("Error unmarshalling lobby list", "error", err)
 					continue
 				}
-				if l != nil {
-					currentLobby = l
+			case server.MessageTypeCreated:
+				c.logger.Debug("Received lobby created message from server")
+				if err := json.Unmarshal(msg.Data.([]byte), &currentLobby); err != nil {
+					c.logger.Error("Error unmarshalling lobby created message", "error", err)
+					continue
 				}
 			}
 		}
