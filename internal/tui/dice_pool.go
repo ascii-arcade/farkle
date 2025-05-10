@@ -65,12 +65,12 @@ func (p *dicePool) render() string {
 
 	topDice := make([]string, 0)
 	for i := range topCount {
-		topDice = append(topDice, die((*p)[i]))
+		topDice = append(topDice, dieFaces[(*p)[i]])
 	}
 
 	bottomDice := make([]string, 0)
 	for i := range bottomCount {
-		bottomDice = append(bottomDice, die((*p)[i+topCount]))
+		bottomDice = append(bottomDice, dieFaces[(*p)[i+topCount]])
 	}
 
 	return lipgloss.JoinVertical(
