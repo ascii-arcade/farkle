@@ -1,4 +1,4 @@
-package server
+package message
 
 import (
 	"encoding/json"
@@ -11,13 +11,17 @@ type Message struct {
 	Data    any         `json:"data"`
 	SentAt  time.Time   `json:"sent_at"`
 
-	from *client `json:"-"`
+	from string `json:"-"`
 }
 
-func (m *Message) toBytes() []byte {
+func (m *Message) ToBytes() []byte {
 	b, err := json.Marshal(m)
 	if err != nil {
 		return nil
 	}
 	return b
+}
+
+func (m *Message) IsFromPlayer(id string) bool {
+	return m.from == id
 }

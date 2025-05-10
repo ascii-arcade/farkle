@@ -1,4 +1,4 @@
-package server
+package message
 
 type Channel string
 

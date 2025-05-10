@@ -26,39 +26,47 @@ type menuModel struct {
 	gameCodeInput   textinput.Model
 	choices         []menuChoice
 
-	logger *slog.Logger
+	err string
 }
 
 func (m menuModel) Init() tea.Cmd {
+	if wsClient != nil {
+		close(wsClient.disconnect)
+		wsClient = nil
+	}
 
-	go m.checkHealth()
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+	sizeCmd := tea.WindowSize()
+	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tick(t)
 	})
+
+	return tea.Batch(sizeCmd, tickCmd)
 }
 
 func (m *menuModel) checkHealth() {
 	c := http.Client{}
-	for {
-		resp, err := c.Get("http://localhost:8080/health")
-		if err == nil && resp.StatusCode == http.StatusOK {
-			serverHealth = true
-			goto CONTINUE
-		}
-		serverHealth = false
-
-	CONTINUE:
-		time.Sleep(5 * time.Second)
+	// for {
+	resp, err := c.Get("http://localhost:8080/health")
+	if err == nil && resp.StatusCode == http.StatusOK {
+		serverHealth = true
+		return
 	}
+	serverHealth = false
+
+	// CONTINUE:
+	// 	time.Sleep(5 * time.Second)
+	// }
 }
 
-func Run(logger *slog.Logger, debug bool) {
-	if _, err := tea.NewProgram(newMenu(logger, debug)).Run(); err != nil {
+func Run(loggerIn *slog.Logger, debugIn bool) {
+	logger = loggerIn
+	debug = debugIn
+	if _, err := tea.NewProgram(newMenu()).Run(); err != nil {
 		fmt.Println("Error starting program:", err)
 	}
 }
 
-func newMenu(logger *slog.Logger, d bool) *menuModel {
+func newMenu() *menuModel {
 	playerNameInput := textinput.New()
 	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	playerNameInput.CharLimit = 25
@@ -75,10 +83,8 @@ func newMenu(logger *slog.Logger, d bool) *menuModel {
 	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 	gameRoomInput.Focus()
 
-	debug = d
 	return &menuModel{
 		index:           0,
-		logger:          logger.With("component", "menu"),
 		playerNameInput: playerNameInput,
 		gameCodeInput:   gameRoomInput,
 		choices: []menuChoice{
@@ -104,7 +110,7 @@ func newMenu(logger *slog.Logger, d bool) *menuModel {
 					if !serverHealth {
 						return m, nil
 					}
-					return newLobbyModel(m, m.playerNameInput.Value())
+					return newLobbyModel(m.playerNameInput.Value(), "", false)
 				},
 				render: func(m menuModel, selected bool) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
@@ -126,16 +132,32 @@ func newMenu(logger *slog.Logger, d bool) *menuModel {
 				input: true,
 				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
 					var cmd tea.Cmd
-					m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
 
 					switch msg := msg.(type) {
 					case tea.KeyMsg:
 						if msg.Type == tea.KeyCtrlQuestionMark {
-							if len(m.gameCodeInput.Value()) == 3 {
+							if len(m.gameCodeInput.Value()) == 4 {
 								m.gameCodeInput.SetValue(m.gameCodeInput.Value()[:len(m.gameCodeInput.Value())-1])
 							}
 						}
+						if msg.Type == tea.KeyEnter {
+							if len(m.playerNameInput.Value()) < 3 {
+								m.err = "A player name must be at least 3 characters long"
+								m.index = 0
+								return m, nil
+							}
+
+							if len(m.gameCodeInput.Value()) < 7 {
+								m.err = "A game code must be 7 characters long"
+								m.index = 3
+								return m, nil
+							}
+
+							return newLobbyModel(m.playerNameInput.Value(), m.gameCodeInput.Value(), true)
+						}
 					}
+
+					m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
 
 					if len(m.gameCodeInput.Value()) == 3 {
 						m.gameCodeInput.SetValue(m.gameCodeInput.Value() + "-")
@@ -179,7 +201,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tick:
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
-			m.logger.Debug("Tick")
+			m.checkHealth()
 			return tick(t)
 		})
 	case tea.KeyMsg:
@@ -217,15 +239,19 @@ func (m menuModel) View() string {
 		return "Window too small, please resize to something larger."
 	}
 
-	panelStyle := lipgloss.NewStyle().Width(m.width).Height(m.height).AlignVertical(lipgloss.Center)
+	panelStyle := lipgloss.NewStyle().Width(m.width).Height(m.height - 1).AlignVertical(lipgloss.Center)
 	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#0000ff")).Margin(1, 2)
 	titleStyle := lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1, 2)
 	menuStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left)
+	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width / 2)
+	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.width / 2)
 
 	if debug {
-		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width - 2).Height(m.height - 2)
+		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width - 2).Height(m.height - 3)
 		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
 		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())
+		controlsStyle = controlsStyle.Background(lipgloss.Color("#000066")).Foreground(lipgloss.Color("#ffffff"))
+		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
 	}
 
 	logoPanel := logoStyle.Render(logo)
@@ -252,9 +278,21 @@ func (m menuModel) View() string {
 
 	menuPanel := lipgloss.NewStyle().MarginLeft(menuMargin).Align(lipgloss.Center, lipgloss.Center).Render(menuJoin)
 
-	return panelStyle.Render(lipgloss.JoinHorizontal(
+	panel := panelStyle.Render(lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		logoPanel,
 		menuPanel,
 	))
+
+	controlsPane := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		controlsStyle.Render("ctrl+c to quit"),
+		errorsStyle.Render(m.err),
+	)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Center,
+		panel,
+		controlsPane,
+	)
 }

@@ -3,32 +3,32 @@ package lobby
 import (
 	"encoding/json"
 	"math/rand"
-	"slices"
-	"sync"
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/player"
+	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/rs/xid"
 )
 
 type Lobby struct {
-	Id        string
-	Name      string
-	Players   []*player.Player
-	Started   bool
-	CreatedAt time.Time
-	Code      string
+	Id        string           `json:"id"`
+	Name      string           `json:"name"`
+	Players   []*player.Player `json:"players"`
+	Started   bool             `json:"started"`
+	CreatedAt time.Time        `json:"created_at"`
+	Code      string           `json:"code"`
 
-	mu sync.Mutex
+	// mu sync.Mutex `json:"-"`
 }
 
 func NewLobby(host *player.Player) *Lobby {
 	players := make([]*player.Player, 6)
+	host.Host = true
 	players[0] = host
 
 	return &Lobby{
 		Id:        xid.New().String(),
-		Name:      host.Name + "'s game",
+		Name:      petname.Generate(2, "-"),
 		Code:      newCode(),
 		Players:   players,
 		Started:   false,
@@ -37,50 +37,81 @@ func NewLobby(host *player.Player) *Lobby {
 }
 
 func newCode() string {
-	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, 6)
 	for i := range b {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
-	return string(b[0:2]) + "-" + string(b[3:5])
+	return string(b[:3]) + "-" + string(b[3:6])
 }
 
-func (l *Lobby) AddPlayer(name string) *player.Player {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// func FromMap(m map[string]any) (*Lobby, error) {
+// 	b, err := json.Marshal(m)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	lobby := &Lobby{}
+// 	if err := json.Unmarshal(b, &lobby); err != nil {
+// 		return nil, err
+// 	}
+
+// 	return lobby, nil
+// }
+
+func (l *Lobby) AddPlayer(p *player.Player) bool {
+	// l.mu.Lock()
+	// defer l.mu.Unlock()
 	emptyIndex := 0
 	for i, player := range l.Players {
 		if player == nil {
 			emptyIndex = i
 			break
 		}
+
+		if player.Id == p.Id {
+			return true
+		}
 	}
-	if emptyIndex == 0 && len(l.Players) == cap(l.Players) {
-		return nil
+	if emptyIndex == 0 && l.IsFull() {
+		return false
 	}
-	newPlayer := &player.Player{
-		Id:    xid.New().String(),
-		Name:  name,
-		Score: 0,
-	}
-	l.Players[emptyIndex] = newPlayer
-	return newPlayer
+	l.Players[emptyIndex] = p
+
+	return true
 }
 
-func (l *Lobby) RemovePlayer(name string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (l *Lobby) RemovePlayer(p *player.Player) {
+	// l.mu.Lock()
+	// defer l.mu.Unlock()
 	for i, player := range l.Players {
-		if player.Name == name {
-			l.Players = slices.Delete(l.Players, i, i+1)
-			break
+		if player == nil {
+			continue
+		}
+
+		if player.Id == p.Id {
+			if player.Host {
+				l.NewHost()
+			}
+
+			l.Players[i] = nil
+			return
+		}
+	}
+}
+
+func (l *Lobby) NewHost() {
+	for i, player := range l.Players {
+		if player != nil && !player.Host {
+			l.Players[i].Host = true
+			return
 		}
 	}
 }
 
 func (l *Lobby) Ready() bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// l.mu.Lock()
+	// defer l.mu.Unlock()
 	playerCount := 0
 	for _, player := range l.Players {
 		if player != nil {
@@ -94,16 +125,41 @@ func (l *Lobby) Ready() bool {
 	return false
 }
 
-func (l *Lobby) ToBytes() []byte {
-	b, _ := json.Marshal(l)
-	return b
+func (l *Lobby) ToJSON() string {
+	b, err := json.Marshal(l)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
 
-func FromBytes(b []byte) (*Lobby, error) {
-	lobby := &Lobby{}
-	if err := json.Unmarshal(b, &lobby); err != nil {
-		return nil, err
+func (l *Lobby) GetHost() *player.Player {
+	for _, player := range l.Players {
+		if player != nil && player.Host {
+			return player
+		}
 	}
+	return nil
+}
 
-	return lobby, nil
+func (l *Lobby) IsHost(p *player.Player) bool {
+	return l.GetHost().Id == p.Id
+}
+
+func (l *Lobby) IsEmpty() bool {
+	for _, player := range l.Players {
+		if player != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (l *Lobby) IsFull() bool {
+	for _, player := range l.Players {
+		if player == nil {
+			return false
+		}
+	}
+	return true
 }

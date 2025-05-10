@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/server"
+	"github.com/ascii-arcade/farkle/internal/message"
 	"golang.org/x/net/websocket"
 )
 
@@ -14,21 +14,37 @@ type client struct {
 	conn      *websocket.Conn
 	connected bool
 	logger    *slog.Logger
+	name      string
+
+	disconnect chan bool
 }
 
-func newWsClient(logger *slog.Logger) *client {
+func newWsClient(name string) *client {
 	l := logger.With("component", "wsclient")
 	c := &client{
-		logger: l,
+		logger:     l,
+		name:       name,
+		disconnect: make(chan bool),
 	}
 	return c.connect()
 }
 
 func (c *client) connect() *client {
-	url := fmt.Sprintf("ws://%s:%s/ws", serverURL, serverPort)
+	url := fmt.Sprintf("ws://%s:%s/ws?name=%s", serverURL, serverPort, c.name)
 	c.logger.Debug("Connecting to server", "url", url)
 	go func() {
 		for {
+			select {
+			case <-c.disconnect:
+				c.logger.Debug("Disconnecting from server")
+				if err := c.conn.Close(); err != nil {
+					c.logger.Error("Error closing connection", "error", err)
+				}
+				c.connected = false
+				return
+			default:
+			}
+
 			conn, err := websocket.Dial(url, "", "http://localhost/")
 			if err != nil {
 				c.logger.Error("Error connecting to server", "error", err)
@@ -60,7 +76,7 @@ func (c *client) Close() {
 	}
 }
 
-func (c *client) SendMessage(msg server.Message) error {
+func (c *client) SendMessage(msg message.Message) error {
 	if !c.connected {
 		c.waitForConnection()
 	}
@@ -84,8 +100,9 @@ func (c *client) waitForConnection() {
 }
 
 func (c *client) ping() error {
-	msg := server.Message{
-		Channel: server.ChannelPing,
+	msg := message.Message{
+		Channel: message.ChannelPing,
+		Type:    message.MessageTypePing,
 		SentAt:  time.Now(),
 	}
 	return c.SendMessage(msg)
@@ -93,45 +110,51 @@ func (c *client) ping() error {
 
 func (c *client) monitorMessages() error {
 	for {
-		msgRaw := make([]byte, 1024) // Allocate a buffer with a fixed size
+		select {
+		case <-c.disconnect:
+			c.logger.Debug("shutting down message monitor")
+			return nil
+		default:
+		}
+
+		if c.conn == nil || !c.connected {
+			c.logger.Error("Connection is nil, cannot monitor messages")
+			return nil
+		}
+
+		msgRaw := make([]byte, 4096) // Allocate a buffer with a fixed size
 		n, err := c.conn.Read(msgRaw)
 		if err != nil {
 			return err
 		}
 
-		var msg server.Message
+		var msg message.Message
 		if err := json.Unmarshal(msgRaw[:n], &msg); err != nil {
 			return err
 		}
 
 		switch msg.Channel {
-		case server.ChannelPing:
+		case message.ChannelPing:
 			c.logger.Debug("Received ping from server")
 			if err := c.ping(); err != nil {
 				return err
 			}
-		case server.ChannelPlayer:
+		case message.ChannelPlayer:
 			c.logger.Debug("Received player message from server")
 			switch msg.Type {
-			case server.MessageTypeMe:
+			case message.MessageTypeMe:
 				c.logger.Debug("Received player message from server")
-				if err := json.Unmarshal(msg.Data.([]byte), &me); err != nil {
+				if err = json.Unmarshal([]byte(msg.Data.(string)), &me); err != nil {
 					c.logger.Error("Error unmarshalling player message", "error", err)
 					continue
 				}
 			}
-		case server.ChannelLobby:
+		case message.ChannelLobby:
 			switch msg.Type {
-			case server.MessageTypeUpdated:
-				c.logger.Debug("Received lobby list from server")
-				if err := json.Unmarshal(msg.Data.([]byte), &currentLobby); err != nil {
-					c.logger.Error("Error unmarshalling lobby list", "error", err)
-					continue
-				}
-			case server.MessageTypeCreated:
-				c.logger.Debug("Received lobby created message from server")
-				if err := json.Unmarshal(msg.Data.([]byte), &currentLobby); err != nil {
-					c.logger.Error("Error unmarshalling lobby created message", "error", err)
+			case message.MessageTypeCreated, message.MessageTypeUpdated:
+				c.logger.Debug("Received lobby update from server")
+				if err = json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
+					c.logger.Error("Error unmarshalling player message", "error", err)
 					continue
 				}
 			}
