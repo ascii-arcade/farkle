@@ -85,9 +85,8 @@ func (h *hub) broadcastMessage(msg Message) {
 	}
 }
 
-func (h *hub) createLobby(host *player.Player, lobbyName string) *lobby.Lobby {
-	lobby := lobby.NewLobby(lobbyName, host)
-	h.lobbies[lobby.Id] = lobby
+func (h *hub) createLobby(host *player.Player) *lobby.Lobby {
+	lobby := lobby.NewLobby(host)
 	h.addLobby(lobby)
 	return lobby
 }

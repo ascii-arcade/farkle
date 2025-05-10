@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"encoding/json"
+	"math/rand"
 	"slices"
 	"sync"
 	"time"
@@ -16,21 +17,32 @@ type Lobby struct {
 	Players   []*player.Player
 	Started   bool
 	CreatedAt time.Time
+	Code      string
 
 	mu sync.Mutex
 }
 
-func NewLobby(lobbyName string, host *player.Player) *Lobby {
+func NewLobby(host *player.Player) *Lobby {
 	players := make([]*player.Player, 6)
 	players[0] = host
 
 	return &Lobby{
 		Id:        xid.New().String(),
-		Name:      lobbyName,
+		Name:      host.Name + "'s game",
+		Code:      newCode(),
 		Players:   players,
 		Started:   false,
 		CreatedAt: time.Now(),
 	}
+}
+
+func newCode() string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b[0:2]) + "-" + string(b[3:5])
 }
 
 func (l *Lobby) AddPlayer(name string) *player.Player {

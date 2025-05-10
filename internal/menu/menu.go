@@ -4,31 +4,33 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type menuChoice struct {
-	actionKeys []string
-	action     func(m menuModel) (tea.Model, tea.Cmd)
-	render     func(m menuModel) string
+	action func(menuModel, tea.Msg) (tea.Model, tea.Cmd)
+	render func(menuModel, bool) string
+	input  bool
 }
 
 type menuModel struct {
 	width           int
 	height          int
-	cursor          int
-	numberOfPlayers int
+	index           int
+	playerNameInput textinput.Model
+	gameCodeInput   textinput.Model
 	choices         []menuChoice
 
 	logger *slog.Logger
 }
 
 func (m menuModel) Init() tea.Cmd {
+
 	go m.checkHealth()
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tick(t)
@@ -57,63 +59,116 @@ func Run(logger *slog.Logger, debug bool) {
 }
 
 func newMenu(logger *slog.Logger, d bool) *menuModel {
+	playerNameInput := textinput.New()
+	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	playerNameInput.CharLimit = 25
+	playerNameInput.Width = 25
+	playerNameInput.Placeholder = "Your name"
+	playerNameInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+	playerNameInput.Focus()
+
+	gameRoomInput := textinput.New()
+	gameRoomInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	gameRoomInput.CharLimit = 7
+	gameRoomInput.Width = 25
+	gameRoomInput.Placeholder = "Game code"
+	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+	gameRoomInput.Focus()
+
 	debug = d
 	return &menuModel{
-		cursor:          0,
-		numberOfPlayers: 3,
+		index:           0,
 		logger:          logger.With("component", "menu"),
+		playerNameInput: playerNameInput,
+		gameCodeInput:   gameRoomInput,
 		choices: []menuChoice{
 			{
-				actionKeys: []string{"n"},
-				action: func(m menuModel) (tea.Model, tea.Cmd) {
-					if !serverHealth {
-						return m, nil
-					}
-
-					nm := newLobbyInputModel(m)
-
-					return nm, nm.Init()
+				input: true,
+				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+					var cmd tea.Cmd
+					m.playerNameInput, cmd = m.playerNameInput.Update(msg)
+					return m, cmd
 				},
-				render: func(m menuModel) string {
-					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-					details := "n"
-
-					if !serverHealth {
-						style = style.Foreground(lipgloss.Color("#ff0000"))
-						details = "connecting..."
+				render: func(m menuModel, selected bool) string {
+					m.playerNameInput.Prompt = "   "
+					m.playerNameInput.Blur()
+					if selected {
+						m.playerNameInput.Prompt = "-> "
+						m.playerNameInput.Focus()
 					}
-
-					return style.Render(fmt.Sprintf("New Online Game (%s)", details))
+					return m.playerNameInput.View()
 				},
 			},
 			{
-				actionKeys: []string{"j"},
-				action: func(m menuModel) (tea.Model, tea.Cmd) {
+				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
 					if !serverHealth {
 						return m, nil
 					}
-
-					return newJoinGameModel(m), nil
+					return newLobbyModel(m, m.playerNameInput.Value())
 				},
-				render: func(m menuModel) string {
+				render: func(m menuModel, selected bool) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-					details := "j"
+					prefix := "   "
+
+					if selected {
+						style = style.Foreground(lipgloss.Color("#00ff00"))
+						prefix = "-> "
+					}
 
 					if !serverHealth {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
-						details = "connecting..."
 					}
 
-					return style.Render(fmt.Sprintf("Join Game (%s)", details))
+					return style.Render(prefix + "New Online Game")
 				},
 			},
 			{
-				actionKeys: []string{"e"},
-				action: func(m menuModel) (tea.Model, tea.Cmd) {
+				input: true,
+				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+					var cmd tea.Cmd
+					m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
+
+					switch msg := msg.(type) {
+					case tea.KeyMsg:
+						if msg.Type == tea.KeyCtrlQuestionMark {
+							if len(m.gameCodeInput.Value()) == 3 {
+								m.gameCodeInput.SetValue(m.gameCodeInput.Value()[:len(m.gameCodeInput.Value())-1])
+							}
+						}
+					}
+
+					if len(m.gameCodeInput.Value()) == 3 {
+						m.gameCodeInput.SetValue(m.gameCodeInput.Value() + "-")
+						m.gameCodeInput.CursorEnd()
+					}
+
+					return m, cmd
+				},
+				render: func(m menuModel, selected bool) string {
+					m.gameCodeInput.Prompt = "   "
+					m.gameCodeInput.Blur()
+
+					if selected {
+						m.gameCodeInput.Prompt = "-> "
+						m.gameCodeInput.Focus()
+					}
+
+					return m.gameCodeInput.View()
+				},
+			},
+			{
+				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, tea.Quit
 				},
-				render: func(m menuModel) string {
-					return lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Render("Exit (e)")
+				render: func(m menuModel, selected bool) string {
+					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+					prefix := "   "
+
+					if selected {
+						style = style.Foreground(lipgloss.Color("#00ff00"))
+						prefix = "-> "
+					}
+					return style.Render(prefix + "Exit")
 				},
 			},
 		},
@@ -129,38 +184,29 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 	case tea.KeyMsg:
 		switch msg.Type {
+		case tea.KeyRunes:
 		case tea.KeyEnter:
-			if m.cursor == 2 && !serverHealth {
-				return m, nil
-			}
-			return m.choices[m.cursor].action(m)
+			return m.choices[m.index].action(m, msg)
 		case tea.KeyCtrlC:
 			return m, tea.Quit
-		case tea.KeyRunes:
-			switch string(msg.Runes) {
-			case "e":
-				return m, tea.Quit
-			default:
-				for _, choice := range m.choices {
-					if slices.Contains(choice.actionKeys, string(msg.Runes)) {
-						return choice.action(m)
-					}
-				}
-			}
 		case tea.KeyUp:
-			if m.cursor > 0 {
-				m.cursor--
+			if m.index > 0 {
+				m.index--
 			}
 		case tea.KeyDown:
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
+			if m.index < len(m.choices)-1 {
+				m.index++
 			}
-		default:
-			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
+	}
+
+	for i, choice := range m.choices {
+		if i == m.index && choice.input {
+			return choice.action(m, msg)
+		}
 	}
 
 	return m, nil
@@ -177,30 +223,27 @@ func (m menuModel) View() string {
 	menuStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left)
 
 	if debug {
-		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width-3).Height(m.height-2).Margin(0, 1)
+		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width - 2).Height(m.height - 2)
 		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
 		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())
 	}
 
 	logoPanel := logoStyle.Render(logo)
 	titlePanel := titleStyle.Render("Farkle")
-	menu := make([]string, 0, 4)
+	menu := make([]string, 0, len(m.choices))
 	for i, choice := range m.choices {
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#fff"))
-		prefix := "   "
+		menu = append(menu, choice.render(m, m.index == i))
+	}
+	menuContent := menuStyle.Render(strings.Join(menu, "\n"))
 
-		if i == m.cursor {
-			style = style.Foreground(lipgloss.Color("#00ff00"))
-			prefix = "-> "
-		}
-
-		menu = append(menu, style.Render(prefix+choice.render(m)))
+	if !serverHealth {
+		menuContent = menuStyle.Render("Connecting to server...")
 	}
 
 	menuJoin := lipgloss.JoinVertical(
 		lipgloss.Center,
 		titlePanel,
-		menuStyle.Render(strings.Join(menu, "\n")),
+		menuContent,
 	)
 
 	logoWidth := lipgloss.Width(logoPanel)

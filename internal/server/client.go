@@ -52,14 +52,12 @@ func (c *client) handleMessages(h *hub) {
 			h.logger.Info("Received lobby message from client", "clientId", c.id)
 			switch msg.Type {
 			case MessageTypeCreate:
-				data := msg.Data.(map[string]any)
-				host := player.New(data["hosts_name"].(string))
-				c.player = host
+				c.player = player.New(msg.Data.(string))
 
 				returnMsg := Message{
 					Channel: ChannelPlayer,
 					Type:    MessageTypeMe,
-					Data:    host.ToBytes(),
+					Data:    c.player.ToBytes(),
 					SentAt:  time.Now(),
 				}
 
@@ -68,10 +66,7 @@ func (c *client) handleMessages(h *hub) {
 					continue
 				}
 
-				newLobby := h.createLobby(
-					host,
-					data["hosts_name"].(string),
-				)
+				newLobby := h.createLobby(c.player)
 				returnMsg = Message{
 					Channel: ChannelLobby,
 					Type:    MessageTypeCreated,

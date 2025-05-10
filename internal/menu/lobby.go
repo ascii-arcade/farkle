@@ -14,26 +14,24 @@ import (
 type lobbyModel struct {
 	width     int
 	height    int
-	lobbyName string
 	hostsName string
 
-	focusIndex int
+	creatingLobby bool
 
 	errors    string
 	menuModel menuModel
 }
 
-func newLobbyModel(menuModel menuModel, lobbyName string, hostsName string) lobbyModel {
+func newLobbyModel(menuModel menuModel, hostsName string) (lobbyModel, tea.Cmd) {
 	wsClient = newWsClient(menuModel.logger)
 
 	m := lobbyModel{
 		width:     menuModel.width,
 		height:    menuModel.height,
 		menuModel: menuModel,
-		lobbyName: lobbyName,
 		hostsName: hostsName,
 	}
-	return m
+	return m, m.Init()
 }
 
 func (m lobbyModel) Init() tea.Cmd {
@@ -63,26 +61,22 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case tick:
-		if currentLobby == nil && wsClient.IsConnected() {
-			type createLobbyData struct {
-				HostsName string `json:"hosts_name"`
-				LobbyName string `json:"lobby_name"`
-			}
-
+		if !m.creatingLobby && wsClient.IsConnected() {
 			if err := wsClient.SendMessage(server.Message{
 				Channel: server.ChannelLobby,
 				Type:    server.MessageTypeCreate,
-				Data: createLobbyData{
-					HostsName: m.hostsName,
-					LobbyName: m.lobbyName,
-				},
-				SentAt: time.Now(),
+				Data:    m.hostsName,
+				SentAt:  time.Now(),
 			}); err != nil {
 				m.errors = "Failed to create lobby"
 				m.menuModel.logger.Error("Failed to send lobby message", "error", err)
-				return m, nil
+				m.creatingLobby = false
+				goto RETURN
 			}
+
+			m.creatingLobby = true
 		}
+	RETURN:
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 			return tick(t)
 		})
