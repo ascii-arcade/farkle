@@ -65,7 +65,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				x := float64(rand.IntN(m.width))
 				y := float64(rand.IntN(m.height / 2)) // stay in upper half
 				m = m.addFireworkAt(x, y)
-				m.nextBurstFrame = m.frame + rand.IntN(20) + 30 // new: 30–50 frames
+				if rand.IntN(6) == 0 {
+					// 1 in 6 chance for rapid-fire burst
+					m.nextBurstFrame = m.frame + rand.IntN(5) + 5 // 5–10 frames
+				} else {
+					m.nextBurstFrame = m.frame + rand.IntN(20) + 30 // 30–50 frames
+				}
+
 			}
 
 			for _, p := range m.particles {
