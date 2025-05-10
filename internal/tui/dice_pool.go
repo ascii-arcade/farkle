@@ -4,6 +4,8 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 type dicePool []int
@@ -46,7 +48,7 @@ func (p *dicePool) renderCharacters() string {
 
 	output := ""
 	for _, n := range *p {
-		output += diceCharacters[n] + " "
+		output += dieCharacters[n] + " "
 	}
 
 	return strings.TrimSpace(output)
@@ -63,17 +65,11 @@ func (p *dicePool) render(start int, end int) string {
 		return ""
 	}
 
-	var lines = make([]string, len(diceFaces[1]))
+	dice := make([]string, 0)
 
-	for i, n := range (*p)[start:end] {
-		for j, line := range diceFaces[n] {
-			if i == len((*p)[start:end])-1 {
-				lines[j] += line
-			} else {
-				lines[j] += line + "  "
-			}
-		}
+	for _, n := range (*p)[start:end] {
+		dice = append(dice, die(n))
 	}
 
-	return strings.Join(lines, "\n")
+	return lipgloss.JoinHorizontal(lipgloss.Top, dice...)
 }
