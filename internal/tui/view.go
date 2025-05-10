@@ -22,8 +22,8 @@ func (m model) View() string {
 		Width(m.width).
 		Height(m.height)
 
-	poolRollPane := stylePool().Render(m.poolRoll.render(0, 3) + "\n" + m.poolRoll.render(3, 6))
-	poolHeldPane := stylePool().Render(m.poolHeld.render(0, 3) + "\n" + m.poolHeld.render(3, 6))
+	poolRollPane := stylePool().Render(m.poolRoll.render())
+	poolHeldPane := stylePool().Render(m.poolHeld.render())
 
 	centeredText := ""
 	if m.error != "" {

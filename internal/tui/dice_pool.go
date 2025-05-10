@@ -4,6 +4,8 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 type dicePool []int
@@ -46,34 +48,34 @@ func (p *dicePool) renderCharacters() string {
 
 	output := ""
 	for _, n := range *p {
-		output += diceCharacters[n] + " "
+		output += dieCharacters[n] + " "
 	}
 
 	return strings.TrimSpace(output)
 }
 
-func (p *dicePool) render(start int, end int) string {
-	if len(*p) == 0 {
-		return ""
-	}
-	if end > len(*p) {
-		end = len(*p)
-	}
-	if start >= end {
+func (p *dicePool) render() string {
+	diceCount := len(*p)
+	if diceCount == 0 {
 		return ""
 	}
 
-	var lines = make([]string, len(diceFaces[1]))
+	topCount := (diceCount + 1) / 2
+	bottomCount := diceCount / 2
 
-	for i, n := range (*p)[start:end] {
-		for j, line := range diceFaces[n] {
-			if i == len((*p)[start:end])-1 {
-				lines[j] += line
-			} else {
-				lines[j] += line + "  "
-			}
-		}
+	topDice := make([]string, 0)
+	for i := range topCount {
+		topDice = append(topDice, die((*p)[i]))
 	}
 
-	return strings.Join(lines, "\n")
+	bottomDice := make([]string, 0)
+	for i := range bottomCount {
+		bottomDice = append(bottomDice, die((*p)[i+topCount]))
+	}
+
+	return lipgloss.JoinVertical(
+		lipgloss.Center,
+		lipgloss.JoinHorizontal(lipgloss.Top, topDice...),
+		lipgloss.JoinHorizontal(lipgloss.Top, bottomDice...),
+	)
 }
