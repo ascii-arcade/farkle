@@ -1,9 +1,11 @@
 package server
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
 )
@@ -18,7 +20,7 @@ func (h *hub) handleMessages(p *player.Player) {
 		msg, err := p.ReceiveMessage()
 		if err != nil {
 			if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "use of closed network connection") {
-				h.logger.Info("Client disconnected", "clientId", p.Id)
+				h.logger.Info("Player disconnected", "player_id", p.Id)
 				h.removePlayer(p)
 				return
 			}
@@ -26,35 +28,24 @@ func (h *hub) handleMessages(p *player.Player) {
 			continue
 		}
 
+		h.logger.Debug("Received message from player", "player_id", p.Id, "channel", msg.Channel, "type", msg.Type)
+
 		switch msg.Channel {
 		case message.ChannelPing:
-			h.logger.Debug("Received ping from client", "clientId", p.Id)
+			h.logger.Debug("Received ping from player", "player_id", p.Id)
 			p.LastSeen = time.Now()
 		case message.ChannelLobby:
-			h.logger.Debug("Received lobby message from client", "clientId", p.Id)
 			switch msg.Type {
 			case message.MessageTypeCreate:
-				returnMsg := message.Message{
-					Channel: message.ChannelPlayer,
-					Type:    message.MessageTypeMe,
-					Data:    p.ToJSON(),
-					SentAt:  time.Now(),
-				}
-
-				if err := p.SendMessage(returnMsg); err != nil {
-					h.logger.Error("Failed to send new player message", "error", err)
-					continue
-				}
-
 				newLobby := h.createLobby(p)
-				returnMsg = message.Message{
+				returnMsg := message.Message{
 					Channel: message.ChannelLobby,
 					Type:    message.MessageTypeCreated,
 					Data:    newLobby.ToJSON(),
 					SentAt:  time.Now(),
 				}
-				if err := p.SendMessage(returnMsg); err != nil {
-					h.logger.Error("Failed to send new lobby message", "error", err)
+				if err := h.broadcastMessage(returnMsg, newLobby.Players...); err != nil {
+					h.logger.Error("Failed to broadcast lobby message", "error", err)
 					continue
 				}
 			case message.MessageTypeJoin:
@@ -62,6 +53,19 @@ func (h *hub) handleMessages(p *player.Player) {
 				lobby := h.getLobby(code)
 				if lobby == nil {
 					h.logger.Error("Lobby not found", "lobbyCode", code)
+					continue
+				}
+
+				if lobby.Started {
+					returnMsg := message.Message{
+						Channel: message.ChannelLobby,
+						Type:    message.MessageTypeError,
+						Data:    "Lobby already started",
+						SentAt:  time.Now(),
+					}
+					if err := p.SendMessage(returnMsg); err != nil {
+						h.logger.Error("Failed to send error message", "error", err)
+					}
 					continue
 				}
 
@@ -81,8 +85,63 @@ func (h *hub) handleMessages(p *player.Player) {
 			case message.MessageTypeLeave:
 				h.logger.Info("Client left lobby", "clientId", p.Id)
 				h.removePlayerFromLobby(p)
+			case message.MessageTypeStart:
+				lobby := h.getLobby(msg.Data.(string))
+				if lobby == nil {
+					h.logger.Error("Lobby not found", "lobbyCode", msg.Data.(string))
+					continue
+				}
+				if lobby.Started {
+					returnMsg := message.Message{
+						Channel: message.ChannelLobby,
+						Type:    message.MessageTypeError,
+						Data:    "Lobby already started",
+						SentAt:  time.Now(),
+					}
+					if err := p.SendMessage(returnMsg); err != nil {
+						h.logger.Error("Failed to send error message", "error", err)
+					}
+					continue
+				}
+
+				lobby.StartGame()
+				returnMsg := message.Message{
+					Channel: message.ChannelLobby,
+					Type:    message.MessageTypeStarted,
+					Data:    lobby.ToJSON(),
+					SentAt:  time.Now(),
+				}
+				h.broadcastMessage(returnMsg, lobby.Players...)
+			}
+		case message.ChannelGame:
+			gameDetails := game.GameDetails{}
+			if err := json.Unmarshal([]byte(msg.Data.(string)), &gameDetails); err != nil {
+				h.logger.Error("Failed to unmarshal game message", "error", err)
+				continue
 			}
 
+			lobby := h.getLobby(gameDetails.LobbyCode)
+			if lobby == nil {
+				h.logger.Error("Lobby not found", "lobbyCode", gameDetails.LobbyCode)
+				continue
+			}
+			if lobby.Game == nil {
+				h.logger.Error("Game not found", "lobbyCode", gameDetails.LobbyCode)
+				continue
+			}
+
+			lobby.Game.HandleMessage(msg)
+			returnMsg := message.Message{
+				Channel: message.ChannelGame,
+				Type:    message.MessageTypeUpdated,
+				Data:    lobby.Game.ToJSON(),
+				SentAt:  time.Now(),
+			}
+
+			if msg.Type == message.MessageTypeRoll {
+				returnMsg.Type = message.MessageTypeRolled
+			}
+			h.broadcastMessage(returnMsg, lobby.Players...)
 		}
 	}
 }

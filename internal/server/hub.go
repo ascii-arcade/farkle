@@ -77,7 +77,7 @@ func (h *hub) removePlayer(p *player.Player) {
 	}
 }
 
-func (h *hub) broadcastMessage(msg message.Message, players ...*player.Player) {
+func (h *hub) broadcastMessage(msg message.Message, players ...*player.Player) error {
 	if h.mu.TryLock() {
 		defer h.mu.Unlock()
 	}
@@ -88,10 +88,14 @@ func (h *hub) broadcastMessage(msg message.Message, players ...*player.Player) {
 				continue
 			}
 			if err := p.SendMessage(msg); err != nil {
-				h.logger.Error("Failed to send message", "error", err)
+				if strings.Contains(err.Error(), "use of closed network connection") {
+					h.logger.Info("Player disconnected, removing from lobby", "player_id", p.Id)
+					h.removePlayer(p)
+				}
+				return err
 			}
 		}
-		return
+		return nil
 	}
 
 	for p := range h.players {
@@ -105,8 +109,11 @@ func (h *hub) broadcastMessage(msg message.Message, players ...*player.Player) {
 
 		if err := p.SendMessage(msg); err != nil {
 			logger.Error("Failed to send message", "error", err)
+			return err
 		}
 	}
+
+	return nil
 }
 
 func (h *hub) createLobby(host *player.Player) *lobby.Lobby {

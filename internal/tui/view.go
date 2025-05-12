@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"strconv"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -24,8 +22,6 @@ func (m model) View() string {
 		Width(m.width).
 		Height(m.height)
 
-	debugPaneStyle := lipgloss.NewStyle().Width(m.width).AlignHorizontal(lipgloss.Left)
-
 	poolRollPane := stylePool().Render(m.poolRoll.render(0, 3) + "\n" + m.poolRoll.render(3, 6))
 	poolHeldPane := stylePool().Render(m.poolHeld.render(0, 3) + "\n" + m.poolHeld.render(3, 6))
 
@@ -35,18 +31,6 @@ func (m model) View() string {
 	}
 
 	debugPane := ""
-
-	if m.debug {
-		debugMsgs := []string{
-			"Debug",
-			"FPS: " + strconv.Itoa(int(m.tps)),
-			"Current Player: " + m.styledPlayerName(m.currentPlayerIndex),
-		}
-		debugPane = lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			debugPaneStyle.Render(debugMsgs...),
-		)
-	}
 
 	poolPanes := lipgloss.JoinVertical(
 		lipgloss.Center,

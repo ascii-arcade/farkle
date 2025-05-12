@@ -1,44 +1,3 @@
-// package player
-
-// import (
-// 	"encoding/json"
-// 	"time"
-
-// 	"golang.org/x/net/websocket"
-// )
-
-// type Player struct {
-// 	Name   string `json:"name"`
-// 	Score  int    `json:"score"`
-// 	Host   bool   `json:"host"`
-// }
-
-// func New(name string) *Player {
-// 	return &Player{
-// 		Name:  name,
-// 		Score: 0,
-// 	}
-// }
-
-// func (p *Player) ToBytes() []byte {
-// 	b, err := json.Marshal(p)
-// 	if err != nil {
-// 		return nil
-// 	}
-// 	return b
-// }
-
-//	func FromMap(m map[string]interface{}) (*Player, error) {
-//		b, err := json.Marshal(m)
-//		if err != nil {
-//			return nil, err
-//		}
-//		p := &Player{}
-//		if err := json.Unmarshal(b, p); err != nil {
-//			return nil, err
-//		}
-//		return p, nil
-//	}
 package player
 
 import (
@@ -47,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/xid"
 	"golang.org/x/net/websocket"
 )
@@ -57,6 +17,7 @@ type Player struct {
 	Score  int    `json:"score"`
 	Host   bool   `json:"host"`
 	Active bool   `json:"active"`
+	Color  string `json:"color"`
 
 	LastSeen time.Time       `json:"-"`
 	conn     *websocket.Conn `json:"-"`
@@ -114,4 +75,10 @@ func (p *Player) Close() error {
 
 func (p *Player) Connected() bool {
 	return p.conn != nil
+}
+
+func (p *Player) styledPlayerName(i int) string {
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(p.Color))
+
+	return style.Render(p.Name)
 }

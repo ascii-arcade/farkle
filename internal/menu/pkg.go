@@ -13,11 +13,7 @@ type errorMsg error
 
 var (
 	logger       *slog.Logger
-	wsClient     *client
 	currentLobby *lobby.Lobby
 	me           *player.Player
 	serverHealth bool
-	debug        bool
-	serverURL    string = "localhost"
-	serverPort   string = "8080"
 )

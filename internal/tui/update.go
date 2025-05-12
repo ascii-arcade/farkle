@@ -13,15 +13,6 @@ type tickMsg struct{}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tick:
-		m.globalTicks++
-		elaspsed := time.Since(m.startTime).Seconds()
-		if elaspsed > 0 {
-			m.tps = float64(m.globalTicks) / elaspsed
-		}
-		return m, tea.Tick(16*time.Millisecond+6*time.Microsecond, func(t time.Time) tea.Msg {
-			return tick(t)
-		})
 	case tea.KeyMsg:
 		if m.isRolling {
 			return m, nil

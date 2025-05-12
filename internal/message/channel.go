@@ -6,4 +6,5 @@ const (
 	ChannelPing   Channel = "ping"
 	ChannelLobby  Channel = "lobby"
 	ChannelPlayer Channel = "player"
+	ChannelGame   Channel = "game"
 )

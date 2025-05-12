@@ -24,11 +24,6 @@ type model struct {
 	poolRoll      dicePool
 	rollTickCount int
 
-	globalTicks int
-	startTime   time.Time
-	tps         float64
-	debug       bool
-
 	height int
 	width  int
 }
@@ -51,7 +46,7 @@ func (m model) Init() tea.Cmd {
 	})
 }
 
-func Run(playerNames []string, debug bool) {
+func Run(playerNames []string) {
 	players = []*player.Player{}
 	for _, name := range playerNames {
 		players = append(players, &player.Player{Name: name})
@@ -75,11 +70,8 @@ func Run(playerNames []string, debug bool) {
 		model{
 			playerColors: colors,
 			// players:      players,
-			poolHeld:  newDicePool(0),
-			poolRoll:  newDicePool(6),
-			debug:     debug,
-			startTime: time.Now(),
-			tps:       0,
+			poolHeld: newDicePool(0),
+			poolRoll: newDicePool(6),
 		},
 		tea.WithAltScreen(),
 	).Run(); err != nil {
@@ -107,11 +99,8 @@ func RunFromLobby(l *lobby.Lobby) {
 		model{
 			playerColors: colors,
 			// players:      players,
-			poolHeld:  newDicePool(0),
-			poolRoll:  newDicePool(6),
-			debug:     false,
-			startTime: time.Now(),
-			tps:       0,
+			poolHeld: newDicePool(0),
+			poolRoll: newDicePool(6),
 		},
 	).Run(); err != nil {
 		panic(err)

@@ -5,20 +5,17 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/player"
-	petname "github.com/dustinkirkland/golang-petname"
-	"github.com/rs/xid"
 )
 
 type Lobby struct {
-	Id        string           `json:"id"`
-	Name      string           `json:"name"`
+	Code      string           `json:"code"`
 	Players   []*player.Player `json:"players"`
 	Started   bool             `json:"started"`
 	CreatedAt time.Time        `json:"created_at"`
-	Code      string           `json:"code"`
 
-	// mu sync.Mutex `json:"-"`
+	Game *game.Game `json:"game"`
 }
 
 func NewLobby(host *player.Player) *Lobby {
@@ -27,8 +24,6 @@ func NewLobby(host *player.Player) *Lobby {
 	players[0] = host
 
 	return &Lobby{
-		Id:        xid.New().String(),
-		Name:      petname.Generate(2, "-"),
 		Code:      newCode(),
 		Players:   players,
 		Started:   false,
@@ -45,23 +40,7 @@ func newCode() string {
 	return string(b[:3]) + "-" + string(b[3:6])
 }
 
-// func FromMap(m map[string]any) (*Lobby, error) {
-// 	b, err := json.Marshal(m)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	lobby := &Lobby{}
-// 	if err := json.Unmarshal(b, &lobby); err != nil {
-// 		return nil, err
-// 	}
-
-// 	return lobby, nil
-// }
-
 func (l *Lobby) AddPlayer(p *player.Player) bool {
-	// l.mu.Lock()
-	// defer l.mu.Unlock()
 	emptyIndex := 0
 	for i, player := range l.Players {
 		if player == nil {
@@ -82,8 +61,6 @@ func (l *Lobby) AddPlayer(p *player.Player) bool {
 }
 
 func (l *Lobby) RemovePlayer(p *player.Player) {
-	// l.mu.Lock()
-	// defer l.mu.Unlock()
 	for i, player := range l.Players {
 		if player == nil {
 			continue
@@ -110,13 +87,11 @@ func (l *Lobby) NewHost() {
 }
 
 func (l *Lobby) Ready() bool {
-	// l.mu.Lock()
-	// defer l.mu.Unlock()
 	playerCount := 0
 	for _, player := range l.Players {
 		if player != nil {
 			playerCount++
-			if playerCount > 2 {
+			if playerCount >= 2 {
 				return true
 			}
 		}
@@ -162,4 +137,9 @@ func (l *Lobby) IsFull() bool {
 		}
 	}
 	return true
+}
+
+func (l *Lobby) StartGame() {
+	l.Game = game.New(l.Code, l.Players)
+	l.Started = true
 }

@@ -2,20 +2,10 @@ package server
 
 import (
 	"time"
-
-	"github.com/ascii-arcade/farkle/internal/message"
 )
 
 func (h *hub) monitorConnections() {
 	for {
-		if len(h.players) > 0 {
-			h.broadcastMessage(message.Message{
-				Channel: message.ChannelPing,
-				Type:    message.MessageTypePing,
-				SentAt:  time.Now(),
-			})
-		}
-
 		time.Sleep(5 * time.Second)
 
 		for p := range h.players {

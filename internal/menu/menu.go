@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/config"
+	"github.com/ascii-arcade/farkle/internal/wsclient"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -30,10 +32,7 @@ type menuModel struct {
 }
 
 func (m menuModel) Init() tea.Cmd {
-	if wsClient != nil {
-		close(wsClient.disconnect)
-		wsClient = nil
-	}
+	wsclient.GetClient().Close()
 
 	sizeCmd := tea.WindowSize()
 	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
@@ -58,9 +57,8 @@ func (m *menuModel) checkHealth() {
 	// }
 }
 
-func Run(loggerIn *slog.Logger, debugIn bool) {
+func Run(loggerIn *slog.Logger) {
 	logger = loggerIn
-	debug = debugIn
 	if _, err := tea.NewProgram(newMenu()).Run(); err != nil {
 		fmt.Println("Error starting program:", err)
 	}
@@ -83,7 +81,7 @@ func newMenu() *menuModel {
 	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 	gameRoomInput.Focus()
 
-	return &menuModel{
+	m := &menuModel{
 		index:           0,
 		playerNameInput: playerNameInput,
 		gameCodeInput:   gameRoomInput,
@@ -195,12 +193,15 @@ func newMenu() *menuModel {
 			},
 		},
 	}
+	m.checkHealth()
+
+	return m
 }
 
 func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tick:
-		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
 			m.checkHealth()
 			return tick(t)
 		})
@@ -235,7 +236,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m menuModel) View() string {
-	if m.height < 15 || m.width < 100 {
+	if m.height < 20 || m.width < 100 {
 		return "Window too small, please resize to something larger."
 	}
 
@@ -246,7 +247,7 @@ func (m menuModel) View() string {
 	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width / 2)
 	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.width / 2)
 
-	if debug {
+	if config.GetDebug() {
 		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width - 2).Height(m.height - 3)
 		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
 		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())

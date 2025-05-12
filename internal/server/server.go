@@ -12,8 +12,8 @@ func Run(l *slog.Logger, debug bool) {
 	logger = l
 
 	h = newHub(logger)
-	go h.monitorBroadcast()
 	go h.monitorConnections()
+	go h.monitorBroadcast()
 	go h.monitorLobbies()
 	go h.run()
 

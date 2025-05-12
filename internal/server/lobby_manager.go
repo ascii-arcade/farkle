@@ -2,8 +2,6 @@ package server
 
 import (
 	"time"
-
-	"github.com/ascii-arcade/farkle/internal/message"
 )
 
 func (h *hub) monitorLobbies() {
@@ -11,16 +9,30 @@ func (h *hub) monitorLobbies() {
 		h.mu.Lock()
 		for _, lobby := range h.lobbies {
 			if lobby.IsEmpty() {
-				h.logger.Info("Lobby is empty, removing", "lobbyId", lobby.Id)
-				delete(h.lobbies, lobby.Id)
+				h.logger.Info("Lobby is empty, removing", "lobby_code", lobby.Code)
+				delete(h.lobbies, lobby.Code)
+				continue
 			}
 
-			h.broadcastMessage(message.Message{
-				Channel: message.ChannelLobby,
-				Type:    message.MessageTypeUpdated,
-				Data:    lobby.ToJSON(),
-				SentAt:  time.Now(),
-			}, lobby.Players...)
+			// if lobby.Started {
+			// 	if err := h.broadcastMessage(message.Message{
+			// 		Channel: message.ChannelGame,
+			// 		Type:    message.MessageTypeUpdated,
+			// 		Data:    lobby.Game.ToJSON(),
+			// 		SentAt:  time.Now(),
+			// 	}, lobby.Players...); err != nil {
+			// 		h.logger.Error("Failed to broadcast game message", "error", err)
+			// 	}
+			// }
+
+			// if err := h.broadcastMessage(message.Message{
+			// 	Channel: message.ChannelLobby,
+			// 	Type:    message.MessageTypeUpdated,
+			// 	Data:    lobby.ToJSON(),
+			// 	SentAt:  time.Now(),
+			// }, lobby.Players...); err != nil {
+			// 	h.logger.Error("Failed to broadcast lobby message", "error", err)
+			// }
 		}
 		h.mu.Unlock()
 

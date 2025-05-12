@@ -1,11 +1,15 @@
 package menu
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/config"
+	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -18,22 +22,96 @@ type lobbyModel struct {
 	creatingLobby bool
 	joiningLobby  bool
 
+	started bool
+
 	errors    string
 	menuModel menuModel
 }
 
 func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, tea.Cmd) {
-	wsClient = newWsClient(playerName)
+	wsclient.New(logger, playerName)
 
 	m := lobbyModel{
 		joiningLobby: joining,
 		code:         code,
 	}
 
+	if !m.joiningLobby {
+		if err := wsclient.SendMessage(message.Message{
+			Channel: message.ChannelLobby,
+			Type:    message.MessageTypeCreate,
+			SentAt:  time.Now(),
+		}); err != nil {
+			m.errors = "Failed to create lobby"
+			logger.Error("Failed to send lobby message", "error", err)
+			m.creatingLobby = false
+		}
+
+		m.creatingLobby = true
+	} else {
+		if err := wsclient.SendMessage(message.Message{
+			Channel: message.ChannelLobby,
+			Type:    message.MessageTypeJoin,
+			Data:    m.code,
+			SentAt:  time.Now(),
+		}); err != nil {
+			m.errors = "Failed to join lobby"
+			logger.Error("Failed to send lobby message", "error", err)
+		}
+	}
+
 	return m, m.Init()
 }
 
 func (m lobbyModel) Init() tea.Cmd {
+	go func() {
+		for {
+			if wsclient.GetClient() == nil {
+				logger.Debug("wsClient is nil, stopping monitoring for messages in lobby model")
+				return
+			}
+
+			select {
+			case <-wsclient.Disconnect:
+				logger.Debug("stopping monitoring for messages in lobby model")
+				return
+			case msg := <-wsclient.LobbyMessages:
+				switch msg.Type {
+				case message.MessageTypeCreated, message.MessageTypeUpdated:
+					logger.Debug("Received lobby update from server")
+					if err := json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
+						logger.Error("Error unmarshalling player message", "error", err)
+						continue
+					}
+				case message.MessageTypeStarted:
+					logger.Debug("Received lobby start message from server")
+					if err := json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
+						logger.Error("Error unmarshalling player message", "error", err)
+						continue
+					}
+
+					if currentLobby.Game != nil {
+						gm := game.NewModel(logger, me, currentLobby.Game)
+
+						tea.NewProgram(gm, tea.WithAltScreen()).Run()
+					}
+				}
+			case msg := <-wsclient.PlayerMessages:
+				logger.Debug("Received player message from server")
+				switch msg.Type {
+				case message.MessageTypeMe:
+					logger.Debug("Received player message from server")
+					if err := json.Unmarshal([]byte(msg.Data.(string)), &me); err != nil {
+						logger.Error("Error unmarshalling player message", "error", err)
+						continue
+					}
+				}
+			default:
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
 	sizeCmd := tea.WindowSize()
 	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tick(t)
@@ -48,7 +126,7 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			wsClient.SendMessage(message.Message{
+			wsclient.SendMessage(message.Message{
 				Channel: message.ChannelLobby,
 				Type:    message.MessageTypeLeave,
 				SentAt:  time.Now(),
@@ -58,50 +136,22 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return newMenu(), m.menuModel.Init()
 		case "enter":
-			// if currentLobby.Ready() {
-			// 	tui.RunFromLobby(currentLobby)
-			// 	return m.menuModel, nil
-			// }
+			if currentLobby.Ready() {
+				// 	tui.RunFromLobby(currentLobby)
+				// 	return m.menuModel, nil
+				wsclient.SendMessage(message.Message{
+					Channel: message.ChannelLobby,
+					Type:    message.MessageTypeStart,
+					SentAt:  time.Now(),
+					Data:    currentLobby.Code,
+				})
+			}
 
 			// m.errors = "Please wait for at least two players to join before starting the game"
 
 			return m, nil
 		}
 	case tick:
-		if currentLobby == nil && !m.joiningLobby && wsClient.IsConnected() {
-			if err := wsClient.SendMessage(message.Message{
-				Channel: message.ChannelLobby,
-				Type:    message.MessageTypeCreate,
-				SentAt:  time.Now(),
-			}); err != nil {
-				m.errors = "Failed to create lobby"
-				logger.Error("Failed to send lobby message", "error", err)
-				m.creatingLobby = false
-				goto RETURN
-			}
-
-			m.creatingLobby = true
-		}
-
-		if currentLobby == nil && m.joiningLobby && wsClient.IsConnected() {
-			if err := wsClient.SendMessage(message.Message{
-				Channel: message.ChannelLobby,
-				Type:    message.MessageTypeJoin,
-				Data:    m.code,
-				SentAt:  time.Now(),
-			}); err != nil {
-				m.errors = "Failed to join lobby"
-				logger.Error("Failed to send lobby message", "error", err)
-				goto RETURN
-			}
-		}
-
-		if currentLobby != nil {
-			m.creatingLobby = false
-			m.joiningLobby = false
-		}
-
-	RETURN:
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 			return tick(t)
 		})
@@ -119,23 +169,19 @@ func (m lobbyModel) View() string {
 	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width / 2)
 	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.width / 2)
 
-	if debug {
+	if config.GetDebug() {
 		fullPaneStyle = fullPaneStyle.BorderStyle(lipgloss.ASCIIBorder()).BorderForeground(lipgloss.Color("#0000ff")).Width(m.width - 2).Height(m.height - 3)
 		controlsStyle = controlsStyle.Background(lipgloss.Color("#000066")).Foreground(lipgloss.Color("#ffffff"))
 		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
 	}
 
-	if currentLobby == nil || m.joiningLobby {
-		msg := "Connecting to server..."
-
-		wsc := wsClient
-		_ = wsc
-
-		if wsClient.IsConnected() && m.creatingLobby {
-			msg = "Loading lobby..."
+	if wsclient.GetClient().IsConnected() && currentLobby == nil {
+		msg := ""
+		if m.creatingLobby {
+			msg = "Creating lobby..."
 		}
 
-		if wsClient.IsConnected() && m.joiningLobby {
+		if m.joiningLobby {
 			msg = "Joining lobby..."
 		}
 
@@ -151,32 +197,29 @@ func (m lobbyModel) View() string {
 		)
 	}
 
-	lobbyContent := []string{}
+	playerList := []string{}
 
 	for i, player := range currentLobby.Players {
 		if player != nil && player.Host {
-			lobbyContent = append(lobbyContent, fmt.Sprintf("%d) %s*", i+1, player.Name))
+			playerList = append(playerList, fmt.Sprintf("%d) %s*", i+1, player.Name))
 			continue
 		}
 
 		if player == nil {
-			lobbyContent = append(lobbyContent, fmt.Sprintf("%d) ...", i+1))
+			playerList = append(playerList, fmt.Sprintf("%d) ...", i+1))
 			continue
 		}
 
-		lobbyContent = append(lobbyContent, fmt.Sprintf("%d) %s", i+1, player.Name))
+		playerList = append(playerList, fmt.Sprintf("%d) %s", i+1, player.Name))
 	}
 
-	lobbyContent = append(lobbyContent, fmt.Sprintf("Code: %s", currentLobby.Code))
-
-	lobbyNamePane := lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render(currentLobby.Name + "\n")
+	lobbyNamePane := lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render(fmt.Sprintf("Lobby Code: %s\n\n", currentLobby.Code))
 
 	lobbyPane := lobbyStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			lobbyNamePane,
-			strings.Join(lobbyContent, "\n"),
-			lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render(""),
+			strings.Join(playerList, "\n"),
 		),
 	)
 
