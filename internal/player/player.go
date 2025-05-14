@@ -3,8 +3,11 @@ package player
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/xid"
@@ -19,21 +22,73 @@ type Player struct {
 	Active bool   `json:"active"`
 	Color  string `json:"color"`
 
-	LastSeen time.Time       `json:"-"`
-	conn     *websocket.Conn `json:"-"`
-	// player   *player.Player `json:"-"`
+	LastSeen       time.Time       `json:"-"`
+	conn           *websocket.Conn `json:"-"`
+	logger         *slog.Logger    `json:"-"`
+	disconnect     chan bool
+	lobbyMessages  chan message.Message
+	gameMessages   chan message.Message
+	playerMessages chan message.Message
 }
 
-func NewPlayer(conn *websocket.Conn, name string) *Player {
+func NewPlayer(conn *websocket.Conn, logger *slog.Logger, name string) *Player {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	c := &Player{
 		Id:       xid.New().String(),
 		Name:     name,
 		Active:   true,
 		LastSeen: time.Now().Add(15 * time.Second),
 
-		conn: conn,
+		conn:   conn,
+		logger: logger.With("component", "player"),
 	}
 	return c
+}
+
+func (p *Player) Connect() {
+	url := fmt.Sprintf("ws://%s:%s/ws?name=%s", config.GetServerURL(), config.GetServerPort(), p.Name)
+	p.logger.Debug("connecting to server", "url", url)
+	for {
+		select {
+		case <-p.disconnect:
+			p.logger.Debug("disconnected from server")
+			return
+		default:
+		}
+
+		conn, err := websocket.Dial(url, "", "http://localhost/")
+		if err != nil {
+			p.logger.Error("error connecting to server", "error", err)
+			goto RECONNECT
+		}
+		p.Active = true
+		p.conn = conn
+
+		if err := p.monitorMessages(); err != nil && !p.Active {
+			p.logger.Error("error monitoring messages", "error", err)
+		}
+
+	RECONNECT:
+		p.Active = false
+		p.logger.Debug("retrying connection...")
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (p *Player) Close() {
+	close(p.disconnect)
+
+	if err := p.conn.Close(); err != nil {
+		p.logger.Error("error closing connection", "error", err)
+		return
+	}
+	close(LobbyMessages)
+	close(GameMessages)
+	close(PlayerMessages)
+	c.connected = false
+	c.logger.Debug("closed connection to server")
 }
 
 func (p *Player) ToJSON() string {
