@@ -6,12 +6,11 @@ import (
 )
 
 type Message struct {
-	Channel Channel     `json:"channel"`
-	Type    MessageType `json:"type"`
-	Data    any         `json:"data"`
-	SentAt  time.Time   `json:"sent_at"`
-
-	from string `json:"-"`
+	Channel  Channel     `json:"channel"`
+	Type     MessageType `json:"type"`
+	Data     any         `json:"data"`
+	SentAt   time.Time   `json:"sent_at"`
+	PlayerId string      `json:"player_id"`
 }
 
 func (m *Message) ToBytes() []byte {
@@ -20,8 +19,4 @@ func (m *Message) ToBytes() []byte {
 		return nil
 	}
 	return b
-}
-
-func (m *Message) IsFromPlayer(id string) bool {
-	return m.from == id
 }

@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/lobbies"
 	"github.com/ascii-arcade/farkle/internal/player"
 )
 
@@ -13,7 +13,7 @@ type errorMsg error
 
 var (
 	logger       *slog.Logger
-	currentLobby *lobby.Lobby
+	currentLobby *lobbies.Lobby
 	me           *player.Player
 	serverHealth bool
 )

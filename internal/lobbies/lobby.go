@@ -1,11 +1,12 @@
-package lobby
+package lobbies
 
 import (
 	"encoding/json"
-	"math/rand"
+	"log/slog"
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/game"
+	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
 )
 
@@ -14,50 +15,45 @@ type Lobby struct {
 	Players   []*player.Player `json:"players"`
 	Started   bool             `json:"started"`
 	CreatedAt time.Time        `json:"created_at"`
+	Game      *game.Game       `json:"game"`
 
-	Game *game.Game `json:"game"`
+	messages chan message.Message `json:"-"`
+
+	logger *slog.Logger
 }
 
-func NewLobby(host *player.Player) *Lobby {
-	players := make([]*player.Player, 6)
-	host.Host = true
-	players[0] = host
-
-	return &Lobby{
-		Code:      newCode(),
-		Players:   players,
+func NewLobby(logger *slog.Logger) *Lobby {
+	code := newCode()
+	l := &Lobby{
+		Code:      code,
+		Players:   make([]*player.Player, 6),
 		Started:   false,
 		CreatedAt: time.Now(),
+		logger:    logger.With("lobby_code", code),
+		messages:  make(chan message.Message, 100),
 	}
-}
 
-func newCode() string {
-	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	b := make([]byte, 6)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b[:3]) + "-" + string(b[3:6])
+	go l.handleMessages()
+
+	return l
 }
 
 func (l *Lobby) AddPlayer(p *player.Player) bool {
-	emptyIndex := 0
 	for i, player := range l.Players {
 		if player == nil {
-			emptyIndex = i
-			break
-		}
+			if i == 0 {
+				p.Host = true
+			}
 
-		if player.Id == p.Id {
+			go p.MonitorMessages(l.messages)
+
+			l.Players[i] = p
+
 			return true
 		}
 	}
-	if emptyIndex == 0 && l.IsFull() {
-		return false
-	}
-	l.Players[emptyIndex] = p
 
-	return true
+	return false
 }
 
 func (l *Lobby) RemovePlayer(p *player.Player) {
@@ -142,4 +138,13 @@ func (l *Lobby) IsFull() bool {
 func (l *Lobby) StartGame() {
 	l.Game = game.New(l.Code, l.Players)
 	l.Started = true
+}
+
+func (l *Lobby) getPlayer(id string) *player.Player {
+	for _, p := range l.Players {
+		if p != nil && p.Id == id {
+			return p
+		}
+	}
+	return nil
 }

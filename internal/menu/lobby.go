@@ -36,30 +36,6 @@ func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, te
 		code:         code,
 	}
 
-	if !m.joiningLobby {
-		if err := wsclient.SendMessage(message.Message{
-			Channel: message.ChannelLobby,
-			Type:    message.MessageTypeCreate,
-			SentAt:  time.Now(),
-		}); err != nil {
-			m.errors = "Failed to create lobby"
-			logger.Error("Failed to send lobby message", "error", err)
-			m.creatingLobby = false
-		}
-
-		m.creatingLobby = true
-	} else {
-		if err := wsclient.SendMessage(message.Message{
-			Channel: message.ChannelLobby,
-			Type:    message.MessageTypeJoin,
-			Data:    m.code,
-			SentAt:  time.Now(),
-		}); err != nil {
-			m.errors = "Failed to join lobby"
-			logger.Error("Failed to send lobby message", "error", err)
-		}
-	}
-
 	return m, m.Init()
 }
 
@@ -77,7 +53,7 @@ func (m lobbyModel) Init() tea.Cmd {
 				return
 			case msg := <-wsclient.LobbyMessages:
 				switch msg.Type {
-				case message.MessageTypeCreated, message.MessageTypeUpdated:
+				case message.MessageTypeUpdated:
 					logger.Debug("Received lobby update from server")
 					if err := json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
 						logger.Error("Error unmarshalling player message", "error", err)

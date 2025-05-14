@@ -4,7 +4,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/lobby"
+	"github.com/ascii-arcade/farkle/internal/lobbies"
 	"github.com/ascii-arcade/farkle/internal/player"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -79,7 +79,7 @@ func Run(playerNames []string) {
 	}
 }
 
-func RunFromLobby(l *lobby.Lobby) {
+func RunFromLobby(l *lobbies.Lobby) {
 	players = l.Players
 	colors := []string{
 		"#3B82F6", // Blue

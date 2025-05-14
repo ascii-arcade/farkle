@@ -1,16 +1,19 @@
-package server
+package lobbies
 
 import (
+	"log/slog"
 	"time"
 )
 
-func (h *hub) monitorLobbies() {
+func MonitorLobbies(l *slog.Logger) {
+	logger := l.With("monitor", "lobbies")
+
 	for {
-		h.mu.Lock()
-		for _, lobby := range h.lobbies {
+		mu.Lock()
+		for _, lobby := range lobbies {
 			if lobby.IsEmpty() {
-				h.logger.Info("Lobby is empty, removing", "lobby_code", lobby.Code)
-				delete(h.lobbies, lobby.Code)
+				logger.Info("Lobby is empty, removing", "lobby_code", lobby.Code)
+				delete(lobbies, lobby.Code)
 				continue
 			}
 
@@ -34,7 +37,7 @@ func (h *hub) monitorLobbies() {
 			// 	h.logger.Error("Failed to broadcast lobby message", "error", err)
 			// }
 		}
-		h.mu.Unlock()
+		mu.Unlock()
 
 		time.Sleep(1 * time.Second)
 	}

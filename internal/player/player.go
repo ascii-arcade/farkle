@@ -62,15 +62,12 @@ func (p *Player) ReceiveMessage() (message.Message, error) {
 	return msg, nil
 }
 
-func (p *Player) Close() error {
+func (p *Player) Close() {
 	if p.conn == nil {
-		return nil
+		return
 	}
-	if err := p.conn.Close(); err != nil {
-		return err
-	}
+	_ = p.conn.Close()
 	p.Active = false
-	return nil
 }
 
 func (p *Player) Connected() bool {
