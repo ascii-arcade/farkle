@@ -45,7 +45,7 @@ func NewModel(logger *slog.Logger, p *player.Player, g *Game) gameModel {
 	go func() {
 		for msg := range wsclient.GameMessages {
 			if msg.Type == message.MessageTypeUpdated {
-				if err := json.Unmarshal([]byte(msg.Data.(string)), &currentGame); err != nil {
+				if err := json.Unmarshal([]byte(msg.Data), &currentGame); err != nil {
 					continue
 				}
 
@@ -54,7 +54,7 @@ func NewModel(logger *slog.Logger, p *player.Player, g *Game) gameModel {
 
 			if msg.Type == message.MessageTypeRolled {
 				// TODO: handle rolling
-				if err := json.Unmarshal([]byte(msg.Data.(string)), &currentGame); err != nil {
+				if err := json.Unmarshal([]byte(msg.Data), &currentGame); err != nil {
 					continue
 				}
 

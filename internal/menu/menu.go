@@ -44,17 +44,15 @@ func (m menuModel) Init() tea.Cmd {
 
 func (m *menuModel) checkHealth() {
 	c := http.Client{}
-	// for {
-	resp, err := c.Get("http://localhost:8080/health")
-	if err == nil && resp.StatusCode == http.StatusOK {
+	for {
+		_, err := c.Get("http://localhost:8080/health")
+		if err != nil {
+			serverHealth = false
+			continue
+		}
 		serverHealth = true
-		return
+		time.Sleep(5 * time.Second)
 	}
-	serverHealth = false
-
-	// CONTINUE:
-	// 	time.Sleep(5 * time.Second)
-	// }
 }
 
 func Run(loggerIn *slog.Logger) {

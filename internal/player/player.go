@@ -3,8 +3,11 @@ package player
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/xid"
@@ -19,8 +22,10 @@ type Player struct {
 	Active bool   `json:"active"`
 	Color  string `json:"color"`
 
-	LastSeen time.Time       `json:"-"`
-	conn     *websocket.Conn `json:"-"`
+	lastSeen   time.Time       `json:"-"`
+	conn       *websocket.Conn `json:"-"`
+	logger     *slog.Logger    `json:"-"`
+	disconnect chan bool       `json:"-"`
 	// player   *player.Player `json:"-"`
 }
 
@@ -29,11 +34,53 @@ func NewPlayer(conn *websocket.Conn, name string) *Player {
 		Id:       xid.New().String(),
 		Name:     name,
 		Active:   true,
-		LastSeen: time.Now().Add(15 * time.Second),
+		lastSeen: time.Now().Add(15 * time.Second),
 
 		conn: conn,
 	}
 	return c
+}
+
+func (p *Player) Connect(code string, messageChan chan message.Message) {
+	url := fmt.Sprintf("ws://%s:%s/ws/%s?name=%s", config.GetServerURL(), config.GetServerPort(), code, p.Name)
+	p.logger.Debug("connecting to server", "url", url)
+	for {
+		select {
+		case <-p.disconnect:
+			p.logger.Debug("disconnected from server")
+			return
+		default:
+		}
+
+		conn, err := websocket.Dial(url, "", "http://localhost/")
+		if err != nil {
+			p.logger.Error("error connecting to server", "error", err)
+			goto RECONNECT
+		}
+		p.Active = true
+		p.conn = conn
+
+		if err := p.MonitorMessages(messageChan); err != nil && !p.Active {
+			p.logger.Error("error monitoring messages", "error", err)
+		}
+
+	RECONNECT:
+		p.Active = false
+		p.logger.Debug("retrying connection...")
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (p *Player) Disconnected() chan bool {
+	return p.disconnect
+}
+
+func (p *Player) Update(pIn Player) {
+	p.Name = pIn.Name
+	p.Score = pIn.Score
+	p.Host = pIn.Host
+	p.Active = pIn.Active
+	p.Color = pIn.Color
 }
 
 func (p *Player) ToJSON() string {

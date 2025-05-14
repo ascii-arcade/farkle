@@ -9,9 +9,8 @@ const (
 	MessageTypeUpdate  MessageType = "update"
 	MessageTypeUpdated MessageType = "updated"
 
-	MessageTypeLeave   MessageType = "leave"
-	MessageTypeStart   MessageType = "start"
-	MessageTypeStarted MessageType = "started"
+	MessageTypeLeave MessageType = "leave"
+	MessageTypeStart MessageType = "start"
 
 	MessageTypeRoll   MessageType = "roll"
 	MessageTypeRolled MessageType = "rolled"

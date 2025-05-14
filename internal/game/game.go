@@ -19,6 +19,7 @@ type Game struct {
 	DiceHeld   dice.DicePool    `json:"dice_held"`
 	DiceLocked []dice.DicePool  `json:"dice_locked"`
 	LobbyCode  string           `json:"lobby_code"`
+	Rolling    bool             `json:"rolling"`
 
 	log log
 }
@@ -57,6 +58,17 @@ func New(lobbyCode string, players []*player.Player) *Game {
 	}
 }
 
+func (g *Game) Update(gIn Game) {
+	g.Players = gIn.Players
+	g.Scores = gIn.Scores
+	g.Turn = gIn.Turn
+	g.Round = gIn.Round
+	g.DicePool = gIn.DicePool
+	g.DiceHeld = gIn.DiceHeld
+	g.DiceLocked = gIn.DiceLocked
+	g.Rolling = gIn.Rolling
+}
+
 func (g *Game) NextTurn() {
 	g.Turn++
 	if g.Turn >= len(g.Players) {
@@ -66,6 +78,7 @@ func (g *Game) NextTurn() {
 }
 
 func (g *Game) RollDice() {
+	g.Rolling = true
 	g.DicePool.Roll()
 }
 

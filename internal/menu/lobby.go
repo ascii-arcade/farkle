@@ -9,6 +9,7 @@ import (
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/internal/player"
 	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,7 +18,6 @@ import (
 type lobbyModel struct {
 	width  int
 	height int
-	code   string
 
 	creatingLobby bool
 	joiningLobby  bool
@@ -29,11 +29,12 @@ type lobbyModel struct {
 }
 
 func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, tea.Cmd) {
-	wsclient.New(logger, playerName)
+	// wsclient.Connect(logger, code, playerName)
+	me = player.NewPlayer(nil, playerName)
+	go me.Connect(code, messages)
 
 	m := lobbyModel{
 		joiningLobby: joining,
-		code:         code,
 	}
 
 	return m, m.Init()
@@ -48,44 +49,29 @@ func (m lobbyModel) Init() tea.Cmd {
 			}
 
 			select {
-			case <-wsclient.Disconnect:
+			case <-me.Disconnected():
 				logger.Debug("stopping monitoring for messages in lobby model")
 				return
-			case msg := <-wsclient.LobbyMessages:
-				switch msg.Type {
-				case message.MessageTypeUpdated:
-					logger.Debug("Received lobby update from server")
-					if err := json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
-						logger.Error("Error unmarshalling player message", "error", err)
-						continue
-					}
-				case message.MessageTypeStarted:
-					logger.Debug("Received lobby start message from server")
-					if err := json.Unmarshal([]byte(msg.Data.(string)), &currentLobby); err != nil {
-						logger.Error("Error unmarshalling player message", "error", err)
-						continue
-					}
-
-					if currentLobby.Game != nil {
-						gm := game.NewModel(logger, me, currentLobby.Game)
-
-						tea.NewProgram(gm, tea.WithAltScreen()).Run()
-					}
-				}
-			case msg := <-wsclient.PlayerMessages:
-				logger.Debug("Received player message from server")
+			case msg := <-messages:
 				switch msg.Type {
 				case message.MessageTypeMe:
 					logger.Debug("Received player message from server")
-					if err := json.Unmarshal([]byte(msg.Data.(string)), &me); err != nil {
+					if err := json.Unmarshal([]byte(msg.Data), &me); err != nil {
 						logger.Error("Error unmarshalling player message", "error", err)
 						continue
 					}
-				}
-			default:
-			}
+				case message.MessageTypeUpdated:
+					logger.Debug("Received lobby update from server")
+					if err := msg.Unmarshal(&currentLobby); err != nil {
+						logger.Error("Error unmarshalling player message", "error", err)
+						continue
+					}
 
-			time.Sleep(100 * time.Millisecond)
+					if currentLobby.Started && currentLobby.Game != nil {
+						tea.NewProgram(game.NewModel(logger, me, currentLobby.Game), tea.WithAltScreen()).Run()
+					}
+				}
+			}
 		}
 	}()
 	sizeCmd := tea.WindowSize()

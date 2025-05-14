@@ -15,8 +15,6 @@ type Client struct {
 	*websocket.Conn
 	connected bool
 	logger    *slog.Logger
-	name      string
-	id        string
 }
 
 var (
@@ -28,11 +26,10 @@ var (
 	Disconnect     chan bool
 )
 
-func New(logger *slog.Logger, name string) {
+func Connect(logger *slog.Logger, code, name string) {
 	l := logger.With("component", "wsclient")
 	c := &Client{
 		logger: l,
-		name:   name,
 	}
 	Disconnect = make(chan bool)
 	LobbyMessages = make(chan message.Message, 10)
@@ -40,13 +37,13 @@ func New(logger *slog.Logger, name string) {
 	PlayerMessages = make(chan message.Message, 10)
 
 	go c.keepAlive()
-	go c.connect()
+	go c.connect(code, name)
 
 	client = c
 }
 
-func (c *Client) connect() {
-	url := fmt.Sprintf("ws://%s:%s/ws?name=%s", config.GetServerURL(), config.GetServerPort(), c.name)
+func (c *Client) connect(code, name string) {
+	url := fmt.Sprintf("ws://%s:%s/ws/%s?name=%s", config.GetServerURL(), config.GetServerPort(), code, name)
 	c.logger.Debug("connecting to server", "url", url)
 	for {
 		select {

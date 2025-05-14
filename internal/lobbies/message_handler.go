@@ -1,6 +1,11 @@
 package lobbies
 
-import "github.com/ascii-arcade/farkle/internal/message"
+import (
+	"encoding/json"
+
+	"github.com/ascii-arcade/farkle/internal/game"
+	"github.com/ascii-arcade/farkle/internal/message"
+)
 
 func (l *Lobby) handleMessages() {
 	for msg := range l.messages {
@@ -14,9 +19,36 @@ func (l *Lobby) handleMessages() {
 			case message.MessageTypeStart:
 				if player.Host {
 					l.StartGame()
+					l.BroadcastUpdate()
 				}
 			}
 		case message.ChannelGame:
+			if l.Game == nil {
+				l.logger.Error("Game not found", "lobbyCode", l.Code)
+				continue
+			}
+			details := game.GameDetails{}
+			if err := json.Unmarshal([]byte(msg.Data), &details); err != nil {
+				return
+			}
+			switch msg.Type {
+			case message.MessageTypeRoll:
+				l.Game.RollDice()
+				l.BroadcastUpdate()
+				l.Game.Rolling = false
+			case message.MessageTypeHold:
+				l.Game.HoldDie(details.DieHeld)
+			case message.MessageTypeUndo:
+				l.Game.Undo()
+			case message.MessageTypeLock:
+				l.Game.LockDice()
+			case message.MessageTypeUpdated:
+				updatedGame := game.Game{}
+				if err := msg.Unmarshal(&updatedGame); err != nil {
+					return
+				}
+				l.Game.Update(updatedGame)
+			}
 		}
 	}
 }

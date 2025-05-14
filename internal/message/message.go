@@ -8,7 +8,7 @@ import (
 type Message struct {
 	Channel  Channel     `json:"channel"`
 	Type     MessageType `json:"type"`
-	Data     any         `json:"data"`
+	Data     string      `json:"data"`
 	SentAt   time.Time   `json:"sent_at"`
 	PlayerId string      `json:"player_id"`
 }
@@ -19,4 +19,8 @@ func (m *Message) ToBytes() []byte {
 		return nil
 	}
 	return b
+}
+
+func (m *Message) Unmarshal(v any) error {
+	return json.Unmarshal([]byte(m.Data), v)
 }
