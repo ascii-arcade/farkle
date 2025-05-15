@@ -1,14 +1,15 @@
 package menu
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ascii-arcade/farkle/internal/config"
-	"github.com/ascii-arcade/farkle/internal/wsclient"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -31,8 +32,15 @@ type menuModel struct {
 	err string
 }
 
+func Run(loggerIn *slog.Logger) {
+	logger = loggerIn
+	if _, err := tea.NewProgram(newMenu()).Run(); err != nil {
+		fmt.Println("Error starting program:", err)
+	}
+}
+
 func (m menuModel) Init() tea.Cmd {
-	wsclient.GetClient().Close()
+	me.Close()
 
 	sizeCmd := tea.WindowSize()
 	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
@@ -44,22 +52,12 @@ func (m menuModel) Init() tea.Cmd {
 
 func (m *menuModel) checkHealth() {
 	c := http.Client{}
-	for {
-		_, err := c.Get("http://localhost:8080/health")
-		if err != nil {
-			serverHealth = false
-			continue
-		}
-		serverHealth = true
-		time.Sleep(5 * time.Second)
+	_, err := c.Get("http://localhost:8080/health")
+	if err != nil {
+		serverHealth = false
+		return
 	}
-}
-
-func Run(loggerIn *slog.Logger) {
-	logger = loggerIn
-	if _, err := tea.NewProgram(newMenu()).Run(); err != nil {
-		fmt.Println("Error starting program:", err)
-	}
+	serverHealth = true
 }
 
 func newMenu() *menuModel {
@@ -106,7 +104,22 @@ func newMenu() *menuModel {
 					if !serverHealth {
 						return m, nil
 					}
-					return newLobbyModel(m.playerNameInput.Value(), "", false)
+					client := http.Client{}
+					res, err := client.Post("http://localhost:8080/lobbies", "application/json", nil)
+					if err != nil {
+						logger.Debug("FAILED")
+						return m, nil
+					}
+					body, err := io.ReadAll(res.Body)
+					if err != nil {
+						logger.Debug("FAILED")
+						return m, nil
+					}
+					if err := json.Unmarshal(body, &currentLobby); err != nil {
+						logger.Debug("FAILED")
+						return m, nil
+					}
+					return newLobbyModel(m.playerNameInput.Value(), currentLobby.Code, false)
 				},
 				render: func(m menuModel, selected bool) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))

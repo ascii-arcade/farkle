@@ -10,7 +10,6 @@ import (
 	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
-	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -29,9 +28,10 @@ type lobbyModel struct {
 }
 
 func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, tea.Cmd) {
-	// wsclient.Connect(logger, code, playerName)
-	me = player.NewPlayer(nil, playerName)
-	go me.Connect(code, messages)
+	messages = make(chan message.Message, 100)
+
+	me = player.NewPlayer(logger, nil, playerName)
+	me.Connect(code, messages)
 
 	m := lobbyModel{
 		joiningLobby: joining,
@@ -43,8 +43,8 @@ func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, te
 func (m lobbyModel) Init() tea.Cmd {
 	go func() {
 		for {
-			if wsclient.GetClient() == nil {
-				logger.Debug("wsClient is nil, stopping monitoring for messages in lobby model")
+			if me == nil {
+				logger.Debug("me is nil, stopping monitoring for messages in lobby model")
 				return
 			}
 
@@ -88,7 +88,7 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			wsclient.SendMessage(message.Message{
+			me.SendMessage(message.Message{
 				Channel: message.ChannelLobby,
 				Type:    message.MessageTypeLeave,
 				SentAt:  time.Now(),
@@ -101,7 +101,7 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if currentLobby.Ready() {
 				// 	tui.RunFromLobby(currentLobby)
 				// 	return m.menuModel, nil
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelLobby,
 					Type:    message.MessageTypeStart,
 					SentAt:  time.Now(),
@@ -137,7 +137,16 @@ func (m lobbyModel) View() string {
 		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
 	}
 
-	if wsclient.GetClient().IsConnected() && currentLobby == nil {
+	if !me.Connected() {
+		return fullPaneStyle.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Center,
+				lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render("Connecting..."),
+			),
+		)
+	}
+
+	if currentLobby == nil {
 		msg := ""
 		if m.creatingLobby {
 			msg = "Creating lobby..."

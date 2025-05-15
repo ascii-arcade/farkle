@@ -29,14 +29,15 @@ type Player struct {
 	// player   *player.Player `json:"-"`
 }
 
-func NewPlayer(conn *websocket.Conn, name string) *Player {
+func NewPlayer(logger *slog.Logger, conn *websocket.Conn, name string) *Player {
 	c := &Player{
 		Id:       xid.New().String(),
 		Name:     name,
 		Active:   true,
 		lastSeen: time.Now().Add(15 * time.Second),
 
-		conn: conn,
+		conn:   conn,
+		logger: logger,
 	}
 	return c
 }
@@ -44,31 +45,33 @@ func NewPlayer(conn *websocket.Conn, name string) *Player {
 func (p *Player) Connect(code string, messageChan chan message.Message) {
 	url := fmt.Sprintf("ws://%s:%s/ws/%s?name=%s", config.GetServerURL(), config.GetServerPort(), code, p.Name)
 	p.logger.Debug("connecting to server", "url", url)
-	for {
-		select {
-		case <-p.disconnect:
-			p.logger.Debug("disconnected from server")
-			return
-		default:
-		}
+	go func() {
+		for {
+			select {
+			case <-p.disconnect:
+				p.logger.Debug("disconnected from server")
+				return
+			default:
+			}
 
-		conn, err := websocket.Dial(url, "", "http://localhost/")
-		if err != nil {
-			p.logger.Error("error connecting to server", "error", err)
-			goto RECONNECT
-		}
-		p.Active = true
-		p.conn = conn
+			conn, err := websocket.Dial(url, "", "http://localhost/")
+			if err != nil {
+				p.logger.Error("error connecting to server", "error", err)
+				goto RECONNECT
+			}
+			p.Active = true
+			p.conn = conn
 
-		if err := p.MonitorMessages(messageChan); err != nil && !p.Active {
-			p.logger.Error("error monitoring messages", "error", err)
-		}
+			if err := p.MonitorMessages(messageChan); err != nil && !p.Active {
+				p.logger.Error("error monitoring messages", "error", err)
+			}
 
-	RECONNECT:
-		p.Active = false
-		p.logger.Debug("retrying connection...")
-		time.Sleep(1 * time.Second)
-	}
+		RECONNECT:
+			p.Active = false
+			p.logger.Debug("retrying connection...")
+			time.Sleep(1 * time.Second)
+		}
+	}()
 }
 
 func (p *Player) Disconnected() chan bool {
@@ -110,7 +113,7 @@ func (p *Player) ReceiveMessage() (message.Message, error) {
 }
 
 func (p *Player) Close() {
-	if p.conn == nil {
+	if p == nil || p.conn == nil {
 		return
 	}
 	_ = p.conn.Close()

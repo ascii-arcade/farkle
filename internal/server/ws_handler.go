@@ -39,7 +39,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			logger.Info("webSocket connection established")
 			defer ws.Close()
 
-			player := player.NewPlayer(ws, name)
+			player := player.NewPlayer(logger, ws, name)
 			logger.Info("new client connected", "clientId", player.Id)
 
 			if err := player.SendMessage(message.Message{

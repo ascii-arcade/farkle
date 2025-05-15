@@ -40,17 +40,23 @@ func NewLobby(logger *slog.Logger) *Lobby {
 
 func (l *Lobby) AddPlayer(p *player.Player) bool {
 	for i, player := range l.Players {
-		if player == nil {
-			if i == 0 {
-				p.Host = true
+		if player != nil {
+			if player.Id == p.Id {
+				l.logger.Debug("Player already in lobby", "player_id", p.Id)
+				return true
 			}
 
-			go p.MonitorMessages(l.messages)
-
-			l.Players[i] = p
-
-			return true
+			continue
 		}
+		if i == 0 {
+			p.Host = true
+		}
+
+		go p.MonitorMessages(l.messages)
+
+		l.Players[i] = p
+
+		return true
 	}
 
 	return false

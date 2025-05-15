@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"log/slog"
 	"strconv"
 	"time"
@@ -9,7 +8,6 @@ import (
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
-	"github.com/ascii-arcade/farkle/internal/wsclient"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -41,27 +39,6 @@ func NewModel(logger *slog.Logger, p *player.Player, g *Game) gameModel {
 	me = p
 	currentGame = g
 	logger = logger.With("component", "game")
-
-	go func() {
-		for msg := range wsclient.GameMessages {
-			if msg.Type == message.MessageTypeUpdated {
-				if err := json.Unmarshal([]byte(msg.Data), &currentGame); err != nil {
-					continue
-				}
-
-				cmdSent = false
-			}
-
-			if msg.Type == message.MessageTypeRolled {
-				// TODO: handle rolling
-				if err := json.Unmarshal([]byte(msg.Data), &currentGame); err != nil {
-					continue
-				}
-
-				cmdSent = false
-			}
-		}
-	}()
 
 	return gameModel{}
 }
@@ -131,7 +108,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					DieHeld:   choice,
 				}
 
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeHold,
 					SentAt:  time.Now(),
@@ -142,7 +119,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeRoll,
 					SentAt:  time.Now(),
@@ -154,7 +131,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeLock,
 					SentAt:  time.Now(),
@@ -166,7 +143,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeBank,
 					SentAt:  time.Now(),
@@ -178,7 +155,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
-				wsclient.SendMessage(message.Message{
+				me.SendMessage(message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeUndo,
 					SentAt:  time.Now(),
