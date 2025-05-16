@@ -37,3 +37,20 @@ func (p *Player) MonitorMessages(messageChan chan message.Message) error {
 		messageChan <- msg
 	}
 }
+
+func (p *Player) MonitorGameMessages(messageChan chan message.Message) error {
+	if p.conn == nil {
+		return nil
+	}
+	for {
+		msg, err := p.ReceiveMessage()
+		if err != nil {
+			return err
+		}
+
+		switch msg.Channel {
+		case message.ChannelGame:
+			messageChan <- msg
+		}
+	}
+}

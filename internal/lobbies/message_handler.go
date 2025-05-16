@@ -11,7 +11,7 @@ func (l *Lobby) handleMessages() {
 	for msg := range l.messages {
 		player := l.getPlayer(msg.PlayerId)
 
-		l.logger.Debug("Received message from player", "channel", msg.Channel, "type", msg.Type, "player_id", msg.PlayerId, "player_name", player.Name)
+		l.logger.Info("Received message from player", "channel", msg.Channel, "type", msg.Type, "player_id", msg.PlayerId, "player_name", player.Name)
 
 		switch msg.Channel {
 		case message.ChannelLobby:
@@ -36,6 +36,8 @@ func (l *Lobby) handleMessages() {
 				l.Game.RollDice()
 				l.BroadcastUpdate()
 				l.Game.Rolling = false
+			case message.MessageTypeRolled:
+				l.Game.Roll()
 			case message.MessageTypeHold:
 				l.Game.HoldDie(details.DieHeld)
 			case message.MessageTypeUndo:

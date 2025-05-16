@@ -20,6 +20,9 @@ type Game struct {
 	DiceLocked []dice.DicePool  `json:"dice_locked"`
 	LobbyCode  string           `json:"lobby_code"`
 	Rolling    bool             `json:"rolling"`
+	Log        []string         `json:"log"`
+
+	roll chan struct{}
 
 	log log
 }
@@ -56,6 +59,11 @@ func New(lobbyCode string, players []*player.Player) *Game {
 		DiceHeld:  dice.NewDicePool(0),
 		LobbyCode: lobbyCode,
 	}
+}
+
+func (g *Game) Roll() {
+	g.Rolling = true
+	g.roll <- struct{}{}
 }
 
 func (g *Game) Update(gIn Game) {

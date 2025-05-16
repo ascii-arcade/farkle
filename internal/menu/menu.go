@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -28,6 +27,7 @@ type menuModel struct {
 	playerNameInput textinput.Model
 	gameCodeInput   textinput.Model
 	choices         []menuChoice
+	serverHealthy   bool
 
 	err string
 }
@@ -39,25 +39,14 @@ func Run(loggerIn *slog.Logger) {
 	}
 }
 
+type serverHealthMsg bool
+
 func (m menuModel) Init() tea.Cmd {
 	me.Close()
 
 	sizeCmd := tea.WindowSize()
-	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tick(t)
-	})
 
-	return tea.Batch(sizeCmd, tickCmd)
-}
-
-func (m *menuModel) checkHealth() {
-	c := http.Client{}
-	_, err := c.Get("http://localhost:8080/health")
-	if err != nil {
-		serverHealth = false
-		return
-	}
-	serverHealth = true
+	return tea.Batch(sizeCmd, serverHealth())
 }
 
 func newMenu() *menuModel {
@@ -101,7 +90,7 @@ func newMenu() *menuModel {
 			},
 			{
 				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					if !serverHealth {
+					if !m.serverHealthy {
 						return m, nil
 					}
 					client := http.Client{}
@@ -130,7 +119,7 @@ func newMenu() *menuModel {
 						prefix = "-> "
 					}
 
-					if !serverHealth {
+					if !m.serverHealthy {
 						style = style.Foreground(lipgloss.Color("#ff0000"))
 					}
 
@@ -204,18 +193,15 @@ func newMenu() *menuModel {
 			},
 		},
 	}
-	m.checkHealth()
 
 	return m
 }
 
 func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tick:
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
-			m.checkHealth()
-			return tick(t)
-		})
+	case serverHealthMsg:
+		m.serverHealthy = bool(msg)
+		return m, serverHealth()
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyRunes:
@@ -274,7 +260,7 @@ func (m menuModel) View() string {
 	}
 	menuContent := menuStyle.Render(strings.Join(menu, "\n"))
 
-	if !serverHealth {
+	if !m.serverHealthy {
 		menuContent = menuStyle.Render("Connecting to server...")
 	}
 
@@ -307,4 +293,21 @@ func (m menuModel) View() string {
 		panel,
 		controlsPane,
 	)
+}
+
+func serverHealth() tea.Cmd {
+	return func() tea.Msg {
+		client := http.Client{}
+		res, err := client.Get("http://localhost:8080/health")
+		if err != nil {
+			return serverHealthMsg(false)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return serverHealthMsg(false)
+		}
+
+		return serverHealthMsg(true)
+	}
 }

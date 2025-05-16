@@ -1,7 +1,6 @@
 package menu
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -21,14 +20,15 @@ type lobbyModel struct {
 	creatingLobby bool
 	joiningLobby  bool
 
-	started bool
-
 	errors    string
 	menuModel menuModel
 }
 
+type disconnectedMsg struct{}
+
 func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, tea.Cmd) {
 	messages = make(chan message.Message, 100)
+	gameMessages = make(chan message.Message, 100)
 
 	me = player.NewPlayer(logger, nil, playerName)
 	me.Connect(code, messages)
@@ -41,44 +41,7 @@ func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, te
 }
 
 func (m lobbyModel) Init() tea.Cmd {
-	go func() {
-		for {
-			if me == nil {
-				logger.Debug("me is nil, stopping monitoring for messages in lobby model")
-				return
-			}
-
-			select {
-			case <-me.Disconnected():
-				logger.Debug("stopping monitoring for messages in lobby model")
-				return
-			case msg := <-messages:
-				switch msg.Type {
-				case message.MessageTypeMe:
-					logger.Debug("Received player message from server")
-					if err := json.Unmarshal([]byte(msg.Data), &me); err != nil {
-						logger.Error("Error unmarshalling player message", "error", err)
-						continue
-					}
-				case message.MessageTypeUpdated:
-					logger.Debug("Received lobby update from server")
-					if err := msg.Unmarshal(&currentLobby); err != nil {
-						logger.Error("Error unmarshalling player message", "error", err)
-						continue
-					}
-
-					if currentLobby.Started && currentLobby.Game != nil {
-						tea.NewProgram(game.NewModel(logger, me, currentLobby.Game), tea.WithAltScreen()).Run()
-					}
-				}
-			}
-		}
-	}()
-	sizeCmd := tea.WindowSize()
-	tickCmd := tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tick(t)
-	})
-	return tea.Batch(sizeCmd, tickCmd)
+	return tea.Batch(tea.WindowSize(), watchForMessages())
 }
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -88,7 +51,7 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			me.SendMessage(message.Message{
+			_ = me.SendMessage(message.Message{
 				Channel: message.ChannelLobby,
 				Type:    message.MessageTypeLeave,
 				SentAt:  time.Now(),
@@ -98,10 +61,8 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return newMenu(), m.menuModel.Init()
 		case "enter":
-			if currentLobby.Ready() {
-				// 	tui.RunFromLobby(currentLobby)
-				// 	return m.menuModel, nil
-				me.SendMessage(message.Message{
+			if currentLobby != nil && currentLobby.Ready() {
+				_ = me.SendMessage(message.Message{
 					Channel: message.ChannelLobby,
 					Type:    message.MessageTypeStart,
 					SentAt:  time.Now(),
@@ -109,17 +70,34 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 			}
 
-			// m.errors = "Please wait for at least two players to join before starting the game"
-
 			return m, nil
 		}
-	case tick:
-		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
-			return tick(t)
-		})
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
+	case message.Message:
+		logger.Debug("Received message from server", "channel", msg.Channel, "type", msg.Type)
+		switch msg.Channel {
+		case message.ChannelPing:
+		case message.ChannelLobby:
+			switch msg.Type {
+			case message.MessageTypeUpdated:
+				logger.Debug("Received lobby update from server")
+				if err := msg.Unmarshal(&currentLobby); err != nil {
+					logger.Error("Error unmarshalling player message", "error", err)
+					break
+				}
+
+				if currentLobby.Started && currentLobby.Game != nil {
+					_, _ = tea.NewProgram(game.NewModel(logger, me, currentLobby.Game), tea.WithAltScreen()).Run()
+				}
+			}
+		default:
+		}
+		return m, watchForMessages()
+	case disconnectedMsg:
+		logger.Debug("stopping monitoring for messages in lobby model")
+		return m, tea.Quit
 	}
 
 	return m, nil
@@ -207,4 +185,24 @@ func (m lobbyModel) View() string {
 		),
 		controlsPane,
 	)
+}
+
+func watchForMessages() tea.Cmd {
+	return func() tea.Msg {
+		for {
+			if me == nil {
+				logger.Debug("me is nil, stopping monitoring for messages in lobby model")
+				return disconnectedMsg{}
+			}
+
+			select {
+			case <-me.Disconnected():
+				logger.Debug("stopping monitoring for messages in lobby model")
+				return disconnectedMsg{}
+			case msg := <-messages:
+				logger.Debug("Received message from server", "channel", msg.Channel, "type", msg.Type)
+				return msg
+			}
+		}
+	}
 }
