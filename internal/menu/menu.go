@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -297,6 +298,15 @@ func (m menuModel) View() string {
 
 func serverHealth() tea.Cmd {
 	return func() tea.Msg {
+		defer func() {
+			lastHealthCheck = time.Now()
+		}()
+
+		if time.Since(lastHealthCheck) < 5*time.Second {
+			time.Sleep(time.Second)
+			return serverHealthMsg(true)
+		}
+
 		client := http.Client{}
 		res, err := client.Get("http://localhost:8080/health")
 		if err != nil {

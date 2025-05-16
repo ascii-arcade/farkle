@@ -2,6 +2,7 @@ package menu
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/ascii-arcade/farkle/internal/lobbies"
 	"github.com/ascii-arcade/farkle/internal/message"
@@ -9,9 +10,10 @@ import (
 )
 
 var (
-	logger       *slog.Logger
-	currentLobby *lobbies.Lobby
-	me           *player.Player
-	messages     chan message.Message
-	gameMessages chan message.Message
+	logger          *slog.Logger
+	currentLobby    *lobbies.Lobby
+	me              *player.Player
+	messages        chan message.Message
+	gameMessages    chan message.Message
+	lastHealthCheck time.Time
 )
