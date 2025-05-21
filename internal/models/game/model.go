@@ -7,6 +7,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/dice"
+	"github.com/ascii-arcade/farkle/internal/game"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,13 +15,14 @@ import (
 )
 
 type gameModel struct {
-	width     int
-	height    int
-	isRolling bool
-	poolRoll  dice.DicePool
-
+	width         int
+	height        int
+	isRolling     bool
+	poolRoll      dice.DicePool
 	error         string
 	rollTickCount int
+
+	game *game.Game
 }
 
 const (
@@ -32,14 +34,14 @@ const (
 )
 
 var (
-	currentGame *Game
+	currentGame *game.Game
 	me          *player.Player
 	logger      *slog.Logger
 	cmdSent     bool
 	messages    chan message.Message
 )
 
-func NewModel(loggerIn *slog.Logger, p *player.Player, g *Game) gameModel {
+func NewModel(loggerIn *slog.Logger, p *player.Player, g *game.Game) gameModel {
 	messages = make(chan message.Message, 100)
 	me = p
 	currentGame = g
@@ -73,7 +75,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "1", "2", "3", "4", "5", "6":
 				choice, _ := strconv.Atoi(msg.String())
-				gd := GameDetails{
+				gd := game.GameDetails{
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 					DieHeld:   choice,
@@ -86,7 +88,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Data:    gd.ToJSON(),
 				})
 			case "r":
-				gd := GameDetails{
+				gd := game.GameDetails{
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
@@ -102,7 +104,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return rollMsg{}
 				})
 			case "l":
-				gd := GameDetails{
+				gd := game.GameDetails{
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
@@ -114,7 +116,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 				cmdSent = true
 			case "y":
-				gd := GameDetails{
+				gd := game.GameDetails{
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
@@ -126,7 +128,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 				cmdSent = true
 			case "u":
-				gd := GameDetails{
+				gd := game.GameDetails{
 					LobbyCode: currentGame.LobbyCode,
 					PlayerId:  me.Id,
 				}
