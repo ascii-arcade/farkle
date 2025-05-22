@@ -182,6 +182,8 @@ func New() *menuModel {
 
 					m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
 
+					m.gameCodeInput.SetValue(strings.ToUpper(m.gameCodeInput.Value()))
+
 					if len(m.gameCodeInput.Value()) == 3 {
 						m.gameCodeInput.SetValue(m.gameCodeInput.Value() + "-")
 						m.gameCodeInput.CursorEnd()

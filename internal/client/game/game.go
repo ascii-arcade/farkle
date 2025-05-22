@@ -78,6 +78,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
 				}
+				return m, nil
 			case "r":
 				gd := game.GameDetails{
 					LobbyCode: m.game.LobbyCode,
@@ -144,6 +145,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			case message.MessageTypeRolled:
+				m.rollTickCount = 0
 				if err := msg.Data.Unmarshal(&m.game); err != nil {
 					return m, nil
 				}
@@ -153,21 +155,36 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 			}
 		}
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		m.width = msg.Width
 	}
 
 	return m, nil
 }
 
 func (m gameModel) View() string {
-	style := lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height)
-
 	cg := m.game
 	_ = cg
 
-	debugPaneStyle := lipgloss.NewStyle().Width(m.width).AlignHorizontal(lipgloss.Left)
-	poolPaneStyle := lipgloss.NewStyle().Width(36).Height(10).Align(lipgloss.Center)
+	paneStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	poolPaneStyle := lipgloss.NewStyle().
+		// Width(36).Height(10).
+		Align(lipgloss.Center)
+
+	logPaneStyle := lipgloss.NewStyle()
+
+	if config.GetDebug() {
+		paneStyle = paneStyle.
+			Width(m.width - 1).
+			Height(m.height - 1).
+			BorderStyle(lipgloss.ASCIIBorder()).
+			BorderForeground(lipgloss.Color("#ff0000"))
+	}
 
 	poolRollPane := poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6))
 	poolHeldPane := poolPaneStyle.Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
@@ -177,20 +194,7 @@ func (m gameModel) View() string {
 		centeredText = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colorError)).Render(m.error)
 	}
 
-	debugPane := ""
-
-	if config.GetDebug() {
-		debugMsgs := []string{
-			"Debug",
-			"Current Player: " + m.game.Players[m.game.Turn].Name,
-		}
-		debugPane = lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			debugPaneStyle.Render(debugMsgs...),
-		)
-	}
-
-	poolPanes := lipgloss.JoinVertical(
+	poolPane := lipgloss.JoinVertical(
 		lipgloss.Center,
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
@@ -200,31 +204,13 @@ func (m gameModel) View() string {
 		centeredText,
 	)
 
-	panes := lipgloss.JoinVertical(
-		lipgloss.Center,
-		"r to roll, l to lock, n to bust, y to bank, u to undo",
+	return paneStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			"",
-			poolPanes,
+			poolPane,
 			m.game.PlayerScores(),
-			"",
-			m.logPane(),
-			debugPane,
+			logPaneStyle.Render(m.game.LogEntries()),
+			"r to roll, l to lock, n to bust, y to bank, u to undo",
 		),
 	)
-
-	return style.Render(
-		lipgloss.Place(
-			m.width,
-			m.height,
-			lipgloss.Center,
-			lipgloss.Center,
-			panes,
-		),
-	)
-}
-
-func (m *gameModel) logPane() string {
-	return lipgloss.NewStyle().Width(80).Height(15).Render(m.game.LogEntries())
 }
