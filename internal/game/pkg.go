@@ -23,8 +23,6 @@ type Game struct {
 	Log        []string         `json:"log"`
 
 	roll chan struct{}
-
-	log log
 }
 
 func New(lobbyCode string, players []*player.Player) *Game {

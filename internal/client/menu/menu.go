@@ -1,14 +1,10 @@
 package menu
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"strings"
-	"time"
 
+	"github.com/ascii-arcade/farkle/internal/client"
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,26 +27,20 @@ type menuModel struct {
 	serverHealthy   bool
 
 	err string
-}
 
-func Run(loggerIn *slog.Logger) {
-	logger = loggerIn
-	if _, err := tea.NewProgram(newMenu()).Run(); err != nil {
-		fmt.Println("Error starting program:", err)
-	}
+	logger *slog.Logger
 }
 
 type serverHealthMsg bool
 
 func (m menuModel) Init() tea.Cmd {
-	me.Close()
-
 	sizeCmd := tea.WindowSize()
 
-	return tea.Batch(sizeCmd, serverHealth())
+	// return tea.Batch(sizeCmd, serverHealth())
+	return sizeCmd
 }
 
-func newMenu() *menuModel {
+func New() *menuModel {
 	playerNameInput := textinput.New()
 	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	playerNameInput.CharLimit = 25
@@ -91,25 +81,26 @@ func newMenu() *menuModel {
 			},
 			{
 				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					if !m.serverHealthy {
-						return m, nil
-					}
-					client := http.Client{}
-					res, err := client.Post("http://localhost:8080/lobbies", "application/json", nil)
-					if err != nil {
-						logger.Debug("FAILED")
-						return m, nil
-					}
-					body, err := io.ReadAll(res.Body)
-					if err != nil {
-						logger.Debug("FAILED")
-						return m, nil
-					}
-					if err := json.Unmarshal(body, &currentLobby); err != nil {
-						logger.Debug("FAILED")
-						return m, nil
-					}
-					return newLobbyModel(m.playerNameInput.Value(), currentLobby.Code, false)
+					// if !m.serverHealthy {
+					// 	return m, nil
+					// }
+					// client := http.Client{}
+					// res, err := client.Post("http://localhost:8080/lobbies", "application/json", nil)
+					// if err != nil {
+					// 	m.logger.Debug("FAILED")
+					// 	return m, nil
+					// }
+					// body, err := io.ReadAll(res.Body)
+					// if err != nil {
+					// 	m.logger.Debug("FAILED")
+					// 	return m, nil
+					// }
+					// if err := json.Unmarshal(body, &currentLobby); err != nil {
+					// 	m.logger.Debug("FAILED")
+					// 	return m, nil
+					// }
+					// return newLobbyModel(m.playerNameInput.Value(), currentLobby.Code, false)
+					return m, nil
 				},
 				render: func(m menuModel, selected bool) string {
 					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
@@ -152,7 +143,8 @@ func newMenu() *menuModel {
 								return m, nil
 							}
 
-							return newLobbyModel(m.playerNameInput.Value(), m.gameCodeInput.Value(), true)
+							// return newLobbyModel(m.playerNameInput.Value(), m.gameCodeInput.Value(), true)
+							return m, nil
 						}
 					}
 
@@ -200,9 +192,9 @@ func newMenu() *menuModel {
 
 func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case serverHealthMsg:
-		m.serverHealthy = bool(msg)
-		return m, serverHealth()
+	// case serverHealthMsg:
+	// 	m.serverHealthy = bool(msg)
+	// 	return m, serverHealth()
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyRunes:
@@ -253,7 +245,7 @@ func (m menuModel) View() string {
 		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
 	}
 
-	logoPanel := logoStyle.Render(logo)
+	logoPanel := logoStyle.Render(client.Logo)
 	titlePanel := titleStyle.Render("Farkle")
 	menu := make([]string, 0, len(m.choices))
 	for i, choice := range m.choices {
@@ -296,28 +288,28 @@ func (m menuModel) View() string {
 	)
 }
 
-func serverHealth() tea.Cmd {
-	return func() tea.Msg {
-		defer func() {
-			lastHealthCheck = time.Now()
-		}()
+// func serverHealth() tea.Cmd {
+// 	return func() tea.Msg {
+// 		defer func() {
+// 			lastHealthCheck = time.Now()
+// 		}()
 
-		if time.Since(lastHealthCheck) < 5*time.Second {
-			time.Sleep(time.Second)
-			return serverHealthMsg(true)
-		}
+// 		if time.Since(lastHealthCheck) < 5*time.Second {
+// 			time.Sleep(time.Second)
+// 			return serverHealthMsg(true)
+// 		}
 
-		client := http.Client{}
-		res, err := client.Get("http://localhost:8080/health")
-		if err != nil {
-			return serverHealthMsg(false)
-		}
-		defer res.Body.Close()
+// 		client := http.Client{}
+// 		res, err := client.Get("http://localhost:8080/health")
+// 		if err != nil {
+// 			return serverHealthMsg(false)
+// 		}
+// 		defer res.Body.Close()
 
-		if res.StatusCode != http.StatusOK {
-			return serverHealthMsg(false)
-		}
+// 		if res.StatusCode != http.StatusOK {
+// 			return serverHealthMsg(false)
+// 		}
 
-		return serverHealthMsg(true)
-	}
-}
+// 		return serverHealthMsg(true)
+// 	}
+// }
