@@ -7,9 +7,11 @@ import (
 	"log/slog"
 	"log/syslog"
 
+	"github.com/ascii-arcade/farkle/internal/client"
+	"github.com/ascii-arcade/farkle/internal/client/menu"
 	"github.com/ascii-arcade/farkle/internal/config"
-	"github.com/ascii-arcade/farkle/internal/menu"
 	splashScreen "github.com/ascii-arcade/farkle/internal/splash_screen"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var (
@@ -47,6 +49,13 @@ CONTINUE:
 }
 
 func main() {
+	initModel := client.App{
+		CurrentView: menu.New(),
+	}
+	p := tea.NewProgram(initModel)
+
 	splashScreen.Run()
-	menu.Run(logger)
+	if _, err := p.Run(); err != nil {
+		logger.Error("Error running client", "error", err)
+	}
 }

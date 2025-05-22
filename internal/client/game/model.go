@@ -1,10 +1,11 @@
 package game
 
 import (
-	"log/slog"
 	"strconv"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/client/eventloop"
+	"github.com/ascii-arcade/farkle/internal/client/networkmanager"
 	"github.com/ascii-arcade/farkle/internal/config"
 	"github.com/ascii-arcade/farkle/internal/dice"
 	"github.com/ascii-arcade/farkle/internal/game"
@@ -22,7 +23,9 @@ type gameModel struct {
 	error         string
 	rollTickCount int
 
-	game *game.Game
+	game   *game.Game
+	player *player.Player
+	nm     *networkmanager.NetworkManager
 }
 
 const (
@@ -33,31 +36,19 @@ const (
 	colorError       = "#9E1A1A"
 )
 
-var (
-	currentGame *game.Game
-	me          *player.Player
-	logger      *slog.Logger
-	cmdSent     bool
-	messages    chan message.Message
-)
-
-func NewModel(loggerIn *slog.Logger, p *player.Player, g *game.Game) gameModel {
-	messages = make(chan message.Message, 100)
-	me = p
-	currentGame = g
-	logger = loggerIn.With("component", "game")
-	go me.MonitorGameMessages(messages)
-
+func NewModel(networkManager *networkmanager.NetworkManager, game *game.Game, player *player.Player) gameModel {
 	return gameModel{
 		poolRoll: dice.NewDicePool(6),
+		game:     game,
+		player:   player,
+		nm:       networkManager,
 	}
 }
 
-type disconnectedMsg struct{}
 type rollMsg struct{}
 
 func (m gameModel) Init() tea.Cmd {
-	return watchForMessages()
+	return tea.WindowSize()
 }
 
 func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -71,74 +62,67 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		}
 
-		if currentGame.IsTurn(me) {
+		if m.game.IsTurn(m.player) {
 			switch msg.String() {
 			case "1", "2", "3", "4", "5", "6":
 				choice, _ := strconv.Atoi(msg.String())
 				gd := game.GameDetails{
-					LobbyCode: currentGame.LobbyCode,
-					PlayerId:  me.Id,
+					LobbyCode: m.game.LobbyCode,
+					PlayerId:  m.player.Id,
 					DieHeld:   choice,
 				}
 
-				me.SendMessage(message.Message{
+				m.nm.Outgoing <- message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeHold,
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
-				})
+				}
 			case "r":
 				gd := game.GameDetails{
-					LobbyCode: currentGame.LobbyCode,
-					PlayerId:  me.Id,
+					LobbyCode: m.game.LobbyCode,
+					PlayerId:  m.player.Id,
 				}
-				me.SendMessage(message.Message{
+
+				m.nm.Outgoing <- message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeRoll,
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
-				})
-				cmdSent = true
-				return m, tea.Cmd(func() tea.Msg {
-					<-currentGame.roll
-					return rollMsg{}
-				})
+				}
 			case "l":
 				gd := game.GameDetails{
-					LobbyCode: currentGame.LobbyCode,
-					PlayerId:  me.Id,
+					LobbyCode: m.game.LobbyCode,
+					PlayerId:  m.player.Id,
 				}
-				me.SendMessage(message.Message{
+				m.nm.Outgoing <- message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeLock,
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
-				})
-				cmdSent = true
+				}
 			case "y":
 				gd := game.GameDetails{
-					LobbyCode: currentGame.LobbyCode,
-					PlayerId:  me.Id,
+					LobbyCode: m.game.LobbyCode,
+					PlayerId:  m.player.Id,
 				}
-				me.SendMessage(message.Message{
+				m.nm.Outgoing <- message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeBank,
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
-				})
-				cmdSent = true
+				}
 			case "u":
 				gd := game.GameDetails{
-					LobbyCode: currentGame.LobbyCode,
-					PlayerId:  me.Id,
+					LobbyCode: m.game.LobbyCode,
+					PlayerId:  m.player.Id,
 				}
-				me.SendMessage(message.Message{
+				m.nm.Outgoing <- message.Message{
 					Channel: message.ChannelGame,
 					Type:    message.MessageTypeUndo,
 					SentAt:  time.Now(),
 					Data:    gd.ToJSON(),
-				})
-				cmdSent = true
+				}
 			}
 		}
 	case rollMsg:
@@ -150,23 +134,25 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.isRolling = false
-		m.poolRoll = currentGame.DicePool
-		currentGame.log = append(currentGame.log, currentGame.styledPlayerName(currentGame.Turn)+" rolled "+currentGame.DicePool.RenderCharacters())
-	case message.Message:
-		logger.Debug("Received message from server", "channel", msg.Channel, "type", msg.Type)
-		switch msg.Type {
-		case message.MessageTypeUpdated:
-			logger.Debug("Received game update from server")
-			if err := msg.Unmarshal(&currentGame); err != nil {
-				logger.Error("Error unmarshalling player message", "error", err)
-				return m, nil
+		m.poolRoll = m.game.DicePool
+		m.game.Log = append(m.game.Log, m.game.StyledPlayerName(m.game.Turn)+" rolled "+m.game.DicePool.RenderCharacters())
+	case eventloop.NetworkMsg:
+		if msg.Data.Channel == message.ChannelGame {
+			switch msg.Data.Type {
+			case message.MessageTypeUpdated:
+				if err := msg.Data.Unmarshal(&m.game); err != nil {
+					return m, nil
+				}
+			case message.MessageTypeRolled:
+				if err := msg.Data.Unmarshal(&m.game); err != nil {
+					return m, nil
+				}
+
+				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
+					return rollMsg{}
+				})
 			}
 		}
-		return m, watchForMessages()
-	case disconnectedMsg:
-		logger.Debug("stopping monitoring for messages in lobby model")
-		return m, tea.Quit
-	default:
 	}
 
 	return m, nil
@@ -177,14 +163,14 @@ func (m gameModel) View() string {
 		Width(m.width).
 		Height(m.height)
 
-	cg := currentGame
+	cg := m.game
 	_ = cg
 
 	debugPaneStyle := lipgloss.NewStyle().Width(m.width).AlignHorizontal(lipgloss.Left)
 	poolPaneStyle := lipgloss.NewStyle().Width(36).Height(10).Align(lipgloss.Center)
 
-	poolRollPane := poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + currentGame.DicePool.Render(3, 6))
-	poolHeldPane := poolPaneStyle.Render(currentGame.DiceHeld.Render(0, 3) + "\n" + currentGame.DiceHeld.Render(3, 6))
+	poolRollPane := poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6))
+	poolHeldPane := poolPaneStyle.Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
 
 	centeredText := ""
 	if m.error != "" {
@@ -196,7 +182,7 @@ func (m gameModel) View() string {
 	if config.GetDebug() {
 		debugMsgs := []string{
 			"Debug",
-			"Current Player: " + currentGame.Players[currentGame.Turn].Name,
+			"Current Player: " + m.game.Players[m.game.Turn].Name,
 		}
 		debugPane = lipgloss.JoinHorizontal(
 			lipgloss.Left,
@@ -221,7 +207,7 @@ func (m gameModel) View() string {
 			lipgloss.Left,
 			"",
 			poolPanes,
-			currentGame.playerScores(),
+			m.game.PlayerScores(),
 			"",
 			m.logPane(),
 			debugPane,
@@ -240,25 +226,5 @@ func (m gameModel) View() string {
 }
 
 func (m *gameModel) logPane() string {
-	return lipgloss.NewStyle().Width(80).Height(15).Render(currentGame.log.entries())
-}
-
-func watchForMessages() tea.Cmd {
-	return func() tea.Msg {
-		for {
-			if currentGame == nil {
-				logger.Debug("currentGame is nil, stopping monitoring for messages in lobby model")
-				return disconnectedMsg{}
-			}
-
-			select {
-			case <-me.Disconnected():
-				logger.Debug("stopping monitoring for messages in game model")
-				return disconnectedMsg{}
-			case msg := <-messages:
-				logger.Debug("Received game message from server", "channel", msg.Channel, "type", msg.Type)
-				return msg
-			}
-		}
-	}
+	return lipgloss.NewStyle().Width(80).Height(15).Render(m.game.LogEntries())
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/rand/v2"
 	"strconv"
+	"strings"
 
 	"github.com/ascii-arcade/farkle/internal/dice"
 	"github.com/ascii-arcade/farkle/internal/player"
@@ -139,7 +140,7 @@ func (g *Game) ToJSON() string {
 	return string(b)
 }
 
-func (g *Game) playerScores() string {
+func (g *Game) PlayerScores() string {
 	scores := make([]string, len(g.Players))
 
 	for i, player := range g.Players {
@@ -147,7 +148,7 @@ func (g *Game) playerScores() string {
 			continue
 		}
 
-		content := g.styledPlayerName(i) + ": " + strconv.Itoa(g.Scores[player.Id])
+		content := g.StyledPlayerName(i) + ": " + strconv.Itoa(g.Scores[player.Id])
 		isCurrentPlayer := g.Turn == i
 
 		scores[i] = lipgloss.NewStyle().
@@ -163,8 +164,18 @@ func (g *Game) playerScores() string {
 	)
 }
 
-func (g *Game) styledPlayerName(i int) string {
+func (g *Game) StyledPlayerName(i int) string {
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(g.Players[i].Color))
 
 	return style.Render(g.Players[i].Name)
+}
+
+func (g *Game) LogEntries() string {
+	if len(g.Log) <= 15 {
+		return strings.Join(g.Log, "\n")
+	}
+
+	recent := g.Log[len(g.Log)-15:]
+
+	return strings.Join(recent, "\n")
 }

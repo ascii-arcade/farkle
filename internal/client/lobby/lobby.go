@@ -1,12 +1,15 @@
-package client
+package lobby
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/ascii-arcade/farkle/internal/client/eventloop"
+	"github.com/ascii-arcade/farkle/internal/client/game"
+	"github.com/ascii-arcade/farkle/internal/client/networkmanager"
 	"github.com/ascii-arcade/farkle/internal/config"
-	"github.com/ascii-arcade/farkle/internal/game"
+	"github.com/ascii-arcade/farkle/internal/lobbies"
 	"github.com/ascii-arcade/farkle/internal/message"
 	"github.com/ascii-arcade/farkle/internal/player"
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,31 +20,23 @@ type lobbyModel struct {
 	width  int
 	height int
 
-	creatingLobby bool
-	joiningLobby  bool
+	lobby  *lobbies.Lobby
+	player *player.Player
 
-	errors    string
-	menuModel menuModel
+	errors         string
+	networkManager *networkmanager.NetworkManager
 }
 
 type disconnectedMsg struct{}
 
-func newLobbyModel(playerName string, code string, joining bool) (lobbyModel, tea.Cmd) {
-	messages = make(chan message.Message, 100)
-	gameMessages = make(chan message.Message, 100)
-
-	me = player.NewPlayer(logger, nil, playerName)
-	me.Connect(code, messages)
-
-	m := lobbyModel{
-		joiningLobby: joining,
+func New(nm *networkmanager.NetworkManager) lobbyModel {
+	return lobbyModel{
+		networkManager: nm,
 	}
-
-	return m, m.Init()
 }
 
 func (m lobbyModel) Init() tea.Cmd {
-	return tea.Batch(tea.WindowSize(), watchForMessages())
+	return tea.WindowSize()
 }
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -51,53 +46,45 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "esc":
-			_ = me.SendMessage(message.Message{
+			m.networkManager.Outgoing <- message.Message{
 				Channel: message.ChannelLobby,
 				Type:    message.MessageTypeLeave,
 				SentAt:  time.Now(),
-			})
-
-			currentLobby = nil
-
-			return newMenu(), m.menuModel.Init()
+			}
+			return m, tea.Quit
 		case "enter":
-			if currentLobby != nil && currentLobby.Ready() {
-				_ = me.SendMessage(message.Message{
+			if m.lobby != nil && m.lobby.Ready() {
+				m.networkManager.Outgoing <- message.Message{
 					Channel: message.ChannelLobby,
 					Type:    message.MessageTypeStart,
 					SentAt:  time.Now(),
-					Data:    currentLobby.Code,
-				})
+					Data:    m.lobby.Code,
+				}
 			}
-
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-	case message.Message:
-		logger.Debug("Received message from server", "channel", msg.Channel, "type", msg.Type)
-		switch msg.Channel {
-		case message.ChannelPing:
-		case message.ChannelLobby:
-			switch msg.Type {
-			case message.MessageTypeUpdated:
-				logger.Debug("Received lobby update from server")
-				if err := msg.Unmarshal(&currentLobby); err != nil {
-					logger.Error("Error unmarshalling player message", "error", err)
-					break
-				}
-
-				if currentLobby.Started && currentLobby.Game != nil {
-					_, _ = tea.NewProgram(game.NewModel(logger, me, currentLobby.Game), tea.WithAltScreen()).Run()
+	case eventloop.NetworkMsg:
+		if msg.Data.Channel == message.ChannelPlayer {
+			if msg.Data.Type == message.MessageTypeMe {
+				if err := msg.Data.Unmarshal(&m.player); err != nil {
+					return m, nil
 				}
 			}
-		default:
 		}
-		return m, watchForMessages()
-	case disconnectedMsg:
-		logger.Debug("stopping monitoring for messages in lobby model")
-		return m, tea.Quit
+
+		if msg.Data.Channel == message.ChannelLobby {
+			if err := msg.Data.Unmarshal(&m.lobby); err != nil {
+				return m, nil
+			}
+
+			if m.lobby.Started {
+				gameModel := game.NewModel(m.networkManager, m.lobby.Game, m.player)
+				return gameModel, nil
+			}
+		}
 	}
 
 	return m, nil
@@ -115,24 +102,24 @@ func (m lobbyModel) View() string {
 		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
 	}
 
-	if !me.Connected() {
-		return fullPaneStyle.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Center,
-				lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render("Connecting..."),
-			),
-		)
-	}
+	// if !me.Connected() {
+	// 	return fullPaneStyle.Render(
+	// 		lipgloss.JoinVertical(
+	// 			lipgloss.Center,
+	// 			lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render("Connecting..."),
+	// 		),
+	// 	)
+	// }
 
-	if currentLobby == nil {
+	if m.lobby == nil {
 		msg := ""
-		if m.creatingLobby {
-			msg = "Creating lobby..."
-		}
+		// if m.creatingLobby {
+		// 	msg = "Creating lobby..."
+		// }
 
-		if m.joiningLobby {
-			msg = "Joining lobby..."
-		}
+		// if m.joiningLobby {
+		// 	msg = "Joining lobby..."
+		// }
 
 		if m.errors != "" {
 			msg = m.errors + "\nPress enter to go back to menu"
@@ -148,7 +135,7 @@ func (m lobbyModel) View() string {
 
 	playerList := []string{}
 
-	for i, player := range currentLobby.Players {
+	for i, player := range m.lobby.Players {
 		if player != nil && player.Host {
 			playerList = append(playerList, fmt.Sprintf("%d) %s*", i+1, player.Name))
 			continue
@@ -162,7 +149,7 @@ func (m lobbyModel) View() string {
 		playerList = append(playerList, fmt.Sprintf("%d) %s", i+1, player.Name))
 	}
 
-	lobbyNamePane := lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render(fmt.Sprintf("Lobby Code: %s\n\n", currentLobby.Code))
+	lobbyNamePane := lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).Render(fmt.Sprintf("Lobby Code: %s\n\n", m.lobby.Code))
 
 	lobbyPane := lobbyStyle.Render(
 		lipgloss.JoinVertical(
@@ -185,24 +172,4 @@ func (m lobbyModel) View() string {
 		),
 		controlsPane,
 	)
-}
-
-func watchForMessages() tea.Cmd {
-	return func() tea.Msg {
-		for {
-			if me == nil {
-				logger.Debug("me is nil, stopping monitoring for messages in lobby model")
-				return disconnectedMsg{}
-			}
-
-			select {
-			case <-me.Disconnected():
-				logger.Debug("stopping monitoring for messages in lobby model")
-				return disconnectedMsg{}
-			case msg := <-messages:
-				logger.Debug("Received message from server", "channel", msg.Channel, "type", msg.Type)
-				return msg
-			}
-		}
-	}
 }

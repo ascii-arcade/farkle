@@ -1,40 +1,33 @@
 package client
 
 import (
+	"github.com/ascii-arcade/farkle/internal/client/messages"
+	"github.com/ascii-arcade/farkle/internal/client/networkmanager"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type App struct {
-	activeModel tea.Model
-}
-
-type switchViewMsg struct {
-	newModel tea.Model
-}
-
-func New() App {
-	return App{
-		activeModel: NewHomeModel(),
-	}
+	CurrentView    tea.Model
+	NetworkManager *networkmanager.NetworkManager
 }
 
 func (m App) Init() tea.Cmd {
-	return m.activeModel.Init()
+	return m.CurrentView.Init()
 }
 
 func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	updateModel, cmd := m.activeModel.Update(msg)
+	updateModel, cmd := m.CurrentView.Update(msg)
 
 	switch msg := msg.(type) {
-	case switchViewMsg:
-		updateModel = msg.newModel
+	case messages.SwitchViewMsg:
+		updateModel = msg.NewModel
 		cmd = nil
 	}
 
-	m.activeModel = updateModel
+	m.CurrentView = updateModel
 	return m, cmd
 }
 
 func (m App) View() string {
-	return m.activeModel.View()
+	return m.CurrentView.View()
 }
