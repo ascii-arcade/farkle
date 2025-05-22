@@ -134,9 +134,7 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return rollMsg{}
 			})
 		}
-		m.isRolling = false
 		m.poolRoll = m.game.DicePool
-		m.game.Log = append(m.game.Log, m.game.StyledPlayerName(m.game.Turn)+" rolled "+m.game.DicePool.RenderCharacters())
 	case eventloop.NetworkMsg:
 		if msg.Data.Channel == message.ChannelGame {
 			switch msg.Data.Type {
@@ -145,11 +143,11 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			case message.MessageTypeRolled:
-				m.rollTickCount = 0
 				if err := msg.Data.Unmarshal(&m.game); err != nil {
 					return m, nil
 				}
 
+				m.rollTickCount = 0
 				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 					return rollMsg{}
 				})
@@ -180,13 +178,13 @@ func (m gameModel) View() string {
 
 	if config.GetDebug() {
 		paneStyle = paneStyle.
-			Width(m.width - 1).
-			Height(m.height - 1).
+			Width(m.width - 2).
+			Height(m.height - 2).
 			BorderStyle(lipgloss.ASCIIBorder()).
 			BorderForeground(lipgloss.Color("#ff0000"))
 	}
 
-	poolRollPane := poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6))
+	poolRollPane := poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.poolRoll.Render(3, 6))
 	poolHeldPane := poolPaneStyle.Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
 
 	centeredText := ""

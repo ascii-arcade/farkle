@@ -35,9 +35,9 @@ func (l *Lobby) handleMessages() {
 			switch msg.Type {
 			case message.MessageTypeRoll:
 				l.Game.RollDice()
+				rolled = true
 			case message.MessageTypeHold:
 				l.Game.HoldDie(details.DieHeld)
-				rolled = true
 			case message.MessageTypeUndo:
 				l.Game.Undo()
 			case message.MessageTypeLock:

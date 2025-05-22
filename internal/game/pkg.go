@@ -59,10 +59,6 @@ func New(lobbyCode string, players []*player.Player) *Game {
 	}
 }
 
-func (g *Game) Roll() {
-	g.roll <- struct{}{}
-}
-
 func (g *Game) Update(gIn Game) {
 	g.Players = gIn.Players
 	g.Scores = gIn.Scores
