@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/ascii-arcade/farkle/internal/client/messages"
-	"github.com/ascii-arcade/farkle/internal/client/networkmanager"
+	"github.com/ascii-arcade/farkle/client/messages"
+	"github.com/ascii-arcade/farkle/client/networkmanager"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

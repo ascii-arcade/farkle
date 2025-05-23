@@ -3,7 +3,7 @@ package lobbies
 import (
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/message"
 )
 
 func (l *Lobby) BroadcastUpdate() {

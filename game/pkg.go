@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ascii-arcade/farkle/internal/dice"
-	"github.com/ascii-arcade/farkle/internal/player"
+	"github.com/ascii-arcade/farkle/dice"
+	"github.com/ascii-arcade/farkle/player"
 	"github.com/charmbracelet/lipgloss"
 )
 

@@ -3,8 +3,8 @@ package lobbies
 import (
 	"encoding/json"
 
-	"github.com/ascii-arcade/farkle/internal/game"
-	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/game"
+	"github.com/ascii-arcade/farkle/message"
 )
 
 func (l *Lobby) handleMessages() {

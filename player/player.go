@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/config"
-	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/message"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/xid"
 	"golang.org/x/net/websocket"

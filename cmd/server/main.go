@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ascii-arcade/farkle/internal/server"
+	"github.com/ascii-arcade/farkle/server"
 )
 
 var (

@@ -3,7 +3,7 @@ package player
 import (
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/message"
 )
 
 func (p *Player) MonitorMessages(messageChan chan message.Message) error {

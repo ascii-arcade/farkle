@@ -1,36 +1,38 @@
-package tui
+package dice
 
 import (
 	"math/rand/v2"
 	"slices"
 	"strings"
+
+	"github.com/ascii-arcade/farkle/score"
 )
 
-type dicePool []int
+type DicePool []int
 
-func newDicePool(size int) dicePool {
-	p := make(dicePool, size)
+func NewDicePool(size int) DicePool {
+	p := make(DicePool, size)
 	for i := range p {
 		p[i] = 1
 	}
 	return p
 }
 
-func (p *dicePool) roll() {
+func (p *DicePool) Roll() {
 	for i := range *p {
 		(*p)[i] = rand.IntN(6) + 1
 	}
 }
 
-func (p *dicePool) contains(face int) bool {
+func (p *DicePool) Contains(face int) bool {
 	return slices.Contains(*p, face)
 }
 
-func (p *dicePool) add(face int) {
+func (p *DicePool) Add(face int) {
 	*p = append(*p, face)
 }
 
-func (p *dicePool) remove(face int) {
+func (p *DicePool) Remove(face int) {
 	for i, n := range *p {
 		if n == face {
 			*p = slices.Delete(*p, i, i+1)
@@ -39,7 +41,11 @@ func (p *dicePool) remove(face int) {
 	}
 }
 
-func (p *dicePool) renderCharacters() string {
+func (p *DicePool) Score() (int, error) {
+	return score.Calculate(*p)
+}
+
+func (p *DicePool) RenderCharacters() string {
 	if len(*p) == 0 {
 		return ""
 	}
@@ -52,7 +58,7 @@ func (p *dicePool) renderCharacters() string {
 	return strings.TrimSpace(output)
 }
 
-func (p *dicePool) render(start int, end int) string {
+func (p *DicePool) Render(start int, end int) string {
 	if len(*p) == 0 {
 		return ""
 	}

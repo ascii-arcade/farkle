@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ascii-arcade/farkle/internal/lobbies"
+	"github.com/ascii-arcade/farkle/lobbies"
 )
 
 func lobbiesHandler(w http.ResponseWriter, r *http.Request) {

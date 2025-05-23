@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/client/eventloop"
-	"github.com/ascii-arcade/farkle/internal/client/game"
-	"github.com/ascii-arcade/farkle/internal/client/networkmanager"
-	"github.com/ascii-arcade/farkle/internal/config"
-	"github.com/ascii-arcade/farkle/internal/lobbies"
-	"github.com/ascii-arcade/farkle/internal/message"
-	"github.com/ascii-arcade/farkle/internal/player"
+	"github.com/ascii-arcade/farkle/client/eventloop"
+	"github.com/ascii-arcade/farkle/client/game"
+	"github.com/ascii-arcade/farkle/client/networkmanager"
+	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/lobbies"
+	"github.com/ascii-arcade/farkle/message"
+	"github.com/ascii-arcade/farkle/player"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -82,7 +82,12 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.lobby.Started {
 				gameModel := game.NewModel(m.networkManager, m.lobby.Game, m.player)
-				return gameModel, nil
+				return gameModel, func() tea.Msg {
+					return tea.WindowSizeMsg{
+						Width:  m.width,
+						Height: m.height,
+					}
+				}
 			}
 		}
 	}

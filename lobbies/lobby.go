@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/game"
-	"github.com/ascii-arcade/farkle/internal/message"
-	"github.com/ascii-arcade/farkle/internal/player"
+	"github.com/ascii-arcade/farkle/game"
+	"github.com/ascii-arcade/farkle/message"
+	"github.com/ascii-arcade/farkle/player"
 )
 
 type Lobby struct {

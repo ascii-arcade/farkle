@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ascii-arcade/farkle/internal/lobbies"
-	"github.com/ascii-arcade/farkle/internal/message"
-	"github.com/ascii-arcade/farkle/internal/player"
+	"github.com/ascii-arcade/farkle/lobbies"
+	"github.com/ascii-arcade/farkle/message"
+	"github.com/ascii-arcade/farkle/player"
 	"golang.org/x/net/websocket"
 )
 

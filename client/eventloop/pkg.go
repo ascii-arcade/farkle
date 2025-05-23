@@ -1,7 +1,7 @@
 package eventloop
 
 import (
-	"github.com/ascii-arcade/farkle/internal/message"
+	"github.com/ascii-arcade/farkle/message"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

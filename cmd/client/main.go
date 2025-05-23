@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"log/syslog"
 
-	"github.com/ascii-arcade/farkle/internal/client"
-	"github.com/ascii-arcade/farkle/internal/client/menu"
-	"github.com/ascii-arcade/farkle/internal/config"
-	splashScreen "github.com/ascii-arcade/farkle/internal/splash_screen"
+	"github.com/ascii-arcade/farkle/client"
+	"github.com/ascii-arcade/farkle/client/menu"
+	"github.com/ascii-arcade/farkle/config"
+	splashScreen "github.com/ascii-arcade/farkle/splash_screen"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
