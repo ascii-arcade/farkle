@@ -21,8 +21,6 @@ type Game struct {
 	DiceLocked []dice.DicePool  `json:"dice_locked"`
 	LobbyCode  string           `json:"lobby_code"`
 	Log        []string         `json:"log"`
-
-	roll chan struct{}
 }
 
 func New(lobbyCode string, players []*player.Player) *Game {
@@ -67,6 +65,7 @@ func (g *Game) Update(gIn Game) {
 	g.DicePool = gIn.DicePool
 	g.DiceHeld = gIn.DiceHeld
 	g.DiceLocked = gIn.DiceLocked
+	g.Log = gIn.Log
 }
 
 func (g *Game) NextTurn() {
