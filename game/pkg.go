@@ -21,6 +21,8 @@ type Game struct {
 	DiceLocked []dice.DicePool  `json:"dice_locked"`
 	LobbyCode  string           `json:"lobby_code"`
 	Log        []string         `json:"log"`
+
+	Rolled bool
 }
 
 func New(lobbyCode string, players []*player.Player) *Game {
@@ -78,17 +80,20 @@ func (g *Game) NextTurn() {
 
 func (g *Game) RollDice() {
 	g.DicePool.Roll()
+	g.Rolled = true
 }
 
 func (g *Game) HoldDie(dieToHold int) {
-	g.DiceHeld.Add(dieToHold)
-	g.DicePool.Remove(dieToHold)
+	if g.DicePool.Remove(dieToHold) {
+		g.DiceHeld.Add(dieToHold)
+	}
 }
 
 func (g *Game) Undo() {
 	lastDie := g.DiceHeld[len(g.DiceHeld)-1]
-	g.DiceHeld.Remove(lastDie)
-	g.DicePool.Add(lastDie)
+	if g.DiceHeld.Remove(lastDie) {
+		g.DicePool.Add(lastDie)
+	}
 }
 
 func (g *Game) LockDice() {
@@ -169,4 +174,13 @@ func (g *Game) LogEntries() string {
 	recent := g.Log[len(g.Log)-15:]
 
 	return strings.Join(recent, "\n")
+}
+
+func (g *Game) Busted() bool {
+	for _, die := range g.DicePool {
+		if die == 1 || die == 5 {
+			return false
+		}
+	}
+	return true
 }

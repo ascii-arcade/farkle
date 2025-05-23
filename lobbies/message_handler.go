@@ -31,11 +31,18 @@ func (l *Lobby) handleMessages() {
 			if err := json.Unmarshal([]byte(msg.Data), &details); err != nil {
 				return
 			}
-			rolled := false
+
+			roll := false
 			switch msg.Type {
 			case message.MessageTypeRoll:
-				l.Game.RollDice()
-				rolled = true
+				if !l.Game.Rolled && len(l.Game.DiceLocked) > 0 {
+					l.Game.RollDice()
+					roll = true
+				}
+
+				if l.Game.Busted() {
+					l.Game.NextTurn()
+				}
 			case message.MessageTypeHold:
 				l.Game.HoldDie(details.DieHeld)
 			case message.MessageTypeUndo:
@@ -44,7 +51,7 @@ func (l *Lobby) handleMessages() {
 				l.Game.LockDice()
 			}
 
-			l.broadcastGameUpdate(rolled)
+			l.broadcastGameUpdate(roll)
 		}
 	}
 }

@@ -32,13 +32,14 @@ func (p *DicePool) Add(face int) {
 	*p = append(*p, face)
 }
 
-func (p *DicePool) Remove(face int) {
+func (p *DicePool) Remove(face int) bool {
 	for i, n := range *p {
 		if n == face {
 			*p = slices.Delete(*p, i, i+1)
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (p *DicePool) Score() (int, error) {

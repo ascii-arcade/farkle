@@ -1,18 +1,13 @@
 package game
 
 import (
-	"strconv"
 	"time"
 
-	"github.com/ascii-arcade/farkle/client/eventloop"
 	"github.com/ascii-arcade/farkle/client/networkmanager"
-	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/game"
-	"github.com/ascii-arcade/farkle/message"
 	"github.com/ascii-arcade/farkle/player"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type gameModel struct {
@@ -49,169 +44,4 @@ type rollMsg struct{}
 
 func (m gameModel) Init() tea.Cmd {
 	return tea.WindowSize()
-}
-
-func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "esc":
-			return m, nil
-
-		}
-
-		if m.game.IsTurn(m.player) {
-			switch msg.String() {
-			case "1", "2", "3", "4", "5", "6":
-				choice, _ := strconv.Atoi(msg.String())
-				gd := game.GameDetails{
-					LobbyCode: m.game.LobbyCode,
-					PlayerId:  m.player.Id,
-					DieHeld:   choice,
-				}
-				m.nm.Outgoing <- message.Message{
-					Channel: message.ChannelGame,
-					Type:    message.MessageTypeHold,
-					SentAt:  time.Now(),
-					Data:    gd.ToJSON(),
-				}
-				return m, nil
-			case "r":
-				gd := game.GameDetails{
-					LobbyCode: m.game.LobbyCode,
-					PlayerId:  m.player.Id,
-				}
-				m.nm.Outgoing <- message.Message{
-					Channel: message.ChannelGame,
-					Type:    message.MessageTypeRoll,
-					SentAt:  time.Now(),
-					Data:    gd.ToJSON(),
-				}
-			case "l":
-				gd := game.GameDetails{
-					LobbyCode: m.game.LobbyCode,
-					PlayerId:  m.player.Id,
-				}
-				m.nm.Outgoing <- message.Message{
-					Channel: message.ChannelGame,
-					Type:    message.MessageTypeLock,
-					SentAt:  time.Now(),
-					Data:    gd.ToJSON(),
-				}
-			case "y":
-				gd := game.GameDetails{
-					LobbyCode: m.game.LobbyCode,
-					PlayerId:  m.player.Id,
-				}
-				m.nm.Outgoing <- message.Message{
-					Channel: message.ChannelGame,
-					Type:    message.MessageTypeBank,
-					SentAt:  time.Now(),
-					Data:    gd.ToJSON(),
-				}
-			case "u":
-				gd := game.GameDetails{
-					LobbyCode: m.game.LobbyCode,
-					PlayerId:  m.player.Id,
-				}
-				m.nm.Outgoing <- message.Message{
-					Channel: message.ChannelGame,
-					Type:    message.MessageTypeUndo,
-					SentAt:  time.Now(),
-					Data:    gd.ToJSON(),
-				}
-			}
-		}
-	case rollMsg:
-		if m.rollTickCount < rollFrames {
-			m.rolling = true
-			m.rollTickCount++
-			m.poolRoll = dice.NewDicePool(6)
-			m.poolRoll.Roll()
-			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
-				return rollMsg{}
-			})
-		}
-		m.rolling = false
-		return m, nil
-	case eventloop.NetworkMsg:
-		if msg.Data.Channel == message.ChannelGame {
-			switch msg.Data.Type {
-			case message.MessageTypeUpdated:
-				if err := msg.Data.Unmarshal(&m.game); err != nil {
-					return m, nil
-				}
-			case message.MessageTypeRolled:
-				if err := msg.Data.Unmarshal(&m.game); err != nil {
-					return m, nil
-				}
-
-				m.rollTickCount = 0
-				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
-					return rollMsg{}
-				})
-			}
-		}
-	case tea.WindowSizeMsg:
-		m.height = msg.Height
-		m.width = msg.Width
-	}
-
-	return m, nil
-}
-
-func (m gameModel) View() string {
-	paneStyle := lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center)
-
-	poolPaneStyle := lipgloss.NewStyle().
-		// Width(36).Height(10).
-		Align(lipgloss.Center)
-
-	logPaneStyle := lipgloss.NewStyle()
-
-	if config.GetDebug() {
-		paneStyle = paneStyle.
-			Width(m.width - 2).
-			Height(m.height - 2).
-			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(lipgloss.Color("#ff0000"))
-	}
-
-	poolRollPane := ""
-	if m.rolling {
-		poolRollPane = poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.poolRoll.Render(3, 6))
-	} else {
-		poolRollPane = m.game.DicePool.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6)
-	}
-	poolHeldPane := poolPaneStyle.Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
-
-	centeredText := ""
-	if m.error != "" {
-		centeredText = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colorError)).Render(m.error)
-	}
-
-	poolPane := lipgloss.JoinVertical(
-		lipgloss.Center,
-		lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			poolRollPane,
-			lipgloss.NewStyle().MarginLeft(5).Render(poolHeldPane),
-		),
-		centeredText,
-	)
-
-	return paneStyle.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			poolPane,
-			m.game.PlayerScores(),
-			logPaneStyle.Render(m.game.LogEntries()),
-			"r to roll, l to lock, n to bust, y to bank, u to undo",
-		),
-	)
 }
