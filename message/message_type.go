@@ -18,6 +18,7 @@ const (
 	MessageTypeUndo   MessageType = "undo"
 	MessageTypeLock   MessageType = "lock"
 	MessageTypeBank   MessageType = "bank"
+	MessageTypeReset  MessageType = "reset"
 
 	MessageTypeMe MessageType = "me"
 )

@@ -124,7 +124,7 @@ func (p *Player) Connected() bool {
 	return p.conn != nil
 }
 
-func (p *Player) styledPlayerName(i int) string {
+func (p *Player) StyledPlayerName() string {
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(p.Color))
 
 	return style.Render(p.Name)

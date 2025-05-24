@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"strconv"
 	"time"
 
@@ -18,45 +19,70 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "esc":
+		switch msg.Type {
+		case tea.KeyCtrlR:
+			if m.player.Host {
+				m.nm.Outgoing <- message.Message{
+					Channel: message.ChannelGame,
+					SentAt:  time.Now(),
+					Type:    message.MessageTypeStart,
+					Data:    gd.ToJSON(),
+				}
+			}
 			return m, nil
+		case tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
 		}
 
-		messageOut := message.Message{
-			Channel: message.ChannelGame,
-			SentAt:  time.Now(),
-		}
-		if msg.String() == "r" && !m.game.Rolled {
-			messageOut.Type = message.MessageTypeRoll
-		}
+		if m.game.IsTurn(m.player) {
+			messageOut := message.Message{
+				Channel: message.ChannelGame,
+				SentAt:  time.Now(),
+			}
 
-		if m.game.IsTurn(m.player) && m.game.Rolled {
-			switch msg.String() {
-			case "1", "2", "3", "4", "5", "6":
+			if msg.String() == "r" && !m.game.Rolled {
+				messageOut.Type = message.MessageTypeRoll
+			}
+
+			if m.game.Rolled && slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
+				face, _ := strconv.Atoi(msg.String())
+				if !m.game.DicePool.Contains(face) {
+					return m, nil
+				}
 				gd.DieHeld, _ = strconv.Atoi(msg.String())
 				messageOut.Type = message.MessageTypeHold
 				messageOut.Data = gd.ToJSON()
+			}
+
+			switch msg.String() {
 			case "l":
+				if len(m.game.DiceHeld) == 0 {
+					return m, nil
+				}
 				messageOut.Type = message.MessageTypeLock
 			case "y":
+				if len(m.game.DiceLocked) == 0 {
+					return m, nil
+				}
 				messageOut.Type = message.MessageTypeBank
 			case "u":
+				if len(m.game.DiceHeld) == 0 {
+					return m, nil
+				}
 				messageOut.Type = message.MessageTypeUndo
 			}
+
+			if messageOut.Type != "" {
+				messageOut.Data = gd.ToJSON()
+				m.nm.Outgoing <- messageOut
+			}
+			return m, nil
 		}
-		if messageOut.Type != "" {
-			messageOut.Data = gd.ToJSON()
-			m.nm.Outgoing <- messageOut
-		}
-		return m, nil
 	case rollMsg:
 		if m.rollTickCount < rollFrames {
 			m.rolling = true
 			m.rollTickCount++
-			m.poolRoll = dice.NewDicePool(6)
+			m.poolRoll = dice.NewDicePool(len(m.game.DicePool))
 			m.poolRoll.Roll()
 			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return rollMsg{}

@@ -9,6 +9,13 @@ var diceCharacters = map[int]string{
 	6: "⚅",
 }
 
+func GetDieCharacter(face int) string {
+	if face < 1 || face > 6 {
+		return " "
+	}
+	return diceCharacters[face]
+}
+
 var diceFaces = map[int][]string{
 	1: {
 		"┌───────┐",

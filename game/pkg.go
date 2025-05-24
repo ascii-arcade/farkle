@@ -23,6 +23,7 @@ type Game struct {
 	LobbyCode  string           `json:"lobby_code"`
 	Log        []string         `json:"log"`
 	FirstRoll  bool             `json:"first_roll"`
+	Busted     bool             `json:"busted"`
 
 	Rolled bool
 }
@@ -77,22 +78,32 @@ func (g *Game) Update(gIn Game) {
 
 func (g *Game) NextTurn() {
 	g.Turn++
-	if g.Turn >= len(g.Players) {
+	if g.Turn >= len(g.Players) || g.Players[g.Turn] == nil {
 		g.Turn = 0
 		g.Round++
 	}
 	g.FirstRoll = true
 	g.Rolled = false
+	g.Busted = false
 }
 
 func (g *Game) RollDice() {
 	if g.FirstRoll {
 		g.DicePool = dice.NewDicePool(6)
+		g.DiceHeld = dice.NewDicePool(0)
+		g.DiceLocked = make([]dice.DicePool, 0)
 		g.FirstRoll = false
 	}
 
 	g.DicePool.Roll()
 	g.Rolled = true
+	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" rolled: "+g.DicePool.RenderCharacters())
+
+	if g.busted() {
+		g.Busted = true
+		g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" busted!")
+		g.NextTurn()
+	}
 }
 
 func (g *Game) HoldDie(dieToHold int) {
@@ -109,6 +120,7 @@ func (g *Game) Undo() {
 	if g.DiceHeld.Remove(lastDie) {
 		g.DicePool.Add(lastDie)
 	}
+	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" undid: "+dice.GetDieCharacter(lastDie))
 }
 
 func (g *Game) LockDice() {
@@ -128,26 +140,24 @@ func (g *Game) LockDice() {
 	if len(g.DicePool) == 0 {
 		g.DicePool = dice.NewDicePool(6)
 	}
+	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
 }
 
 func (g *Game) Bank() bool {
+	turnScore := 0
 	for _, diceLocked := range g.DiceLocked {
 		score, ok := diceLocked.Score()
 		if !ok {
 			return false
 		}
-		g.Scores[g.Players[g.Turn].Id] += score
+		turnScore += score
 	}
+	g.Scores[g.Players[g.Turn].Id] += turnScore
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.NextTurn()
+	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" banked: "+strconv.Itoa(turnScore))
 	return true
-}
-
-func (g *Game) Bust() {
-	g.DiceHeld = dice.NewDicePool(0)
-	g.DiceLocked = []dice.DicePool{}
-	g.NextTurn()
 }
 
 func (g *Game) IsTurn(p *player.Player) bool {
@@ -189,17 +199,17 @@ func (g *Game) StyledPlayerName(i int) string {
 	return style.Render(g.Players[i].Name)
 }
 
-func (g *Game) LogEntries() string {
-	if len(g.Log) <= 15 {
+func (g *Game) RenderLog(limit int) string {
+	if limit <= 0 || len(g.Log) == 0 {
+		return ""
+	}
+	if limit >= len(g.Log) {
 		return strings.Join(g.Log, "\n")
 	}
-
-	recent := g.Log[len(g.Log)-15:]
-
-	return strings.Join(recent, "\n")
+	return strings.Join(g.Log[len(g.Log)-limit:], "\n")
 }
 
-func (g *Game) Busted() bool {
+func (g *Game) busted() bool {
 	_, ok := score.Calculate(g.DicePool)
-	return ok
+	return !ok
 }

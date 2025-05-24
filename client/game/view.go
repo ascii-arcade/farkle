@@ -13,23 +13,34 @@ func (m gameModel) View() string {
 		Width(m.width).
 		Height(m.height).
 		Align(lipgloss.Center, lipgloss.Center)
-
 	poolPaneStyle := lipgloss.NewStyle().
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#3B82F6")).
-		PaddingBottom(1).
-		Width(31).
-		Height(10)
+		Padding(1, 0).
+		Width(32).
+		Height(12)
 	heldPaneStyle := lipgloss.NewStyle().
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#3B82F6")).
-		Width(32).
-		Height(11)
+		Width(31).
+		Height(12)
 	heldScorePaneStyle := lipgloss.NewStyle()
+	lockedPaneStyle := lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3B82F6")).
+		Padding(0, 1).
+		Width(19).
+		Height(12)
 
-	logPaneStyle := lipgloss.NewStyle()
+	logPaneStyle := lipgloss.NewStyle().
+		Align(lipgloss.Left).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3B82F6")).
+		Height(12).
+		Width(35)
 
 	if config.GetDebug() {
 		paneStyle = paneStyle.
@@ -60,10 +71,37 @@ func (m gameModel) View() string {
 		Height(10).
 		Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
 
+	if m.game.Busted {
+		heldDie = lipgloss.NewStyle().
+			Height(10).
+			Foreground(lipgloss.Color(colorError)).
+			Align(lipgloss.Center, lipgloss.Center).
+			Render("BUSTED")
+		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color("#ff0000"))
+	}
+
 	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
+		"To be Locked (l)",
 		heldDie,
 		heldScorePaneStyle.Render("Score: "+strconv.Itoa(heldScore)),
+	))
+
+	bankedDie := ""
+	for _, diePool := range m.game.DiceLocked {
+		bankedDie += diePool.RenderCharacters() + "\n"
+	}
+	lockedScore := 0
+	for _, diePool := range m.game.DiceLocked {
+		score, _ := diePool.Score()
+		lockedScore += score
+	}
+	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
+		lipgloss.Left,
+		"To be Banked (y)",
+		lipgloss.NewStyle().
+			Height(10).Render(bankedDie),
+		"Score: "+strconv.Itoa(lockedScore),
 	))
 
 	centeredText := ""
@@ -75,19 +113,25 @@ func (m gameModel) View() string {
 		lipgloss.Center,
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
+			logPaneStyle.Render(m.game.RenderLog(13)),
 			poolRollPane,
 			poolHeldPane,
+			lockedPane,
 		),
 		centeredText,
 	)
+
+	controls := "r to roll, l to lock, y to bank, u to undo, esc to quit"
+	if m.player.Host {
+		controls += ", ctrl+r to reset"
+	}
 
 	return paneStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			poolPane,
 			m.game.PlayerScores(),
-			logPaneStyle.Render(m.game.LogEntries()),
-			"r to roll, l to lock, n to bust, y to bank, u to undo",
+			controls,
 		),
 	)
 }

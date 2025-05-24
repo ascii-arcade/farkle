@@ -52,8 +52,11 @@ func (p *DicePool) RenderCharacters() string {
 	}
 
 	output := ""
-	for _, n := range *p {
-		output += diceCharacters[n] + " "
+	for i, n := range *p {
+		output += diceCharacters[n]
+		if i != len(*p)-1 {
+			output += " "
+		}
 	}
 
 	return strings.TrimSpace(output)
