@@ -1,7 +1,10 @@
 package game
 
 import (
+	"strconv"
+
 	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/score"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -12,8 +15,19 @@ func (m gameModel) View() string {
 		Align(lipgloss.Center, lipgloss.Center)
 
 	poolPaneStyle := lipgloss.NewStyle().
-		// Width(36).Height(10).
-		Align(lipgloss.Center)
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3B82F6")).
+		PaddingBottom(1).
+		Width(31).
+		Height(10)
+	heldPaneStyle := lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3B82F6")).
+		Width(32).
+		Height(11)
+	heldScorePaneStyle := lipgloss.NewStyle()
 
 	logPaneStyle := lipgloss.NewStyle()
 
@@ -25,13 +39,32 @@ func (m gameModel) View() string {
 			BorderForeground(lipgloss.Color("#ff0000"))
 	}
 
-	poolRollPane := ""
+	poolDie := ""
 	if m.rolling {
-		poolRollPane = poolPaneStyle.Render(m.poolRoll.Render(0, 3) + "\n" + m.poolRoll.Render(3, 6))
+		poolDie = m.poolRoll.Render(0, 3) + "\n" + m.poolRoll.Render(3, 6)
 	} else {
-		poolRollPane = m.game.DicePool.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6)
+		poolDie = m.game.DicePool.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6)
 	}
-	poolHeldPane := poolPaneStyle.Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
+
+	poolRollPane := lipgloss.JoinVertical(
+		lipgloss.Left,
+		poolPaneStyle.Render(poolDie),
+	)
+
+	heldScore, ok := score.Calculate(m.game.DiceHeld)
+	if !ok {
+		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color(colorError))
+	}
+
+	heldDie := lipgloss.NewStyle().
+		Height(10).
+		Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
+
+	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
+		lipgloss.Left,
+		heldDie,
+		heldScorePaneStyle.Render("Score: "+strconv.Itoa(heldScore)),
+	))
 
 	centeredText := ""
 	if m.error != "" {
@@ -43,7 +76,7 @@ func (m gameModel) View() string {
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			poolRollPane,
-			lipgloss.NewStyle().MarginLeft(5).Render(poolHeldPane),
+			poolHeldPane,
 		),
 		centeredText,
 	)

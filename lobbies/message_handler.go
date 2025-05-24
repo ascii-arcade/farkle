@@ -35,13 +35,13 @@ func (l *Lobby) handleMessages() {
 			roll := false
 			switch msg.Type {
 			case message.MessageTypeRoll:
-				if !l.Game.Rolled && len(l.Game.DiceLocked) > 0 {
+				if !l.Game.Rolled || l.Game.FirstRoll {
 					l.Game.RollDice()
 					roll = true
 				}
 
 				if l.Game.Busted() {
-					l.Game.NextTurn()
+					l.Game.Bust()
 				}
 			case message.MessageTypeHold:
 				l.Game.HoldDie(details.DieHeld)
@@ -49,6 +49,8 @@ func (l *Lobby) handleMessages() {
 				l.Game.Undo()
 			case message.MessageTypeLock:
 				l.Game.LockDice()
+			case message.MessageTypeBank:
+				l.Game.Bank()
 			}
 
 			l.broadcastGameUpdate(roll)

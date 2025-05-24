@@ -8,6 +8,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/player"
+	"github.com/ascii-arcade/farkle/score"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -21,6 +22,7 @@ type Game struct {
 	DiceLocked []dice.DicePool  `json:"dice_locked"`
 	LobbyCode  string           `json:"lobby_code"`
 	Log        []string         `json:"log"`
+	FirstRoll  bool             `json:"first_roll"`
 
 	Rolled bool
 }
@@ -56,6 +58,7 @@ func New(lobbyCode string, players []*player.Player) *Game {
 		DicePool:  dice.NewDicePool(6),
 		DiceHeld:  dice.NewDicePool(0),
 		LobbyCode: lobbyCode,
+		FirstRoll: true,
 	}
 }
 
@@ -68,6 +71,8 @@ func (g *Game) Update(gIn Game) {
 	g.DiceHeld = gIn.DiceHeld
 	g.DiceLocked = gIn.DiceLocked
 	g.Log = gIn.Log
+	g.Rolled = gIn.Rolled
+	g.FirstRoll = gIn.FirstRoll
 }
 
 func (g *Game) NextTurn() {
@@ -76,9 +81,16 @@ func (g *Game) NextTurn() {
 		g.Turn = 0
 		g.Round++
 	}
+	g.FirstRoll = true
+	g.Rolled = false
 }
 
 func (g *Game) RollDice() {
+	if g.FirstRoll {
+		g.DicePool = dice.NewDicePool(6)
+		g.FirstRoll = false
+	}
+
 	g.DicePool.Roll()
 	g.Rolled = true
 }
@@ -90,6 +102,9 @@ func (g *Game) HoldDie(dieToHold int) {
 }
 
 func (g *Game) Undo() {
+	if len(g.DiceHeld) == 0 {
+		return
+	}
 	lastDie := g.DiceHeld[len(g.DiceHeld)-1]
 	if g.DiceHeld.Remove(lastDie) {
 		g.DicePool.Add(lastDie)
@@ -101,27 +116,35 @@ func (g *Game) LockDice() {
 		return
 	}
 
+	_, scoreable := score.Calculate(g.DiceHeld)
+	if !scoreable {
+		return
+	}
+
 	g.DiceLocked = append(g.DiceLocked, g.DiceHeld)
 	g.DiceHeld = dice.NewDicePool(0)
+	g.Rolled = false
+
+	if len(g.DicePool) == 0 {
+		g.DicePool = dice.NewDicePool(6)
+	}
 }
 
-func (g *Game) Bank() error {
+func (g *Game) Bank() bool {
 	for _, diceLocked := range g.DiceLocked {
-		score, err := diceLocked.Score()
-		if err != nil {
-			return err
+		score, ok := diceLocked.Score()
+		if !ok {
+			return false
 		}
 		g.Scores[g.Players[g.Turn].Id] += score
 	}
-	g.DicePool = dice.NewDicePool(6)
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
-
-	return nil
+	g.NextTurn()
+	return true
 }
 
 func (g *Game) Bust() {
-	g.DicePool = dice.NewDicePool(6)
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.NextTurn()
@@ -177,10 +200,6 @@ func (g *Game) LogEntries() string {
 }
 
 func (g *Game) Busted() bool {
-	for _, die := range g.DicePool {
-		if die == 1 || die == 5 {
-			return false
-		}
-	}
-	return true
+	_, ok := score.Calculate(g.DicePool)
+	return ok
 }

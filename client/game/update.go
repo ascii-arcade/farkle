@@ -46,6 +46,8 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "u":
 				messageOut.Type = message.MessageTypeUndo
 			}
+		}
+		if messageOut.Type != "" {
 			messageOut.Data = gd.ToJSON()
 			m.nm.Outgoing <- messageOut
 		}
