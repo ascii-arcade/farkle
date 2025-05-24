@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	dieCharacters = map[int]string{
+	diceCharacters = map[int]string{
 		1: "⚀",
 		2: "⚁",
 		3: "⚂",
@@ -43,4 +43,11 @@ func center(s string) string {
 
 func right(s string) string {
 	return lipgloss.NewStyle().Width(5).Align(lipgloss.Right).Render(s)
+}
+
+func GetDieCharacter(face int) string {
+	if face < 1 || face > 6 {
+		return " "
+	}
+	return diceCharacters[face]
 }

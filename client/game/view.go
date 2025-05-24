@@ -50,11 +50,9 @@ func (m gameModel) View() string {
 			BorderForeground(lipgloss.Color("#ff0000"))
 	}
 
-	poolDie := ""
+	poolDie := m.game.DicePool.Render(0, 6)
 	if m.rolling {
-		poolDie = m.poolRoll.Render(0, 3) + "\n" + m.poolRoll.Render(3, 6)
-	} else {
-		poolDie = m.game.DicePool.Render(0, 3) + "\n" + m.game.DicePool.Render(3, 6)
+		poolDie = m.poolRoll.Render(0, 6)
 	}
 
 	poolRollPane := lipgloss.JoinVertical(
@@ -69,7 +67,7 @@ func (m gameModel) View() string {
 
 	heldDie := lipgloss.NewStyle().
 		Height(10).
-		Render(m.game.DiceHeld.Render(0, 3) + "\n" + m.game.DiceHeld.Render(3, 6))
+		Render(m.game.DiceHeld.Render(0, 6))
 
 	if m.game.Busted {
 		heldDie = lipgloss.NewStyle().
@@ -113,7 +111,7 @@ func (m gameModel) View() string {
 		lipgloss.Center,
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
-			logPaneStyle.Render(m.game.RenderLog(13)),
+			logPaneStyle.Render(m.game.RenderLog(12)),
 			poolRollPane,
 			poolHeldPane,
 			lockedPane,

@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/ascii-arcade/farkle/score"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type DicePool []int
@@ -64,11 +64,12 @@ func (p *DicePool) RenderCharacters() string {
 }
 
 func (p *DicePool) Render(start int, end int) string {
-	if len(*p) == 0 {
+	diceCount := len(*p)
+	if diceCount == 0 {
 		return ""
 	}
-	if end > len(*p) {
-		end = len(*p)
+	if end > diceCount {
+		end = diceCount
 	}
 	if start >= end {
 		return ""
