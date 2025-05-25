@@ -152,6 +152,11 @@ func (g *Game) Bank() bool {
 		}
 		turnScore += score
 	}
+
+	if g.Scores[g.Players[g.Turn].Id] == 0 && turnScore < 500 {
+		return false
+	}
+
 	g.Scores[g.Players[g.Turn].Id] += turnScore
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}

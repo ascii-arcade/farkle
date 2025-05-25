@@ -19,14 +19,16 @@ var (
 )
 
 func init() {
-	serverURL := flag.String("server", "localhost", "WebSocket server URL")
-	serverPort := flag.String("port", "8080", "WebSocket server port")
+	serverURL := flag.String("server", "farkle.ascii-arcade.games", "WebSocket server URL")
+	serverPort := flag.String("port", "443", "WebSocket server port")
 	debug := flag.Bool("debug", false, "Enable debug mode")
+	secure := flag.Bool("secure", true, "Use secure WebSocket connection (wss)")
 	flag.Parse()
 
 	config.SetServerURL(serverURL)
 	config.SetServerPort(serverPort)
 	config.SetDebug(debug)
+	config.SetSecure(secure)
 
 	loggerHandler := slog.NewTextHandler(io.Discard, nil)
 	if *debug {
@@ -50,7 +52,7 @@ CONTINUE:
 
 func main() {
 	initModel := client.App{
-		CurrentView: menu.New(),
+		CurrentView: menu.New(logger),
 	}
 	p := tea.NewProgram(initModel)
 

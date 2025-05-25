@@ -2,6 +2,7 @@ package menu
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -44,7 +45,7 @@ func (m menuModel) Init() tea.Cmd {
 	return tea.Batch(tea.WindowSize(), serverHealth(false))
 }
 
-func New() *menuModel {
+func New(logger *slog.Logger) *menuModel {
 	playerNameInput := textinput.New()
 	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	playerNameInput.CharLimit = 25
@@ -59,164 +60,174 @@ func New() *menuModel {
 	gameRoomInput.Width = 25
 	gameRoomInput.Placeholder = "Game code"
 	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-	gameRoomInput.Focus()
 
 	m := &menuModel{
 		index:           0,
 		playerNameInput: playerNameInput,
 		gameCodeInput:   gameRoomInput,
-		choices: []menuChoice{
-			{
-				input: true,
-				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					var cmd tea.Cmd
-					m.playerNameInput, cmd = m.playerNameInput.Update(msg)
-					return m, cmd
-				},
-				render: func(m menuModel, selected bool) string {
-					m.playerNameInput.Prompt = "   "
-					m.playerNameInput.Blur()
-					if selected {
-						m.playerNameInput.Prompt = "-> "
-						m.playerNameInput.Focus()
-					}
-					return m.playerNameInput.View()
-				},
+		logger:          logger,
+	}
+
+	m.choices = []menuChoice{
+		{
+			input: true,
+			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+				var cmd tea.Cmd
+				m.playerNameInput, cmd = m.playerNameInput.Update(msg)
+				return m, cmd
 			},
-			{
-				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					if !m.serverHealthy {
-						return m, nil
-					}
-					client := http.Client{}
-					res, err := client.Post("http://localhost:8080/lobbies", "application/json", nil)
-					if err != nil {
-						m.logger.Debug("FAILED")
-						return m, nil
-					}
-					body, err := io.ReadAll(res.Body)
-					if err != nil {
-						m.logger.Debug("FAILED")
-						return m, nil
-					}
-					var l *lobbies.Lobby
-					if err := json.Unmarshal(body, &l); err != nil {
-						m.logger.Debug("FAILED")
-						return m, nil
-					}
-
-					nm, err := networkmanager.NewNetworkManager("ws://" + config.GetServerURL() + ":" + config.GetServerPort() + "/ws/" + l.Code + "?name=" + m.playerNameInput.Value())
-					if err != nil {
-						return m, nil
-					}
-
-					p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
-
-					eventLoop := eventloop.New(nm.Incoming, p)
-					eventLoop.Start()
-
-					if _, err := p.Run(); err != nil {
-						m.logger.Error("Error running client", "error", err)
-					}
-
+			render: func(m menuModel, selected bool) string {
+				m.playerNameInput.Prompt = "   "
+				m.playerNameInput.Blur()
+				if selected {
+					m.playerNameInput.Prompt = "-> "
+					m.playerNameInput.Focus()
+				}
+				return m.playerNameInput.View()
+			},
+		},
+		{
+			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+				if !m.serverHealthy {
 					return m, nil
-				},
-				render: func(m menuModel, selected bool) string {
-					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-					prefix := "   "
-
-					if selected {
-						style = style.Foreground(lipgloss.Color("#00ff00"))
-						prefix = "-> "
+				}
+				client := http.Client{}
+				scheme := "http"
+				if config.GetSecure() {
+					scheme = "https"
+				}
+				res, err := client.Post(fmt.Sprintf("%s://%s:%s/lobbies", scheme, config.GetServerURL(), config.GetServerPort()), "application/json", nil)
+				if err != nil {
+					if m.logger != nil {
+						m.logger.Debug("Failed to create lobby", "error", err)
 					}
-
-					if !m.serverHealthy {
-						style = style.Foreground(lipgloss.Color("#ff0000"))
+					m.err = "Failed to create lobby"
+					return m, nil
+				}
+				defer res.Body.Close()
+				body, err := io.ReadAll(res.Body)
+				if err != nil {
+					if m.logger != nil {
+						m.logger.Debug("Failed to read lobby response", "error", err)
 					}
+					m.err = "Failed to read lobby response"
+					return m, nil
+				}
+				var l lobbies.Lobby
+				if err := json.Unmarshal(body, &l); err != nil {
+					if m.logger != nil {
+						m.logger.Debug("Failed to unmarshal lobby", "error", err)
+					}
+					m.err = "Failed to parse lobby"
+					return m, nil
+				}
 
-					return style.Render(prefix + "New Online Game")
-				},
+				scheme = "ws"
+				if config.GetSecure() {
+					scheme = "wss"
+				}
+
+				nm, err := networkmanager.NewNetworkManager(fmt.Sprintf("%s://%s:%s/ws/%s?name=%s", scheme, config.GetServerURL(), config.GetServerPort(), l.Code, m.playerNameInput.Value()))
+				if err != nil {
+					m.err = "Failed to connect to lobby"
+					return m, nil
+				}
+
+				p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
+				eventLoop := eventloop.New(nm.Incoming, p)
+				eventLoop.Start()
+
+				if _, err := p.Run(); err != nil && m.logger != nil {
+					m.logger.Error("Error running client", "error", err)
+				}
+
+				return m, nil
 			},
-			{
-				input: true,
-				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					var cmd tea.Cmd
+			render: func(m menuModel, selected bool) string {
+				style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+				prefix := "   "
+				if selected {
+					prefix = "-> "
+				}
+				if !m.serverHealthy {
+					style = style.Foreground(lipgloss.Color("#ff0000"))
+				}
+				return style.Render(prefix + "New Online Game")
+			},
+		},
+		{
+			input: true,
+			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+				var cmd tea.Cmd
 
-					switch msg := msg.(type) {
-					case tea.KeyMsg:
-						if msg.Type == tea.KeyCtrlQuestionMark {
-							if len(m.gameCodeInput.Value()) == 4 {
-								m.gameCodeInput.SetValue(m.gameCodeInput.Value()[:len(m.gameCodeInput.Value())-1])
-							}
+				switch msg := msg.(type) {
+				case tea.KeyMsg:
+					if msg.Type == tea.KeyCtrlQuestionMark {
+						if len(m.gameCodeInput.Value()) == 4 {
+							m.gameCodeInput.SetValue(m.gameCodeInput.Value()[:len(m.gameCodeInput.Value())-1])
 						}
-						if msg.Type == tea.KeyEnter {
-							if len(m.playerNameInput.Value()) < 3 {
-								m.err = "A player name must be at least 3 characters long"
-								m.index = 0
-								return m, nil
-							}
-
-							if len(m.gameCodeInput.Value()) < 7 {
-								m.err = "A game code must be 7 characters long"
-								m.index = 3
-								return m, nil
-							}
-
-							nm, err := networkmanager.NewNetworkManager("ws://" + config.GetServerURL() + ":" + config.GetServerPort() + "/ws/" + m.gameCodeInput.Value() + "?name=" + m.playerNameInput.Value())
-							if err != nil {
-								return m, nil
-							}
-
-							p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
-
-							eventLoop := eventloop.New(nm.Incoming, p)
-							eventLoop.Start()
-
-							if _, err := p.Run(); err != nil {
-								m.logger.Error("Error running client", "error", err)
-							}
-
+					}
+					if msg.Type == tea.KeyEnter {
+						if len(m.playerNameInput.Value()) < 3 {
+							m.err = "A player name must be at least 3 characters long"
+							m.index = 0
 							return m, nil
 						}
+						if len(m.gameCodeInput.Value()) < 7 {
+							m.err = "A game code must be 7 characters long"
+							m.index = 2
+							return m, nil
+						}
+						scheme := "ws"
+						if config.GetSecure() {
+							scheme = "wss"
+						}
+						nm, err := networkmanager.NewNetworkManager(fmt.Sprintf("%s://%s:%s/ws/%s?name=%s", scheme, config.GetServerURL(), config.GetServerPort(), m.gameCodeInput.Value(), m.playerNameInput.Value()))
+						if err != nil {
+							m.err = "Failed to join lobby"
+							return m, nil
+						}
+						p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
+						eventLoop := eventloop.New(nm.Incoming, p)
+						eventLoop.Start()
+						if _, err := p.Run(); err != nil && m.logger != nil {
+							m.logger.Error("Error running client", "error", err)
+						}
+						return m, nil
 					}
+				}
 
-					m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
+				m.gameCodeInput, cmd = m.gameCodeInput.Update(msg)
+				m.gameCodeInput.SetValue(strings.ToUpper(m.gameCodeInput.Value()))
 
-					m.gameCodeInput.SetValue(strings.ToUpper(m.gameCodeInput.Value()))
+				if len(m.gameCodeInput.Value()) == 3 && !strings.Contains(m.gameCodeInput.Value(), "-") {
+					m.gameCodeInput.SetValue(m.gameCodeInput.Value() + "-")
+					m.gameCodeInput.CursorEnd()
+				}
 
-					if len(m.gameCodeInput.Value()) == 3 {
-						m.gameCodeInput.SetValue(m.gameCodeInput.Value() + "-")
-						m.gameCodeInput.CursorEnd()
-					}
-
-					return m, cmd
-				},
-				render: func(m menuModel, selected bool) string {
-					m.gameCodeInput.Prompt = "   "
-					m.gameCodeInput.Blur()
-
-					if selected {
-						m.gameCodeInput.Prompt = "-> "
-						m.gameCodeInput.Focus()
-					}
-
-					return m.gameCodeInput.View()
-				},
+				return m, cmd
 			},
-			{
-				action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-					return m, tea.Quit
-				},
-				render: func(m menuModel, selected bool) string {
-					style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
-					prefix := "   "
-
-					if selected {
-						style = style.Foreground(lipgloss.Color("#00ff00"))
-						prefix = "-> "
-					}
-					return style.Render(prefix + "Exit")
-				},
+			render: func(m menuModel, selected bool) string {
+				m.gameCodeInput.Prompt = "   "
+				m.gameCodeInput.Blur()
+				if selected {
+					m.gameCodeInput.Prompt = "-> "
+					m.gameCodeInput.Focus()
+				}
+				return m.gameCodeInput.View()
+			},
+		},
+		{
+			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+				return m, tea.Quit
+			},
+			render: func(m menuModel, selected bool) string {
+				style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+				prefix := "   "
+				if selected {
+					prefix = "-> "
+				}
+				return style.Render(prefix + "Exit")
 			},
 		},
 	}

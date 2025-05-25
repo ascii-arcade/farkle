@@ -2,8 +2,9 @@ package config
 
 var (
 	debug      bool
-	serverURL  string = "localhost"
-	serverPort string = "8080"
+	serverURL  string
+	serverPort string
+	secure     bool
 )
 
 func GetServerURL() string {
@@ -15,6 +16,9 @@ func GetServerPort() string {
 func GetDebug() bool {
 	return debug
 }
+func GetSecure() bool {
+	return secure
+}
 
 func SetServerURL(url *string) {
 	serverURL = *url
@@ -24,4 +28,7 @@ func SetServerPort(port *string) {
 }
 func SetDebug(d *bool) {
 	debug = *d
+}
+func SetSecure(s *bool) {
+	secure = *s
 }
