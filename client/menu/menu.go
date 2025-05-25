@@ -340,7 +340,12 @@ func serverHealth(healthy bool) tea.Cmd {
 		}
 
 		client := http.Client{}
-		res, err := client.Get("http://localhost:8080/health")
+		scheme := "http"
+		if config.GetSecure() {
+			scheme = "https"
+		}
+
+		res, err := client.Get(fmt.Sprintf("%s://%s:%s/health", scheme, config.GetServerURL(), config.GetServerPort()))
 		if err != nil {
 			return serverHealthMsg(false)
 		}

@@ -30,7 +30,7 @@ func loggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 			r = r.WithContext(ctx)
 			next.ServeHTTP(w, r)
 			duration := time.Since(start)
-			logger.Info("Request handled", "method", r.Method, "path", r.URL.Path, "duration", duration)
+			logger.Debug("Request handled", "method", r.Method, "path", r.URL.Path, "duration", duration)
 		})
 	}
 }
