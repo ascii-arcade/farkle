@@ -20,7 +20,7 @@ var (
 
 func init() {
 	serverURL := flag.String("server", "farkle.ascii-arcade.games", "WebSocket server URL")
-	serverPort := flag.String("port", "443", "WebSocket server port")
+	serverPort := flag.String("port", "", "WebSocket server port")
 	debug := flag.Bool("debug", false, "Enable debug mode")
 	secure := flag.Bool("secure", true, "Use secure WebSocket connection (wss)")
 	flag.Parse()

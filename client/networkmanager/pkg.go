@@ -1,6 +1,9 @@
 package networkmanager
 
 import (
+	"fmt"
+
+	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/message"
 	"golang.org/x/net/websocket"
 )
@@ -13,8 +16,25 @@ type NetworkManager struct {
 	quit chan struct{}
 }
 
-func NewNetworkManager(url string) (*NetworkManager, error) {
-	conn, err := websocket.Dial(url, "", "http://localhost/")
+func NewNetworkManager(code, name string) (*NetworkManager, error) {
+	scheme := "ws"
+	if config.GetSecure() {
+		scheme = "wss"
+	}
+
+	port := ""
+	if config.GetServerPort() != "" {
+		port = ":" + config.GetServerPort()
+	}
+
+	url := fmt.Sprintf("%s://%s%s/ws/%s?name=%s", scheme, config.GetServerURL(), port, code, name)
+	wsConfig, err := websocket.NewConfig(url, "http://localhost/")
+	if err != nil {
+		return nil, err
+	}
+	wsConfig.Header.Set("Connection", "Upgrade")
+	wsConfig.Header.Set("Upgrade", "websocket")
+	conn, err := websocket.DialConfig(wsConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -60,6 +60,7 @@ func New(logger *slog.Logger) *menuModel {
 	gameRoomInput.Width = 25
 	gameRoomInput.Placeholder = "Game code"
 	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
+	gameRoomInput.Focus()
 
 	m := &menuModel{
 		index:           0,
@@ -121,13 +122,7 @@ func New(logger *slog.Logger) *menuModel {
 					m.err = "Failed to parse lobby"
 					return m, nil
 				}
-
-				scheme = "ws"
-				if config.GetSecure() {
-					scheme = "wss"
-				}
-
-				nm, err := networkmanager.NewNetworkManager(fmt.Sprintf("%s://%s:%s/ws/%s?name=%s", scheme, config.GetServerURL(), config.GetServerPort(), l.Code, m.playerNameInput.Value()))
+				nm, err := networkmanager.NewNetworkManager(l.Code, m.playerNameInput.Value())
 				if err != nil {
 					m.err = "Failed to connect to lobby"
 					return m, nil
@@ -178,11 +173,7 @@ func New(logger *slog.Logger) *menuModel {
 							m.index = 2
 							return m, nil
 						}
-						scheme := "ws"
-						if config.GetSecure() {
-							scheme = "wss"
-						}
-						nm, err := networkmanager.NewNetworkManager(fmt.Sprintf("%s://%s:%s/ws/%s?name=%s", scheme, config.GetServerURL(), config.GetServerPort(), m.gameCodeInput.Value(), m.playerNameInput.Value()))
+						nm, err := networkmanager.NewNetworkManager(m.gameCodeInput.Value(), m.playerNameInput.Value())
 						if err != nil {
 							m.err = "Failed to join lobby"
 							return m, nil
