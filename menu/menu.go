@@ -1,33 +1,33 @@
 package menu
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ascii-arcade/farkle/client/eventloop"
-	"github.com/ascii-arcade/farkle/client/lobby"
-	"github.com/ascii-arcade/farkle/client/networkmanager"
 	"github.com/ascii-arcade/farkle/config"
-	"github.com/ascii-arcade/farkle/lobbies"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type menuChoice struct {
-	action func(menuModel, tea.Msg) (tea.Model, tea.Cmd)
-	render func(menuModel, bool) string
+	action func(Model, tea.Msg) (tea.Model, tea.Cmd)
+	render func(Model, bool) string
 	input  bool
 }
 
-type menuModel struct {
-	width           int
-	height          int
+type Model struct {
+	Term     string
+	Width    int
+	Height   int
+	Renderer *lipgloss.Renderer
+
+	isJoining bool
+	gameCode  string
+
 	index           int
 	playerNameInput textinput.Model
 	gameCodeInput   textinput.Model
@@ -41,11 +41,11 @@ type menuModel struct {
 
 type serverHealthMsg bool
 
-func (m menuModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return tea.Batch(tea.WindowSize(), serverHealth(false))
 }
 
-func New(logger *slog.Logger) *menuModel {
+func New(logger *slog.Logger) *Model {
 	playerNameInput := textinput.New()
 	playerNameInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	playerNameInput.CharLimit = 25
@@ -62,7 +62,7 @@ func New(logger *slog.Logger) *menuModel {
 	gameRoomInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 	gameRoomInput.Focus()
 
-	m := &menuModel{
+	m := &Model{
 		index:           0,
 		playerNameInput: playerNameInput,
 		gameCodeInput:   gameRoomInput,
@@ -72,12 +72,12 @@ func New(logger *slog.Logger) *menuModel {
 	m.choices = []menuChoice{
 		{
 			input: true,
-			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+			action: func(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmd tea.Cmd
 				m.playerNameInput, cmd = m.playerNameInput.Update(msg)
 				return m, cmd
 			},
-			render: func(m menuModel, selected bool) string {
+			render: func(m Model, selected bool) string {
 				m.playerNameInput.Prompt = "   "
 				m.playerNameInput.Blur()
 				if selected {
@@ -88,57 +88,10 @@ func New(logger *slog.Logger) *menuModel {
 			},
 		},
 		{
-			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-				if !m.serverHealthy {
-					return m, nil
-				}
-				client := http.Client{}
-				scheme := "http"
-				if config.GetSecure() {
-					scheme = "https"
-				}
-				res, err := client.Post(fmt.Sprintf("%s://%s:%s/lobbies", scheme, config.GetServerURL(), config.GetServerPort()), "application/json", nil)
-				if err != nil {
-					if m.logger != nil {
-						m.logger.Debug("Failed to create lobby", "error", err)
-					}
-					m.err = "Failed to create lobby"
-					return m, nil
-				}
-				defer res.Body.Close()
-				body, err := io.ReadAll(res.Body)
-				if err != nil {
-					if m.logger != nil {
-						m.logger.Debug("Failed to read lobby response", "error", err)
-					}
-					m.err = "Failed to read lobby response"
-					return m, nil
-				}
-				var l lobbies.Lobby
-				if err := json.Unmarshal(body, &l); err != nil {
-					if m.logger != nil {
-						m.logger.Debug("Failed to unmarshal lobby", "error", err)
-					}
-					m.err = "Failed to parse lobby"
-					return m, nil
-				}
-				nm, err := networkmanager.NewNetworkManager(l.Code, m.playerNameInput.Value())
-				if err != nil {
-					m.err = "Failed to connect to lobby"
-					return m, nil
-				}
-
-				p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
-				eventLoop := eventloop.New(nm.Incoming, p)
-				eventLoop.Start()
-
-				if _, err := p.Run(); err != nil && m.logger != nil {
-					m.logger.Error("Error running client", "error", err)
-				}
-
+			action: func(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			},
-			render: func(m menuModel, selected bool) string {
+			render: func(m Model, selected bool) string {
 				style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 				prefix := "   "
 				if selected {
@@ -152,7 +105,7 @@ func New(logger *slog.Logger) *menuModel {
 		},
 		{
 			input: true,
-			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+			action: func(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmd tea.Cmd
 
 				switch msg := msg.(type) {
@@ -173,17 +126,6 @@ func New(logger *slog.Logger) *menuModel {
 							m.index = 2
 							return m, nil
 						}
-						nm, err := networkmanager.NewNetworkManager(m.gameCodeInput.Value(), m.playerNameInput.Value())
-						if err != nil {
-							m.err = "Failed to join lobby"
-							return m, nil
-						}
-						p := tea.NewProgram(lobby.New(nm), tea.WithAltScreen())
-						eventLoop := eventloop.New(nm.Incoming, p)
-						eventLoop.Start()
-						if _, err := p.Run(); err != nil && m.logger != nil {
-							m.logger.Error("Error running client", "error", err)
-						}
 						return m, nil
 					}
 				}
@@ -198,7 +140,7 @@ func New(logger *slog.Logger) *menuModel {
 
 				return m, cmd
 			},
-			render: func(m menuModel, selected bool) string {
+			render: func(m Model, selected bool) string {
 				m.gameCodeInput.Prompt = "   "
 				m.gameCodeInput.Blur()
 				if selected {
@@ -209,10 +151,10 @@ func New(logger *slog.Logger) *menuModel {
 			},
 		},
 		{
-			action: func(m menuModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+			action: func(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			},
-			render: func(m menuModel, selected bool) string {
+			render: func(m Model, selected bool) string {
 				style := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00"))
 				prefix := "   "
 				if selected {
@@ -226,7 +168,7 @@ func New(logger *slog.Logger) *menuModel {
 	return m
 }
 
-func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case serverHealthMsg:
 		m.serverHealthy = bool(msg)
@@ -248,8 +190,8 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.WindowSizeMsg:
-		m.height = msg.Height
-		m.width = msg.Width
+		m.Height = msg.Height
+		m.Width = msg.Width
 	}
 
 	for i, choice := range m.choices {
@@ -261,20 +203,20 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m menuModel) View() string {
-	if m.height < 20 || m.width < 100 {
+func (m Model) View() string {
+	if m.Height < 20 || m.Width < 100 {
 		return "Window too small, please resize to something larger."
 	}
 
-	panelStyle := lipgloss.NewStyle().Width(m.width).Height(m.height - 1).AlignVertical(lipgloss.Center)
+	panelStyle := lipgloss.NewStyle().Width(m.Width).Height(m.Height - 1).AlignVertical(lipgloss.Center)
 	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#0000ff")).Margin(1, 2)
 	titleStyle := lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1, 2)
 	menuStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left)
-	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width / 2)
-	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.width / 2)
+	controlsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.Width / 2)
+	errorsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.Width / 2)
 
 	if config.GetDebug() {
-		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.width - 2).Height(m.height - 3)
+		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(m.Width - 2).Height(m.Height - 3)
 		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
 		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())
 		controlsStyle = controlsStyle.Background(lipgloss.Color("#000066")).Foreground(lipgloss.Color("#ffffff"))
@@ -300,7 +242,7 @@ func (m menuModel) View() string {
 	)
 
 	logoWidth := lipgloss.Width(logoPanel)
-	restOfPanelWidth := max(m.width-logoWidth, 0)
+	restOfPanelWidth := max(m.Width-logoWidth, 0)
 	menuMargin := max((restOfPanelWidth/2)-lipgloss.Width(menuJoin), 0)
 
 	menuPanel := lipgloss.NewStyle().MarginLeft(menuMargin).Align(lipgloss.Center, lipgloss.Center).Render(menuJoin)

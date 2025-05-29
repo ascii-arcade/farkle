@@ -2,9 +2,9 @@ package game
 
 import (
 	"encoding/json"
-	"math/rand/v2"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/player"
@@ -13,54 +13,55 @@ import (
 )
 
 type Game struct {
-	Players    []*player.Player `json:"players"`
-	Scores     map[string]int   `json:"scores"`
-	Turn       int              `json:"turn"`
-	Round      int              `json:"round"`
-	DicePool   dice.DicePool    `json:"dice_pool"`
-	DiceHeld   dice.DicePool    `json:"dice_held"`
-	DiceLocked []dice.DicePool  `json:"dice_locked"`
-	LobbyCode  string           `json:"lobby_code"`
-	Log        []string         `json:"log"`
-	FirstRoll  bool             `json:"first_roll"`
-	Busted     bool             `json:"busted"`
+	Players map[string]*player.Player
+	Clients map[chan any]struct{}
 
-	Rolled bool
+	mu sync.Mutex
+
+	Scores     map[string]int
+	Turn       int
+	Round      int
+	DicePool   dice.DicePool
+	DiceHeld   dice.DicePool
+	DiceLocked []dice.DicePool
+	LobbyCode  string
+	Log        []string
+	FirstRoll  bool
+	Busted     bool
+	Rolled     bool
 }
 
-func New(lobbyCode string, players []*player.Player) *Game {
+var Games = make(map[string]*Game)
+
+func New() *Game {
 	scores := make(map[string]int)
-	colors := []string{
-		"#3B82F6", // Blue
-		"#10B981", // Green
-		"#FACC15", // Yellow
-		"#8B5CF6", // Purple
-		"#06B6D4", // Cyan
-		"#F97316", // Orange
-	}
-
-	rand.Shuffle(len(colors), func(i, j int) {
-		colors[i], colors[j] = colors[j], colors[i]
-	})
-
-	for i, p := range players {
-		if p == nil {
-			continue
-		}
-		scores[p.Id] = 0
-		p.Color = colors[i]
-	}
 
 	return &Game{
-		Players:   players,
 		Scores:    scores,
 		Turn:      0,
 		Round:     1,
 		DicePool:  dice.NewDicePool(6),
 		DiceHeld:  dice.NewDicePool(0),
-		LobbyCode: lobbyCode,
 		FirstRoll: true,
 	}
+}
+
+func (g *Game) Lock() {
+	g.mu.Lock()
+}
+func (g *Game) Unlock() {
+	g.mu.Unlock()
+}
+
+func (s *Game) AddClient(ch chan any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Clients[ch] = struct{}{}
+}
+
+func (s *Game) RemoveClient(ch chan any, player *player.Player) {
+	delete(s.Clients, ch)
+	delete(s.Players, player.Id)
 }
 
 func (g *Game) Update(gIn Game) {
@@ -78,7 +79,7 @@ func (g *Game) Update(gIn Game) {
 
 func (g *Game) NextTurn() {
 	g.Turn++
-	if g.Turn >= len(g.Players) || g.Players[g.Turn] == nil {
+	if g.Turn >= len(g.Players) {
 		g.Turn = 0
 		g.Round++
 	}
@@ -97,13 +98,22 @@ func (g *Game) RollDice() {
 
 	g.DicePool.Roll()
 	g.Rolled = true
-	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" rolled: "+g.DicePool.RenderCharacters())
+	g.Log = append(g.Log, g.getTurnPlayer().StyledPlayerName()+" rolled: "+g.DicePool.RenderCharacters())
 
 	if g.busted() {
 		g.Busted = true
-		g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" busted!")
+		g.Log = append(g.Log, g.getTurnPlayer().StyledPlayerName()+" busted!")
 		g.NextTurn()
 	}
+}
+
+func (g *Game) getTurnPlayer() *player.Player {
+	for _, p := range g.Players {
+		if p.TurnOrder == g.Turn {
+			return p
+		}
+	}
+	return nil
 }
 
 func (g *Game) HoldDie(dieToHold int) {
@@ -120,7 +130,7 @@ func (g *Game) Undo() {
 	if g.DiceHeld.Remove(lastDie) {
 		g.DicePool.Add(lastDie)
 	}
-	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" undid: "+dice.GetDieCharacter(lastDie))
+	g.Log = append(g.Log, g.getTurnPlayer().StyledPlayerName()+" undid: "+dice.GetDieCharacter(lastDie))
 }
 
 func (g *Game) LockDice() {
@@ -140,7 +150,7 @@ func (g *Game) LockDice() {
 	if len(g.DicePool) == 0 {
 		g.DicePool = dice.NewDicePool(6)
 	}
-	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+	g.Log = append(g.Log, g.getTurnPlayer().StyledPlayerName()+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
 }
 
 func (g *Game) Bank() bool {
@@ -153,20 +163,20 @@ func (g *Game) Bank() bool {
 		turnScore += score
 	}
 
-	if g.Scores[g.Players[g.Turn].Id] == 0 && turnScore < 500 {
+	if g.Scores[g.getTurnPlayer().Id] == 0 && turnScore < 500 {
 		return false
 	}
 
-	g.Scores[g.Players[g.Turn].Id] += turnScore
+	g.Scores[g.getTurnPlayer().Id] += turnScore
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.NextTurn()
-	g.Log = append(g.Log, g.Players[g.Turn].StyledPlayerName()+" banked: "+strconv.Itoa(turnScore))
+	g.Log = append(g.Log, g.getTurnPlayer().StyledPlayerName()+" banked: "+strconv.Itoa(turnScore))
 	return true
 }
 
 func (g *Game) IsTurn(p *player.Player) bool {
-	return g.Players[g.Turn].Id == p.Id
+	return g.getTurnPlayer().Id == p.Id
 }
 
 func (g *Game) ToJSON() string {
@@ -175,33 +185,25 @@ func (g *Game) ToJSON() string {
 }
 
 func (g *Game) PlayerScores() string {
-	scores := make([]string, len(g.Players))
+	scores := make([]string, 0, len(g.Players))
 
-	for i, player := range g.Players {
+	for _, player := range g.Players {
 		if player == nil {
 			continue
 		}
+		isCurrentPlayer := g.Turn == player.TurnOrder
 
-		content := g.StyledPlayerName(i) + ": " + strconv.Itoa(g.Scores[player.Id])
-		isCurrentPlayer := g.Turn == i
-
-		scores[i] = lipgloss.NewStyle().
+		scores = append(scores, lipgloss.NewStyle().
 			PaddingRight(2).
 			Bold(isCurrentPlayer).
 			Italic(isCurrentPlayer).
-			Render(content)
+			Render(g.getTurnPlayer().StyledPlayerName()+": "+strconv.Itoa(g.Scores[player.Id])))
 	}
 
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		scores...,
 	)
-}
-
-func (g *Game) StyledPlayerName(i int) string {
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color(g.Players[i].Color))
-
-	return style.Render(g.Players[i].Name)
 }
 
 func (g *Game) RenderLog(limit int) string {
@@ -217,4 +219,15 @@ func (g *Game) RenderLog(limit int) string {
 func (g *Game) busted() bool {
 	_, ok := score.Calculate(g.DicePool)
 	return !ok
+}
+
+func (s *Game) Refresh() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for ch := range s.Clients {
+		select {
+		case ch <- 0:
+		default:
+		}
+	}
 }
