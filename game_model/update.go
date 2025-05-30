@@ -7,6 +7,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/score"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -68,7 +69,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(m.game.DiceLocked) >= 0 {
 					m.game.Bank()
 				}
-			case "u":
+			case "a":
+				for _, face := range score.GetScorableDieFaces(m.game.DicePool) {
+					m.game.HoldDie(face)
+				}
+			case "u", "backspace":
 				if len(m.game.DiceHeld) > 0 {
 					m.game.Undo()
 				}

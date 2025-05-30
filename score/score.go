@@ -63,6 +63,24 @@ func Calculate(dieFaces []int, ignoreUselessDie bool) (int, error) {
 	return score, nil
 }
 
+func GetScorableDieFaces(dieFaces []int) []int {
+	roll, err := newRoll(dieFaces)
+	if err != nil {
+		return nil
+	}
+
+	scorableDieFaces := make([]int, 0)
+	for face, count := range roll {
+		if count > 0 && (face == 1 || face == 5 || count >= 3) {
+			for range count {
+				scorableDieFaces = append(scorableDieFaces, face)
+			}
+		}
+	}
+
+	return scorableDieFaces
+}
+
 func newRoll(dieFaces []int) (roll, error) {
 	if err := validateDieFaces(dieFaces); err != nil {
 		return nil, err
