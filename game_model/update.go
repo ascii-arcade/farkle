@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/messages"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -34,6 +35,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.game.IsTurn(m.player) {
 			if msg.String() == "r" && !m.game.Rolled && !m.rolling {
+
+				if m.game.FirstRoll {
+					m.game.DicePool = dice.NewDicePool(6)
+					m.game.DiceHeld = dice.NewDicePool(0)
+					m.game.DiceLocked = make([]dice.DicePool, 0)
+					m.game.FirstRoll = false
+				}
+
 				m.rollTickCount = 0
 				m.rolling = true
 				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {

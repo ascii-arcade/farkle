@@ -154,13 +154,6 @@ func (g *Game) RollDice() {
 	g.Lock()
 	defer g.Unlock()
 
-	if g.FirstRoll {
-		g.DicePool = dice.NewDicePool(6)
-		g.DiceHeld = dice.NewDicePool(0)
-		g.DiceLocked = make([]dice.DicePool, 0)
-		g.FirstRoll = false
-	}
-
 	g.DicePool.Roll()
 	g.Rolled = true
 	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
@@ -253,9 +246,9 @@ func (g *Game) Bank() {
 
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
-	g.NextTurn()
 	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
 
+	g.NextTurn()
 	g.Refresh()
 }
 
