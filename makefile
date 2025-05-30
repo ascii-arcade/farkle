@@ -1,8 +1,8 @@
 test:
 	@go test ./... -v
 
-build: test
-	@go build -o bin/client ./cmd/client
+docker-build: test
+	@docker build -t farkle:latest .
 
-run: build
-	@./bin/client
+docker-run: docker-build
+	@docker run --rm -d farkle:latest

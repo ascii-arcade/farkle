@@ -2,5 +2,5 @@ services:
   farkle:
     build: .
     ports:
-      - "8080:8080"
+      - "23234:23234"
     restart: always
