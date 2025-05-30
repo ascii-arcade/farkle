@@ -56,7 +56,7 @@ func Calculate(dieFaces []int, ignoreUselessDie bool) (int, error) {
 		return 0, errors.New("useless dice detected")
 	}
 
-	if score == 0 {
+	if score == 0 && len(dieFaces) > 0 {
 		return 0, errors.New("no score")
 	}
 
