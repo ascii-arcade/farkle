@@ -66,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.game.LockDice()
 				}
 			case "y":
-				if len(m.game.DiceLocked) >= 0 {
+				if len(m.game.DiceHeld) == 0 && len(m.game.DiceLocked) > 0 {
 					m.game.Bank()
 				}
 			case "a":
