@@ -107,7 +107,7 @@ func TestCalculate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			got, err := Calculate(tt.dieFaces)
+			got, err := Calculate(tt.dieFaces, false)
 
 			if tt.wantError != "" {
 				if err == nil {

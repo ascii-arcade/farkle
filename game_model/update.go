@@ -35,6 +35,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.game.IsTurn(m.player) {
 			if msg.String() == "r" && !m.game.Rolled {
 				m.game.RollDice()
+
+				m.rollTickCount = 0
+				m.rolling = true
+				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
+					return rollMsg{}
+				})
 			}
 
 			if m.game.Rolled && slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
@@ -66,6 +72,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.rollTickCount < rollFrames {
 			m.rollTickCount++
 			m.game.DicePool.Roll()
+			m.game.Refresh()
 			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return rollMsg{}
 			})

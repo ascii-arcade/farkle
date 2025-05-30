@@ -16,11 +16,11 @@ type Model struct {
 	rollTickCount int
 	error         string
 
-	GameCode string
-
 	style  lipgloss.Style
 	player *games.Player
 	game   *games.Game
+
+	rolling bool
 }
 
 const (
