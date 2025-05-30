@@ -4,3 +4,6 @@ services:
     ports:
       - "23234:23234"
     restart: always
+    environment:
+      - FARKLE_PORT=23234
+      - FARKLE_HOST=0.0.0.0
