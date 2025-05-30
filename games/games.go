@@ -199,7 +199,7 @@ func (g *Game) LockDice() {
 	if len(g.DiceHeld) == 0 {
 		return
 	}
-	if _, err := score.Calculate(g.DiceHeld); err != nil {
+	if _, err := score.Calculate(g.DiceHeld, false); err != nil {
 		return
 	}
 
@@ -284,7 +284,7 @@ func (g *Game) RenderLog(limit int) string {
 }
 
 func (g *Game) busted() bool {
-	if _, err := score.Calculate(g.DicePool); err != nil {
+	if _, err := score.Calculate(g.DicePool, true); err != nil {
 		return true
 	}
 	return false
