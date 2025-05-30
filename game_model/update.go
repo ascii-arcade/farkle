@@ -33,7 +33,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.game.IsTurn(m.player) {
-			if msg.String() == "r" && !m.game.Rolled {
+			if msg.String() == "r" && !m.game.Rolled && !m.rolling {
 				m.rollTickCount = 0
 				m.rolling = true
 				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
