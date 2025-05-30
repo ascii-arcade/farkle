@@ -1,0 +1,13 @@
+services:
+  farkle:
+    build: .
+    ports:
+      - "23234:23234"
+    restart: always
+    environment:
+      - ASCII_ARCADE_PORT=23234
+      - ASCII_ARCADE_HOST=0.0.0.0
+    volumes:
+      - farkle_ssh:/app/.ssh
+volumes:
+  farkle_ssh:

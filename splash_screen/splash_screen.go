@@ -1,30 +1,46 @@
-package splash_screen
+package splashscreen
 
 import (
 	"time"
 
+	"github.com/ascii-arcade/farkle/menu"
+	"github.com/ascii-arcade/farkle/messages"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type model struct {
+type Model struct {
 	height int
 	width  int
+	style  lipgloss.Style
 }
 
 type doneMsg struct{}
 
-func (m model) Init() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return doneMsg{}
-	})
+func NewModel(style lipgloss.Style, width, height int) Model {
+	return Model{
+		height: height,
+		width:  width,
+		style:  style,
+	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(
+		tea.Tick(time.Second, func(t time.Time) tea.Msg {
+			return doneMsg{}
+		}),
+		tea.WindowSize(),
+	)
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case doneMsg:
-		return m, tea.Quit
-
+		menuModel := menu.New(m.style, m.width, m.height)
+		return m, func() tea.Msg {
+			return messages.SwitchViewMsg{Model: menuModel}
+		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -33,8 +49,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
-	style := lipgloss.NewStyle().
+func (m Model) View() string {
+	style := m.style.
 		Width(m.width).
 		Height(m.height)
 
@@ -62,11 +78,4 @@ func (m model) View() string {
 			logo,
 		),
 	)
-}
-
-func Run() {
-	tea.NewProgram(
-		model{},
-		tea.WithAltScreen(),
-	).Run()
 }

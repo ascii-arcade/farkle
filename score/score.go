@@ -7,7 +7,7 @@ import (
 
 type roll map[int]int
 
-func Calculate(dieFaces []int) (int, error) {
+func Calculate(dieFaces []int, ignoreUselessDie bool) (int, error) {
 	roll, err := newRoll(dieFaces)
 	if err != nil {
 		return 0, err
@@ -52,8 +52,12 @@ func Calculate(dieFaces []int) (int, error) {
 	score += roll[5] * 50
 	roll[5] = 0
 
-	if roll[0] > 0 || roll[2] > 0 || roll[3] > 0 || roll[4] > 0 || roll[6] > 0 {
+	if (roll[0] > 0 || roll[2] > 0 || roll[3] > 0 || roll[4] > 0 || roll[6] > 0) && !ignoreUselessDie {
 		return 0, errors.New("useless dice detected")
+	}
+
+	if score == 0 && len(dieFaces) > 0 {
+		return 0, errors.New("no score")
 	}
 
 	return score, nil
@@ -73,10 +77,6 @@ func newRoll(dieFaces []int) (roll, error) {
 }
 
 func validateDieFaces(dieFaces []int) error {
-	if len(dieFaces) == 0 {
-		return errors.New("no dice")
-	}
-
 	if len(dieFaces) > 6 {
 		return errors.New("too many dice")
 	}

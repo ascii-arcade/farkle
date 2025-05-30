@@ -1,1 +1,5 @@
 "go-farkle"
+*.log
+__debug*
+bin/
+.ssh/
