@@ -2,6 +2,7 @@ package games
 
 import (
 	"encoding/json"
+	"math/rand/v2"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ type Game struct {
 	FirstRoll  bool
 	Rolled     bool
 
+	colors  []string
 	round   int
 	turn    int
 	log     []string
@@ -36,6 +38,19 @@ type Game struct {
 var games = make(map[string]*Game)
 
 func New(style lipgloss.Style) *Game {
+	colors := []string{
+		"#3B82F6", // Blue
+		"#10B981", // Green
+		"#FACC15", // Yellow
+		"#8B5CF6", // Purple
+		"#06B6D4", // Cyan
+		"#F97316", // Orange
+	}
+
+	rand.Shuffle(len(colors), func(i, j int) {
+		colors[i], colors[j] = colors[j], colors[i]
+	})
+
 	game := &Game{
 		turn:      0,
 		round:     1,
@@ -44,6 +59,7 @@ func New(style lipgloss.Style) *Game {
 		FirstRoll: true,
 		Code:      utils.GenerateCode(),
 		style:     style,
+		colors:    colors,
 	}
 	games[game.Code] = game
 	return game
@@ -82,6 +98,7 @@ func (g *Game) AddPlayer(host bool) *Player {
 		Name:       utils.GenerateName(),
 		UpdateChan: make(chan any, 1),
 		Host:       host,
+		Color:      g.colors[len(g.players)%len(g.colors)],
 	}
 
 	g.Lock()
@@ -146,18 +163,18 @@ func (g *Game) RollDice() {
 
 	g.DicePool.Roll()
 	g.Rolled = true
-	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
+	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
 
 	if g.busted() {
 		g.Busted = true
-		g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" busted!")
+		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" busted!")
 		g.NextTurn()
 	}
 
 	g.Refresh()
 }
 
-func (g *Game) getTurnPlayer() *Player {
+func (g *Game) GetTurnPlayer() *Player {
 	for i, p := range g.players {
 		if i == g.turn {
 			return p
@@ -210,7 +227,7 @@ func (g *Game) LockDice() {
 	if len(g.DicePool) == 0 {
 		g.DicePool = dice.NewDicePool(6)
 	}
-	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
 
 	g.Refresh()
 }
@@ -228,7 +245,7 @@ func (g *Game) Bank() {
 		turnScore += score
 	}
 
-	p := g.getTurnPlayer()
+	p := g.GetTurnPlayer()
 	if p.Score == 0 && turnScore < 500 {
 		return
 	}
@@ -237,13 +254,13 @@ func (g *Game) Bank() {
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.NextTurn()
-	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
+	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
 
 	g.Refresh()
 }
 
 func (g *Game) IsTurn(p *Player) bool {
-	return g.getTurnPlayer().Id == p.Id
+	return g.GetTurnPlayer().Id == p.Id
 }
 
 func (g *Game) ToJSON() string {

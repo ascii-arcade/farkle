@@ -9,6 +9,8 @@ import (
 )
 
 func (m Model) View() string {
+	borderColor := m.game.GetTurnPlayer().Color
+
 	paneStyle := m.style.
 		Width(m.width).
 		Height(m.height).
@@ -16,27 +18,27 @@ func (m Model) View() string {
 	logPaneStyle := m.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B82F6")).
+		BorderForeground(lipgloss.Color(borderColor)).
 		Height(12).
 		Width(35)
 	poolPaneStyle := m.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B82F6")).
+		BorderForeground(lipgloss.Color(borderColor)).
 		Padding(1, 0).
 		Width(32).
 		Height(12)
 	heldPaneStyle := m.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B82F6")).
+		BorderForeground(lipgloss.Color(borderColor)).
 		Width(48).
 		Height(12)
 	heldScorePaneStyle := m.style
 	lockedPaneStyle := m.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B82F6")).
+		BorderForeground(lipgloss.Color(borderColor)).
 		Padding(0, 1).
 		Width(19).
 		Height(12)
@@ -98,11 +100,15 @@ func (m Model) View() string {
 			BorderForeground(lipgloss.Color("#ff0000"))
 	}
 
-	poolDie := m.game.DicePool.Render(0, 6)
-
+	poolRollStrings := []string{}
+	if m.game.GetTurnPlayer().Id == m.player.Id {
+		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
+		poolRollStrings = append(poolRollStrings, "Your Turn!\n")
+	}
+	poolRollStrings = append(poolRollStrings, m.game.DicePool.Render(0, 6))
 	poolRollPane := lipgloss.JoinVertical(
 		lipgloss.Left,
-		poolPaneStyle.Render(poolDie),
+		poolPaneStyle.Render(poolRollStrings...),
 	)
 
 	heldScore, err := m.game.DiceHeld.Score()

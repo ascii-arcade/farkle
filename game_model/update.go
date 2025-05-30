@@ -34,8 +34,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.game.IsTurn(m.player) {
 			if msg.String() == "r" && !m.game.Rolled {
-				m.game.RollDice()
-
 				m.rollTickCount = 0
 				m.rolling = true
 				return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
@@ -77,6 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return rollMsg{}
 			})
 		}
+		m.game.RollDice()
 		return m, nil
 	case messages.RefreshGame:
 		return m, waitForRefreshSignal(m.player.UpdateChan)
