@@ -199,8 +199,7 @@ func (g *Game) LockDice() {
 	if len(g.DiceHeld) == 0 {
 		return
 	}
-
-	if score.Calculate(g.DiceHeld) == 0 {
+	if _, err := score.Calculate(g.DiceHeld); err != nil {
 		return
 	}
 
@@ -222,8 +221,8 @@ func (g *Game) Bank() {
 
 	turnScore := 0
 	for _, diceLocked := range g.DiceLocked {
-		score := diceLocked.Score()
-		if score == 0 {
+		score, err := diceLocked.Score()
+		if err != nil {
 			return
 		}
 		turnScore += score
@@ -285,7 +284,10 @@ func (g *Game) RenderLog(limit int) string {
 }
 
 func (g *Game) busted() bool {
-	return score.Calculate(g.DicePool) == 0
+	if _, err := score.Calculate(g.DicePool); err != nil {
+		return true
+	}
+	return false
 }
 
 func (g *Game) Refresh() {

@@ -47,7 +47,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			switch msg.String() {
 			case "l":
-				if len(m.game.DiceHeld) != 0 && m.game.DiceHeld.Score() > 0 {
+				_, err := m.game.DiceHeld.Score()
+				if len(m.game.DiceHeld) != 0 && err == nil {
 					m.game.LockDice()
 				}
 			case "y":

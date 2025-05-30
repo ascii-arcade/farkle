@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/config"
-	"github.com/ascii-arcade/farkle/score"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -108,8 +107,9 @@ func (m Model) View() string {
 		poolPaneStyle.Render(poolDie),
 	)
 
-	heldScore := score.Calculate(m.game.DiceHeld)
-	if heldScore == 0 {
+	heldScore, err := m.game.DiceHeld.Score()
+	if err != nil {
+		m.error = err.Error()
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color(colorError))
 	}
 
@@ -139,7 +139,12 @@ func (m Model) View() string {
 	}
 	lockedScore := 0
 	for _, diePool := range m.game.DiceLocked {
-		lockedScore += diePool.Score()
+		ls, err := diePool.Score()
+		if err != nil {
+			m.error = err.Error()
+		} else {
+			lockedScore += ls
+		}
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,

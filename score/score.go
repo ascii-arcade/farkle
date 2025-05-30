@@ -1,32 +1,40 @@
 package score
 
+import (
+	"errors"
+	"fmt"
+)
+
 type roll map[int]int
 
-func Calculate(dieFaces []int) int {
-	roll := newRoll(dieFaces)
+func Calculate(dieFaces []int) (int, error) {
+	roll, err := newRoll(dieFaces)
+	if err != nil {
+		return 0, err
+	}
 
 	if roll.ofAKind(6) != 0 {
-		return 3000
+		return 3000, nil
 	}
 
 	if roll.hasTriplets() {
-		return 2500
+		return 2500, nil
 	}
 
 	if roll.hasFourOfAKindAndAPair() || roll.hasThreePairs() || roll.hasStraight() {
-		return 1500
+		return 1500, nil
 	}
 
 	score := 0
 
 	if face := roll.ofAKind(5); face != 0 {
 		score += 2000
-		delete(roll, face)
+		roll[face] = 0
 	}
 
 	if face := roll.ofAKind(4); face != 0 {
 		score += 1000
-		delete(roll, face)
+		roll[face] = 0
 	}
 
 	if face := roll.ofAKind(3); face != 0 {
@@ -35,25 +43,51 @@ func Calculate(dieFaces []int) int {
 		} else {
 			score += face * 100
 		}
-		delete(roll, face)
+		roll[face] = 0
 	}
 
 	score += roll[1] * 100
-	delete(roll, 1)
+	roll[1] = 0
 
 	score += roll[5] * 50
-	delete(roll, 5)
+	roll[5] = 0
 
-	return score
+	if roll[0] > 0 || roll[2] > 0 || roll[3] > 0 || roll[4] > 0 || roll[6] > 0 {
+		return 0, errors.New("useless dice detected")
+	}
+
+	return score, nil
 }
 
-func newRoll(dieFaces []int) roll {
+func newRoll(dieFaces []int) (roll, error) {
+	if err := validateDieFaces(dieFaces); err != nil {
+		return nil, err
+	}
+
 	roll := make(roll)
 	for _, die := range dieFaces {
 		roll[die]++
 	}
 
-	return roll
+	return roll, nil
+}
+
+func validateDieFaces(dieFaces []int) error {
+	if len(dieFaces) == 0 {
+		return errors.New("no dice")
+	}
+
+	if len(dieFaces) > 6 {
+		return errors.New("too many dice")
+	}
+
+	for _, die := range dieFaces {
+		if die < 1 || die > 6 {
+			return fmt.Errorf("invalid die face: %d", die)
+		}
+	}
+
+	return nil
 }
 
 func (r roll) ofAKind(targetCount int) int {
