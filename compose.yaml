@@ -8,6 +8,6 @@ services:
       - ASCII_ARCADE_PORT=23234
       - ASCII_ARCADE_HOST=0.0.0.0
     volumes:
-      - farkle_ssh:/app/farkle/.ssh
+      - farkle_ssh:/app/.ssh
 volumes:
   farkle_ssh:
