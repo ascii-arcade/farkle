@@ -43,7 +43,7 @@ func (p *DicePool) Remove(face int) bool {
 	return false
 }
 
-func (p *DicePool) Score() (int, bool) {
+func (p *DicePool) Score() int {
 	return score.Calculate(*p)
 }
 

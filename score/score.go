@@ -2,19 +2,19 @@ package score
 
 type roll map[int]int
 
-func Calculate(dieFaces []int) (int, bool) {
+func Calculate(dieFaces []int) int {
 	roll := newRoll(dieFaces)
 
 	if roll.ofAKind(6) != 0 {
-		return 3000, true
+		return 3000
 	}
 
 	if roll.hasTriplets() {
-		return 2500, true
+		return 2500
 	}
 
 	if roll.hasFourOfAKindAndAPair() || roll.hasThreePairs() || roll.hasStraight() {
-		return 1500, true
+		return 1500
 	}
 
 	score := 0
@@ -44,7 +44,7 @@ func Calculate(dieFaces []int) (int, bool) {
 	score += roll[5] * 50
 	delete(roll, 5)
 
-	return score, score != 0
+	return score
 }
 
 func newRoll(dieFaces []int) roll {

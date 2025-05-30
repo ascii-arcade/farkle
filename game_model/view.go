@@ -37,9 +37,7 @@ func (m Model) View() string {
 		Height(12)
 
 	if !m.game.Started {
-		sb := strings.Builder{}
-		sb.WriteString("Game Code: " + m.game.Code + "\n")
-		sb.WriteString("Host, press s to start\n\n")
+		playersString := []string{}
 		for _, player := range m.game.GetPlayers() {
 			n := player.Name
 			if player.Host {
@@ -48,25 +46,43 @@ func (m Model) View() string {
 			if player.Name == m.player.Name {
 				n += " (you)"
 			}
-			n += "\n"
 
-			sb.WriteString(n)
+			playersString = append(playersString, n)
 		}
 
-		pane := m.style.
-			Align(lipgloss.Center, lipgloss.Center).
+		lobbyPaneStyle := m.style.
+			Align(lipgloss.Center).
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#3B82F6")).
 			Height(12).
-			Padding(0, 2).
-			Render(sb.String())
+			Width(40)
 
-		return paneStyle.Render(
+		lobbyPane := lobbyPaneStyle.Render(
 			lipgloss.JoinVertical(
-				lipgloss.Left,
-				pane,
+				lipgloss.Center,
+				m.style.Render(
+					lipgloss.JoinVertical(
+						lipgloss.Center,
+						[]string{
+							"Game Code: " + m.game.Code + "\n",
+							strings.Join(playersString, "\n"),
+						}...,
+					),
+				),
 			),
 		)
+		out := []string{
+			lobbyPane,
+		}
+		if m.player.Host {
+			out = append(out, m.style.Render("Press 's' to start the game"))
+		} else {
+			out = append(out, m.style.Render("Waiting for host to start the game..."))
+		}
+		return paneStyle.Render(lipgloss.JoinVertical(
+			lipgloss.Center,
+			out...,
+		))
 	}
 
 	logPaneStyle := m.style.
@@ -86,17 +102,14 @@ func (m Model) View() string {
 	}
 
 	poolDie := m.game.DicePool.Render(0, 6)
-	if m.rolling {
-		poolDie = m.poolRoll.Render(0, 6)
-	}
 
 	poolRollPane := lipgloss.JoinVertical(
 		lipgloss.Left,
 		poolPaneStyle.Render(poolDie),
 	)
 
-	heldScore, ok := score.Calculate(m.game.DiceHeld)
-	if !ok {
+	heldScore := score.Calculate(m.game.DiceHeld)
+	if heldScore == 0 {
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color(colorError))
 	}
 
@@ -126,8 +139,7 @@ func (m Model) View() string {
 	}
 	lockedScore := 0
 	for _, diePool := range m.game.DiceLocked {
-		score, _ := diePool.Score()
-		lockedScore += score
+		lockedScore += diePool.Score()
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,

@@ -134,7 +134,7 @@ func New(style lipgloss.Style, width, height int) *Model {
 				sb := strings.Builder{}
 				sb.WriteString(m.gameCodeInput.View())
 				if len(m.gameCodeInput.Value()) == 7 && games.Exists(m.gameCodeInput.Value()) {
-					sb.WriteString(" (enter to join)")
+					sb.WriteString("\npress enter to join")
 				}
 				return sb.String()
 			},
@@ -184,7 +184,7 @@ func (m Model) View() string {
 	panelStyle := m.style.Width(m.width).Height(m.height - 1).AlignVertical(lipgloss.Center)
 	logoStyle := m.style.Foreground(lipgloss.Color("#0000ff")).Margin(1, 2)
 	titleStyle := m.style.Border(lipgloss.NormalBorder()).Padding(1, 2)
-	menuStyle := m.style.Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left)
+	menuStyle := m.style.Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(20)
 	controlsStyle := m.style.Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(m.width / 2)
 	errorsStyle := m.style.Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(m.width / 2)
 

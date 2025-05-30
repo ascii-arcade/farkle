@@ -22,15 +22,15 @@ type Game struct {
 	Busted     bool
 	Code       string
 	Started    bool
+	FirstRoll  bool
+	Rolled     bool
 
-	round     int
-	firstRoll bool
-	rolled    bool
-	turn      int
-	log       []string
-	players   []*Player
-	style     lipgloss.Style
-	mu        sync.Mutex
+	round   int
+	turn    int
+	log     []string
+	players []*Player
+	style   lipgloss.Style
+	mu      sync.Mutex
 }
 
 var games = make(map[string]*Game)
@@ -41,7 +41,7 @@ func New(style lipgloss.Style) *Game {
 		round:     1,
 		DicePool:  dice.NewDicePool(6),
 		DiceHeld:  dice.NewDicePool(0),
-		firstRoll: true,
+		FirstRoll: true,
 		Code:      utils.GenerateCode(),
 		style:     style,
 	}
@@ -67,7 +67,13 @@ func Get(code string) (*Game, bool) {
 }
 
 func (g *Game) Start() {
+	g.Lock()
+	defer g.Unlock()
+	if g.Started {
+		return
+	}
 	g.Started = true
+	g.Refresh()
 }
 
 func (g *Game) AddPlayer(host bool) *Player {
@@ -112,8 +118,8 @@ func (g *Game) NextTurn() {
 		g.turn = 0
 		g.round++
 	}
-	g.firstRoll = true
-	g.rolled = false
+	g.FirstRoll = true
+	g.Rolled = false
 	g.Busted = false
 }
 
@@ -131,15 +137,15 @@ func (g *Game) RollDice() {
 	g.Lock()
 	defer g.Unlock()
 
-	if g.firstRoll {
+	if g.FirstRoll {
 		g.DicePool = dice.NewDicePool(6)
 		g.DiceHeld = dice.NewDicePool(0)
 		g.DiceLocked = make([]dice.DicePool, 0)
-		g.firstRoll = false
+		g.FirstRoll = false
 	}
 
 	g.DicePool.Roll()
-	g.rolled = true
+	g.Rolled = true
 	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
 
 	if g.busted() {
@@ -147,14 +153,13 @@ func (g *Game) RollDice() {
 		g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" busted!")
 		g.NextTurn()
 	}
+
+	g.Refresh()
 }
 
 func (g *Game) getTurnPlayer() *Player {
-	g.Lock()
-	defer g.Unlock()
-
-	for _, p := range g.players {
-		if p.TurnOrder == g.turn {
+	for i, p := range g.players {
+		if i == g.turn {
 			return p
 		}
 	}
@@ -168,6 +173,8 @@ func (g *Game) HoldDie(dieToHold int) {
 	if g.DicePool.Remove(dieToHold) {
 		g.DiceHeld.Add(dieToHold)
 	}
+
+	g.Refresh()
 }
 
 func (g *Game) Undo() {
@@ -181,7 +188,8 @@ func (g *Game) Undo() {
 	if g.DiceHeld.Remove(lastDie) {
 		g.DicePool.Add(lastDie)
 	}
-	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" undid: "+dice.GetDieCharacter(lastDie))
+
+	g.Refresh()
 }
 
 func (g *Game) LockDice() {
@@ -192,45 +200,47 @@ func (g *Game) LockDice() {
 		return
 	}
 
-	_, scoreable := score.Calculate(g.DiceHeld)
-	if !scoreable {
+	if score.Calculate(g.DiceHeld) == 0 {
 		return
 	}
 
 	g.DiceLocked = append(g.DiceLocked, g.DiceHeld)
 	g.DiceHeld = dice.NewDicePool(0)
-	g.rolled = false
+	g.Rolled = false
 
 	if len(g.DicePool) == 0 {
 		g.DicePool = dice.NewDicePool(6)
 	}
 	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+
+	g.Refresh()
 }
 
-func (g *Game) Bank() bool {
+func (g *Game) Bank() {
 	g.Lock()
 	defer g.Unlock()
 
 	turnScore := 0
 	for _, diceLocked := range g.DiceLocked {
-		score, ok := diceLocked.Score()
-		if !ok {
-			return false
+		score := diceLocked.Score()
+		if score == 0 {
+			return
 		}
 		turnScore += score
 	}
 
 	p := g.getTurnPlayer()
 	if p.Score == 0 && turnScore < 500 {
-		return false
+		return
 	}
-
 	p.Score += turnScore
+
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.NextTurn()
 	g.log = append(g.log, g.getTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
-	return true
+
+	g.Refresh()
 }
 
 func (g *Game) IsTurn(p *Player) bool {
@@ -245,17 +255,17 @@ func (g *Game) ToJSON() string {
 func (g *Game) PlayerScores() string {
 	scores := make([]string, 0, len(g.players))
 
-	for _, p := range g.players {
+	for i, p := range g.players {
 		if p == nil {
 			continue
 		}
 
-		isCurrentPlayer := g.turn == p.TurnOrder
+		isCurrentPlayer := g.turn == i
 		scores = append(scores, g.style.
 			PaddingRight(2).
 			Bold(isCurrentPlayer).
 			Italic(isCurrentPlayer).
-			Render(g.getTurnPlayer().StyledPlayerName(g.style)+": "+strconv.Itoa(p.Score)))
+			Render(p.StyledPlayerName(g.style)+": "+strconv.Itoa(p.Score)))
 	}
 
 	return lipgloss.JoinHorizontal(
@@ -275,8 +285,7 @@ func (g *Game) RenderLog(limit int) string {
 }
 
 func (g *Game) busted() bool {
-	_, ok := score.Calculate(g.DicePool)
-	return !ok
+	return score.Calculate(g.DicePool) == 0
 }
 
 func (g *Game) Refresh() {

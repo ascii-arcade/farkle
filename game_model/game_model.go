@@ -3,7 +3,6 @@ package gamemodel
 import (
 	"time"
 
-	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/messages"
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,8 +13,6 @@ type Model struct {
 	width  int
 	height int
 
-	poolRoll      dice.DicePool
-	rolling       bool
 	rollTickCount int
 	error         string
 
@@ -36,12 +33,11 @@ const (
 
 func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game) Model {
 	return Model{
-		poolRoll: dice.NewDicePool(6),
-		player:   player,
-		style:    style,
-		game:     game,
-		width:    width,
-		height:   height,
+		player: player,
+		game:   game,
+		style:  style,
+		width:  width,
+		height: height,
 	}
 }
 
