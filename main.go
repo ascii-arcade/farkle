@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ascii-arcade/farkle/root"
+	"github.com/ascii-arcade/farkle/app"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
@@ -46,8 +46,14 @@ func init() {
 	logFile = os.Getenv("ASCII_ARCADE_LOG_FILE")
 	logPath = os.Getenv("ASCII_ARCADE_LOG_PATH")
 
-	host = os.Getenv("ASCII_ARCADE_HOST")
-	port = os.Getenv("ASCII_ARCADE_PORT")
+	hostStr := os.Getenv("ASCII_ARCADE_HOST")
+	if hostStr != "" {
+		host = hostStr
+	}
+	portStr := os.Getenv("ASCII_ARCADE_PORT")
+	if portStr != "" {
+		port = portStr
+	}
 
 	slogLevel := slog.LevelInfo
 	if debug {
@@ -73,7 +79,7 @@ func main() {
 		wish.WithAddress(net.JoinHostPort(host, port)),
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		wish.WithMiddleware(
-			tea.Middleware(root.TeaHandler),
+			tea.Middleware(app.TeaHandler),
 			activeterm.Middleware(),
 			logging.Middleware(),
 		),
