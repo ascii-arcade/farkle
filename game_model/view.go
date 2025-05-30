@@ -13,6 +13,12 @@ func (m Model) View() string {
 		Width(m.width).
 		Height(m.height).
 		Align(lipgloss.Center, lipgloss.Center)
+	logPaneStyle := m.style.
+		Align(lipgloss.Left).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3B82F6")).
+		Height(12).
+		Width(35)
 	poolPaneStyle := m.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
@@ -24,7 +30,7 @@ func (m Model) View() string {
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#3B82F6")).
-		Width(31).
+		Width(48).
 		Height(12)
 	heldScorePaneStyle := m.style
 	lockedPaneStyle := m.style.
@@ -83,14 +89,6 @@ func (m Model) View() string {
 			out...,
 		))
 	}
-
-	logPaneStyle := m.style.
-		Align(lipgloss.Left).
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B82F6")).
-		Height(12).
-		Width(35)
-	_ = logPaneStyle
 
 	if config.GetDebug() {
 		paneStyle = paneStyle.
@@ -165,6 +163,9 @@ func (m Model) View() string {
 			lipgloss.Top,
 			logPaneStyle.Render(m.game.RenderLog(12)),
 			poolRollPane,
+		),
+		lipgloss.JoinHorizontal(
+			lipgloss.Top,
 			poolHeldPane,
 			lockedPane,
 		),
