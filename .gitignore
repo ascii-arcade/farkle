@@ -2,3 +2,4 @@
 *.log
 __debug*
 bin/
+.ssh/
