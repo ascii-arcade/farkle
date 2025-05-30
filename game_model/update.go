@@ -76,6 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.game.RollDice()
+		m.rolling = false
 		return m, nil
 	case messages.RefreshGame:
 		return m, waitForRefreshSignal(m.player.UpdateChan)
