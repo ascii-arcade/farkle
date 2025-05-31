@@ -60,7 +60,7 @@ func (s *tableScreen) update(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(s.model.game.DiceHeld) != 0 && err == nil {
 			s.model.game.LockDice()
 		}
-	case "y":
+	case "y", "b":
 		if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
 			s.model.game.Bank()
 		}

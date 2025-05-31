@@ -172,7 +172,7 @@ func (s *tableScreen) view() string {
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
-		"To be Banked (y)",
+		"To be Banked (b)",
 		s.model.style.
 			Height(10).Render(bankedDie),
 		"Score: "+strconv.Itoa(lockedScore),
@@ -198,7 +198,7 @@ func (s *tableScreen) view() string {
 		centeredText,
 	)
 
-	controls := "r to roll, l to lock, y to bank, u to undo, ? for help, esc to quit"
+	controls := "r to roll, l to lock, b to bank, u to undo, ? for help, esc to quit"
 
 	return paneStyle.Render(
 		lipgloss.JoinVertical(
