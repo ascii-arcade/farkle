@@ -5,7 +5,7 @@ An SSH terminal based farkle game.
 ## Quick Start
 
 ```bash
-ssh farkle.ascii-arcade.games -p 23234
+ssh farkle.ascii-arcade.games -p 2022
 ```
 
 ## Host Your Own
