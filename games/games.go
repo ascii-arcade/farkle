@@ -111,6 +111,7 @@ func (g *Game) AddPlayer(host bool) *Player {
 func (g *Game) RemovePlayer(player *Player) {
 	g.Lock()
 	defer g.Unlock()
+	defer g.Refresh()
 
 	for i, p := range g.players {
 		if p.Id == player.Id {
@@ -118,9 +119,17 @@ func (g *Game) RemovePlayer(player *Player) {
 			break
 		}
 	}
+
+	if len(g.players) > 0 && player.Host {
+		g.players[0].Host = true
+	}
+
+	if len(g.players) == 1 && g.Started {
+		g.Started = false
+	}
+
 	if len(g.players) == 0 {
 		delete(games, g.Code)
-		return
 	}
 }
 
@@ -152,14 +161,19 @@ func (g *Game) Restart() {
 
 func (g *Game) NextTurn() {
 	player := g.GetTurnPlayer()
-	if player.Score >= 10000 && !g.endGame {
+	if player.Score >= 1000 && !g.endGame {
 		g.endGame = true
 		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
+	}
+
+	if g.endGame && !player.PlayedLastTurn {
+		player.PlayedLastTurn = true
 	}
 
 	if g.IsGameOver() {
 		winner := g.GetWinningPlayer()
 		g.log = append(g.log, winner.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winner.Score)+"!")
+		return
 	}
 
 	g.turn++
@@ -294,17 +308,6 @@ func (g *Game) Bank() {
 	g.DiceHeld = dice.NewDicePool(0)
 	g.DiceLocked = []dice.DicePool{}
 	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
-
-	if g.endGame {
-		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" ended the game with a score of "+strconv.Itoa(p.Score))
-		p.PlayedLastTurn = true
-	}
-
-	if p.Score >= 10000 && !g.endGame {
-		g.endGame = true
-		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" triggered end game!")
-		p.PlayedLastTurn = true
-	}
 
 	g.NextTurn()
 	g.Refresh()

@@ -19,6 +19,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
+			m.game.RemovePlayer(m.player)
 			return m, tea.Quit
 		}
 
@@ -41,6 +42,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "r":
 				m.game.Restart()
+				return m, nil
 			default:
 				return m, nil
 			}
@@ -95,8 +97,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.game.Bank()
 				}
 			case "a":
-				for _, face := range score.GetScorableDieFaces(m.game.DicePool) {
-					m.game.HoldDie(face)
+				if m.game.Rolled {
+					for _, face := range score.GetScorableDieFaces(m.game.DicePool) {
+						m.game.HoldDie(face)
+					}
 				}
 			case "u", "backspace":
 				if len(m.game.DiceHeld) > 0 {
