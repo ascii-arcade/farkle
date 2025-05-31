@@ -67,6 +67,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "?":
+			m.screen = &helpScreen{model: &m}
+		case "q":
+			m.screen = &tableScreen{model: &m}
 		default:
 			return m.activeScreen().update(msg)
 		}
