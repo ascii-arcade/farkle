@@ -9,6 +9,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type screen interface {
+	setModel(*Model)
+	update(tea.KeyMsg) (tea.Model, tea.Cmd)
+	view() string
+}
+
 type Model struct {
 	width  int
 	height int
@@ -19,6 +25,7 @@ type Model struct {
 	style  lipgloss.Style
 	player *games.Player
 	game   *games.Game
+	screen screen
 
 	rolling bool
 }
@@ -38,6 +45,7 @@ func NewModel(style lipgloss.Style, width, height int, player *games.Player, gam
 		style:  style,
 		width:  width,
 		height: height,
+		screen: &tableScreen{},
 	}
 }
 
@@ -48,6 +56,48 @@ func (m Model) Init() tea.Cmd {
 		waitForRefreshSignal(m.player.UpdateChan),
 		tea.WindowSize(),
 	)
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.height, m.width = msg.Height, msg.Width
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		default:
+			return m.activeScreen().update(msg)
+		}
+
+	case rollMsg:
+		if m.rollTickCount < rollFrames {
+			m.rollTickCount++
+			m.game.DicePool.Roll()
+			m.game.Refresh()
+			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
+				return rollMsg{}
+			})
+		}
+		m.game.RollDice()
+		m.rolling = false
+		return m, nil
+
+	case messages.RefreshGame:
+		return m, waitForRefreshSignal(m.player.UpdateChan)
+	}
+
+	return m, nil
+}
+
+func (m Model) View() string {
+	return m.activeScreen().view()
+}
+
+func (m *Model) activeScreen() screen {
+	m.screen.setModel(m)
+	return m.screen
 }
 
 func waitForRefreshSignal(ch chan any) tea.Cmd {
