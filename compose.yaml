@@ -2,11 +2,11 @@ services:
   farkle:
     build: .
     ports:
-      - "23234:23234"
+      - "2022:2022"
       - "8080:8080"
     restart: always
     environment:
-      - ASCII_ARCADE_SSH_PORT=23234
+      - ASCII_ARCADE_SSH_PORT=2022
       - ASCII_ARCADE_WEB_PORT=8080
       - ASCII_ARCADE_HOST=0.0.0.0
     volumes:
