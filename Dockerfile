@@ -8,4 +8,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ./bin/server .
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/bin/server /app/server
+COPY ./web/index.html /app/web/index.html
+COPY ./web/assets /app/web/assets
 CMD [ "./server" ]
