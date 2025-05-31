@@ -100,14 +100,14 @@ func (s *tableScreen) view() string {
 		))
 	}
 
-	if m.game.IsGameOver() {
-		winner := m.game.GetWinningPlayer()
+	if s.model.game.IsGameOver() {
+		winner := s.model.game.GetWinningPlayer()
 		return paneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
-				m.style.Bold(true).Foreground(lipgloss.Color("#3B82F6")).Render("Game Over!"),
-				m.style.Bold(true).Render("Winner: "+winner.StyledPlayerName(m.style)),
-				m.style.Render("The host can press 'r' to restart the game"),
+				s.model.style.Bold(true).Foreground(lipgloss.Color("#3B82F6")).Render("Game Over!"),
+				s.model.style.Bold(true).Render("Winner: "+winner.StyledPlayerName(s.model.style)),
+				s.model.style.Render("The host can press 'r' to restart the game"),
 			),
 		)
 	}
