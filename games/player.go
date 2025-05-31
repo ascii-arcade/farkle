@@ -5,12 +5,13 @@ import (
 )
 
 type Player struct {
-	Id         string
-	Name       string
-	Score      int
-	Color      string
-	UpdateChan chan any
-	Host       bool
+	Id             string
+	Name           string
+	Score          int
+	Color          string
+	UpdateChan     chan any
+	Host           bool
+	PlayedLastTurn bool
 }
 
 func (p *Player) StyledPlayerName(style lipgloss.Style) string {

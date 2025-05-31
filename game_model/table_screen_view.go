@@ -100,6 +100,18 @@ func (s *tableScreen) view() string {
 		))
 	}
 
+	if m.game.IsGameOver() {
+		winner := m.game.GetWinningPlayer()
+		return paneStyle.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Center,
+				m.style.Bold(true).Foreground(lipgloss.Color("#3B82F6")).Render("Game Over!"),
+				m.style.Bold(true).Render("Winner: "+winner.StyledPlayerName(m.style)),
+				m.style.Render("The host can press 'r' to restart the game"),
+			),
+		)
+	}
+
 	if config.GetDebug() {
 		paneStyle = paneStyle.
 			Width(s.model.width - 2).
@@ -187,9 +199,6 @@ func (s *tableScreen) view() string {
 	)
 
 	controls := "r to roll, l to lock, y to bank, u to undo, ? for help, esc to quit"
-	if s.model.player.Host {
-		controls += ", ctrl+r to reset"
-	}
 
 	return paneStyle.Render(
 		lipgloss.JoinVertical(
