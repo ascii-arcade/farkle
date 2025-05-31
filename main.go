@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/app"
+	"github.com/ascii-arcade/farkle/web"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
@@ -98,6 +99,8 @@ func main() {
 			done <- nil
 		}
 	}()
+
+	go web.Run()
 
 	<-done
 	logger.Info("Stopping SSH server")
