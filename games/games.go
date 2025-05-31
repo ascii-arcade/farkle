@@ -171,7 +171,7 @@ func (g *Game) Restart() {
 
 func (g *Game) NextTurn() {
 	player := g.GetTurnPlayer()
-	if player.Score >= 1000 && !g.endGame {
+	if player.Score >= 10000 && !g.endGame {
 		g.endGame = true
 		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
 	}
