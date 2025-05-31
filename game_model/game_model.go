@@ -66,6 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
+			m.game.RemovePlayer(m.player)
 			return m, tea.Quit
 		case "?":
 			m.screen = &helpScreen{model: &m}
