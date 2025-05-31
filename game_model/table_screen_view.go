@@ -8,34 +8,42 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (m Model) View() string {
-	borderColor := m.game.GetTurnPlayer().Color
+type tableScreen struct {
+	model *Model
+}
 
-	paneStyle := m.style.
-		Width(m.width).
-		Height(m.height).
+func (s *tableScreen) setModel(model *Model) {
+	s.model = model
+}
+
+func (s *tableScreen) view() string {
+	borderColor := s.model.game.GetTurnPlayer().Color
+
+	paneStyle := s.model.style.
+		Width(s.model.width).
+		Height(s.model.height).
 		Align(lipgloss.Center, lipgloss.Center)
-	logPaneStyle := m.style.
+	logPaneStyle := s.model.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(borderColor)).
 		Height(12).
 		Width(35)
-	poolPaneStyle := m.style.
+	poolPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(borderColor)).
 		Padding(1, 0).
 		Width(32).
 		Height(12)
-	heldPaneStyle := m.style.
+	heldPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(borderColor)).
 		Width(48).
 		Height(12)
-	heldScorePaneStyle := m.style
-	lockedPaneStyle := m.style.
+	heldScorePaneStyle := s.model.style
+	lockedPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(borderColor)).
@@ -43,21 +51,21 @@ func (m Model) View() string {
 		Width(19).
 		Height(12)
 
-	if !m.game.Started {
+	if !s.model.game.Started {
 		playersString := []string{}
-		for _, player := range m.game.GetPlayers() {
+		for _, player := range s.model.game.GetPlayers() {
 			n := player.Name
 			if player.Host {
 				n += " (host)"
 			}
-			if player.Name == m.player.Name {
+			if player.Name == s.model.player.Name {
 				n += " (you)"
 			}
 
 			playersString = append(playersString, n)
 		}
 
-		lobbyPaneStyle := m.style.
+		lobbyPaneStyle := s.model.style.
 			Align(lipgloss.Center).
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#3B82F6")).
@@ -67,11 +75,11 @@ func (m Model) View() string {
 		lobbyPane := lobbyPaneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
-				m.style.Render(
+				s.model.style.Render(
 					lipgloss.JoinVertical(
 						lipgloss.Center,
 						[]string{
-							"Game Code: " + m.game.Code + "\n",
+							"Game Code: " + s.model.game.Code + "\n",
 							strings.Join(playersString, "\n"),
 						}...,
 					),
@@ -81,10 +89,10 @@ func (m Model) View() string {
 		out := []string{
 			lobbyPane,
 		}
-		if m.player.Host {
-			out = append(out, m.style.Render("Press 's' to start the game"))
+		if s.model.player.Host {
+			out = append(out, s.model.style.Render("Press 's' to start the game"))
 		} else {
-			out = append(out, m.style.Render("Waiting for host to start the game..."))
+			out = append(out, s.model.style.Render("Waiting for host to start the game..."))
 		}
 		return paneStyle.Render(lipgloss.JoinVertical(
 			lipgloss.Center,
@@ -94,35 +102,35 @@ func (m Model) View() string {
 
 	if config.GetDebug() {
 		paneStyle = paneStyle.
-			Width(m.width - 2).
-			Height(m.height - 2).
+			Width(s.model.width - 2).
+			Height(s.model.height - 2).
 			BorderStyle(lipgloss.ASCIIBorder()).
 			BorderForeground(lipgloss.Color("#ff0000"))
 	}
 
 	poolRollStrings := []string{}
-	if m.game.GetTurnPlayer().Id == m.player.Id {
+	if s.model.game.GetTurnPlayer().Id == s.model.player.Id {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
 		poolRollStrings = append(poolRollStrings, "Your Turn!\n")
 	}
-	poolRollStrings = append(poolRollStrings, m.game.DicePool.Render(0, 6))
+	poolRollStrings = append(poolRollStrings, s.model.game.DicePool.Render(0, 6))
 	poolRollPane := lipgloss.JoinVertical(
 		lipgloss.Left,
 		poolPaneStyle.Render(poolRollStrings...),
 	)
 
-	heldScore, err := m.game.DiceHeld.Score()
+	heldScore, err := s.model.game.DiceHeld.Score()
 	if err != nil {
-		m.error = err.Error()
+		s.model.error = err.Error()
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color(colorError))
 	}
 
-	heldDie := m.style.
+	heldDie := s.model.style.
 		Height(10).
-		Render(m.game.DiceHeld.Render(0, 6))
+		Render(s.model.game.DiceHeld.Render(0, 6))
 
-	if m.game.Busted {
-		heldDie = m.style.
+	if s.model.game.Busted {
+		heldDie = s.model.style.
 			Height(10).
 			Foreground(lipgloss.Color(colorError)).
 			Align(lipgloss.Center, lipgloss.Center).
@@ -138,14 +146,14 @@ func (m Model) View() string {
 	))
 
 	bankedDie := ""
-	for _, diePool := range m.game.DiceLocked {
+	for _, diePool := range s.model.game.DiceLocked {
 		bankedDie += diePool.RenderCharacters() + "\n"
 	}
 	lockedScore := 0
-	for _, diePool := range m.game.DiceLocked {
+	for _, diePool := range s.model.game.DiceLocked {
 		ls, err := diePool.Score()
 		if err != nil {
-			m.error = err.Error()
+			s.model.error = err.Error()
 		} else {
 			lockedScore += ls
 		}
@@ -153,21 +161,21 @@ func (m Model) View() string {
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
 		"To be Banked (y)",
-		m.style.
+		s.model.style.
 			Height(10).Render(bankedDie),
 		"Score: "+strconv.Itoa(lockedScore),
 	))
 
 	centeredText := ""
-	if m.error != "" {
-		centeredText = m.style.Bold(true).Foreground(lipgloss.Color(colorError)).Render(m.error)
+	if s.model.error != "" {
+		centeredText = s.model.style.Bold(true).Foreground(lipgloss.Color(colorError)).Render(s.model.error)
 	}
 
 	poolPane := lipgloss.JoinVertical(
 		lipgloss.Center,
 		lipgloss.JoinHorizontal(
 			lipgloss.Top,
-			logPaneStyle.Render(m.game.RenderLog(12)),
+			logPaneStyle.Render(s.model.game.RenderLog(12)),
 			poolRollPane,
 		),
 		lipgloss.JoinHorizontal(
@@ -178,8 +186,8 @@ func (m Model) View() string {
 		centeredText,
 	)
 
-	controls := "r to roll, l to lock, y to bank, u to undo, esc to quit"
-	if m.player.Host {
+	controls := "r to roll, l to lock, y to bank, u to undo, ? for help, esc to quit"
+	if s.model.player.Host {
 		controls += ", ctrl+r to reset"
 	}
 
@@ -187,7 +195,7 @@ func (m Model) View() string {
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			poolPane,
-			m.game.PlayerScores(),
+			s.model.game.PlayerScores(),
 			controls,
 		),
 	)
