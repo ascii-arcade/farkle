@@ -64,13 +64,6 @@ func New(style lipgloss.Style) *Game {
 	return game
 }
 
-func (g *Game) Lock() {
-	g.mu.Lock()
-}
-func (g *Game) Unlock() {
-	g.mu.Unlock()
-}
-
 func Exists(code string) bool {
 	_, ok := games[code]
 	return ok
@@ -79,6 +72,21 @@ func Exists(code string) bool {
 func Get(code string) (*Game, bool) {
 	game, ok := games[code]
 	return game, ok
+}
+
+func GetAll() []*Game {
+	gamesList := make([]*Game, 0, len(games))
+	for _, game := range games {
+		gamesList = append(gamesList, game)
+	}
+	return gamesList
+}
+
+func (g *Game) Lock() {
+	g.mu.Lock()
+}
+func (g *Game) Unlock() {
+	g.mu.Unlock()
 }
 
 func (g *Game) Start() {
@@ -134,6 +142,8 @@ func (g *Game) RemovePlayer(player *Player) {
 }
 
 func (g *Game) GetPlayers() []*Player {
+	g.Lock()
+	defer g.Unlock()
 	return g.players
 }
 
