@@ -33,6 +33,9 @@ func Run() error {
 	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: Eventually implement admin only information
+		// params := r.URL.Query()
+		// if params.Get("admin_key") == config.GetWebAdminKey() {}
 		totalGames := len(games.GetAll())
 		totalStartedGames := 0
 		for _, game := range games.GetAll() {
@@ -58,5 +61,5 @@ func Run() error {
 		}
 	})
 
-	return http.ListenAndServe(":8080", mux)
+	return http.ListenAndServe(":"+config.GetServerPortWeb(), mux)
 }
