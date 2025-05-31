@@ -184,6 +184,10 @@ func (g *Game) NextTurn() {
 	g.Rolled = false
 	g.Busted = false
 	g.DiceLocked = []dice.DicePool{}
+	g.DicePool = dice.NewDicePool(6)
+	g.DiceHeld = dice.NewDicePool(0)
+	g.DiceLocked = make([]dice.DicePool, 0)
+	g.FirstRoll = false
 }
 
 func (g *Game) GetHost() *Player {

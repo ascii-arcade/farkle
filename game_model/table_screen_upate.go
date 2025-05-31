@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/score"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -17,14 +16,12 @@ func (s *tableScreen) update(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "r":
-		if !s.model.game.Rolled && !s.model.rolling {
-			if s.model.game.FirstRoll {
-				s.model.game.DicePool = dice.NewDicePool(6)
-				s.model.game.DiceHeld = dice.NewDicePool(0)
-				s.model.game.DiceLocked = make([]dice.DicePool, 0)
-				s.model.game.FirstRoll = false
-			}
+		if s.model.game.IsGameOver() && s.model.player.Host {
+			s.model.game.Restart()
+			return s.model, nil
+		}
 
+		if !s.model.game.Rolled && !s.model.rolling {
 			s.model.rollTickCount = 0
 			s.model.rolling = true
 			return s.model, tea.Tick(rollInterval, func(time.Time) tea.Msg {
@@ -38,6 +35,21 @@ func (s *tableScreen) update(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				s.model.game.HoldDie(face)
 				return s.model, nil
 			}
+		}
+	case "!", "@", "#", "$", "%", "^":
+		if s.model.game.Rolled {
+			faceMap := map[string]int{"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6}
+			face := faceMap[msg.String()]
+			c := 0
+			for _, die := range s.model.game.DicePool {
+				if die == face {
+					c++
+				}
+			}
+			for range c {
+				s.model.game.HoldDie(face)
+			}
+
 		}
 	case "s":
 		if !s.model.game.Started && s.model.player.Host {
@@ -60,6 +72,8 @@ func (s *tableScreen) update(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(s.model.game.DiceHeld) > 0 {
 			s.model.game.Undo()
 		}
+	case "c":
+		s.model.game.ClearHeld()
 	}
 
 	return s.model, nil
