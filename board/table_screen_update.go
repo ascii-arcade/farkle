@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/score"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -15,6 +16,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "r":
@@ -76,6 +78,12 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			}
 		case "c":
 			s.model.game.ClearHeld()
+		case "?":
+			return s.model, func() tea.Msg {
+				return messages.SwitchScreenMsg{
+					Screen: &helpScreen{model: s.model},
+				}
+			}
 		}
 	}
 

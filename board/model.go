@@ -58,18 +58,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height, m.width = msg.Height, msg.Width
 
+	case messages.SwitchScreenMsg:
+		m.screen = msg.Screen.WithModel(&m)
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
 			m.game.RemovePlayer(m.player)
 			return m, tea.Quit
-		case "?":
-			m.screen = &helpScreen{model: &m}
-		case "q":
-			m.screen = &tableScreen{model: &m}
-		default:
-			activeScreenModel, cmd := m.activeScreen().Update(msg)
-			return activeScreenModel.(*Model), cmd
 		}
 
 	case rollMsg:
@@ -89,7 +86,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForRefreshSignal(m.player.UpdateChan)
 	}
 
-	return m, nil
+	activeScreenModel, cmd := m.activeScreen().Update(msg)
+	return activeScreenModel.(*Model), cmd
 }
 
 func (m Model) View() string {
