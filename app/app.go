@@ -5,8 +5,8 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
 
+	"github.com/ascii-arcade/farkle/menu"
 	"github.com/ascii-arcade/farkle/messages"
-	splashscreen "github.com/ascii-arcade/farkle/splash_screen"
 )
 
 type rootModel struct {
@@ -20,6 +20,12 @@ func (m rootModel) Init() tea.Cmd {
 
 func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC:
+			return m, tea.Quit
+		}
+
 	case messages.SwitchViewMsg:
 		m.active = msg.Model
 		initcmd := m.active.Init()
@@ -42,42 +48,6 @@ func TeaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	}
 	return rootModel{
 		sess:   s,
-		active: splashscreen.NewModel(bubbletea.MakeRenderer(s).NewStyle(), pty.Window.Width, pty.Window.Height),
+		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle()),
 	}, []tea.ProgramOption{tea.WithAltScreen()}
 }
-
-// func (m *rootModel) newGame() error {
-// 	code := newCode()
-// 	game.Games[code] = game.New()
-// 	return m.joinGame(code)
-// }
-
-// func (m *rootModel) joinGame(code string) error {
-// 	updateCh := make(chan any)
-// 	m.game.UpdateCh = updateCh
-// 	m.game.GameCode = code
-
-// 	state, exists := game.Games[code]
-// 	if !exists {
-// 		return errors.New("game does not exist")
-// 	}
-
-// 	state.AddClient(updateCh)
-// 	state.Players[m.game.Player.Id] = &player.Player{
-// 		Name:      m.game.Player.Name,
-// 		TurnOrder: len(state.Players) + 1,
-// 	}
-
-// 	state.Refresh()
-
-// 	return nil
-// }
-
-// func newCode() string {
-// 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// 	b := make([]byte, 6)
-// 	for i := range b {
-// 		b[i] = charset[rand.Intn(len(charset))]
-// 	}
-// 	return string(b[:3]) + "-" + string(b[3:6])
-// }

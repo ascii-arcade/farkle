@@ -6,7 +6,8 @@ import (
 )
 
 type (
-	SwitchViewMsg   struct{ Model tea.Model }
-	SwitchScreenMsg struct{ Screen screen.Screen }
-	RefreshGame     struct{}
+	SwitchViewMsg       struct{ Model tea.Model }
+	SwitchScreenMsg     struct{ Screen screen.Screen }
+	RefreshGame         struct{}
+	SplashScreenDoneMsg struct{}
 )

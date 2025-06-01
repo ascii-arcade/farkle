@@ -1,60 +1,13 @@
-package splashscreen
+package menu
 
 import (
-	"time"
-
-	"github.com/ascii-arcade/farkle/menu"
 	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type Model struct {
-	height int
-	width  int
-	style  lipgloss.Style
-}
-
-type doneMsg struct{}
-
-func NewModel(style lipgloss.Style, width, height int) Model {
-	return Model{
-		height: height,
-		width:  width,
-		style:  style,
-	}
-}
-
-func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		tea.Tick(time.Second, func(t time.Time) tea.Msg {
-			return doneMsg{}
-		}),
-		tea.WindowSize(),
-	)
-}
-
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case doneMsg:
-		menuModel := menu.New(m.style, m.width, m.height)
-		return m, func() tea.Msg {
-			return messages.SwitchViewMsg{Model: menuModel}
-		}
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-	}
-
-	return m, nil
-}
-
-func (m Model) View() string {
-	style := m.style.
-		Width(m.width).
-		Height(m.height)
-
-	logo := `++------------------------------------------------------------------------------++
+const splashLogo = `++------------------------------------------------------------------------------++
 ++------------------------------------------------------------------------------++
 ||                                                                              ||
 ||                                                                              ||
@@ -69,13 +22,47 @@ func (m Model) View() string {
 ++------------------------------------------------------------------------------++
 ++------------------------------------------------------------------------------++`
 
+type splashScreen struct {
+	model *Model
+	style lipgloss.Style
+}
+
+func (m *Model) newSplashScreen() *splashScreen {
+	return &splashScreen{
+		model: m,
+		style: m.style,
+	}
+}
+
+func (s *splashScreen) WithModel(model any) screen.Screen {
+	s.model = model.(*Model)
+	return s
+}
+
+func (s *splashScreen) Update(msg tea.Msg) (any, tea.Cmd) {
+	switch msg.(type) {
+	case messages.SplashScreenDoneMsg:
+		return s.model, func() tea.Msg {
+			return messages.SwitchScreenMsg{
+				Screen: s.model.newOptionScreen(),
+			}
+		}
+	}
+	return s.model, nil
+}
+
+func (s *splashScreen) View() string {
+	style := s.style.
+		Width(s.model.Width).
+		Height(s.model.Height)
+
 	return style.Render(
 		lipgloss.Place(
-			m.width,
-			m.height,
+			s.model.Width,
+			s.model.Height,
 			lipgloss.Center,
 			lipgloss.Center,
-			logo,
+			splashLogo,
 		),
 	)
 }
