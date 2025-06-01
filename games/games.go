@@ -103,7 +103,7 @@ func (g *Game) AddPlayer(host bool) *Player {
 	player := &Player{
 		Id:         xid.New().String(),
 		Name:       utils.GenerateName(),
-		UpdateChan: make(chan any, 1),
+		UpdateChan: make(chan struct{}, 1),
 		Host:       host,
 		Color:      g.colors[len(g.players)%len(g.colors)],
 	}
@@ -119,7 +119,6 @@ func (g *Game) AddPlayer(host bool) *Player {
 func (g *Game) RemovePlayer(player *Player) {
 	g.Lock()
 	defer g.Unlock()
-	defer g.Refresh()
 
 	for i, p := range g.players {
 		if p.Id == player.Id {
@@ -138,7 +137,10 @@ func (g *Game) RemovePlayer(player *Player) {
 
 	if len(g.players) == 0 {
 		delete(games, g.Code)
+		return
 	}
+
+	defer g.Refresh()
 }
 
 func (g *Game) GetPlayers() []*Player {
@@ -275,6 +277,12 @@ func (g *Game) Undo() {
 	}
 
 	g.Refresh()
+}
+
+func (g *Game) UndoAll() {
+	for range len(g.DiceHeld) {
+		g.Undo()
+	}
 }
 
 func (g *Game) LockDice() {

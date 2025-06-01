@@ -14,15 +14,12 @@ type Model struct {
 	width  int
 	height int
 
-	rollTickCount int
-	error         string
+	error string
 
 	style  lipgloss.Style
 	player *games.Player
 	game   *games.Game
 	screen screen.Screen
-
-	rolling bool
 }
 
 const (
@@ -58,10 +55,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height, m.width = msg.Height, msg.Width
 
-	case messages.SwitchScreenMsg:
-		m.screen = msg.Screen.WithModel(&m)
-		return m, nil
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
@@ -69,17 +62,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case rollMsg:
-		if m.rollTickCount < rollFrames {
-			m.rollTickCount++
-			m.game.DicePool.Roll()
-			m.game.Refresh()
-			return m, tea.Tick(rollInterval, func(time.Time) tea.Msg {
-				return rollMsg{}
-			})
-		}
-		m.game.RollDice()
-		m.rolling = false
+	case messages.SwitchScreenMsg:
+		m.screen = msg.Screen.WithModel(&m)
 		return m, nil
 
 	case messages.RefreshGame:
@@ -98,7 +82,7 @@ func (m *Model) activeScreen() screen.Screen {
 	return m.screen.WithModel(m)
 }
 
-func waitForRefreshSignal(ch chan any) tea.Cmd {
+func waitForRefreshSignal(ch chan struct{}) tea.Cmd {
 	return func() tea.Msg {
 		return messages.RefreshGame(<-ch)
 	}

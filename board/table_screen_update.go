@@ -16,6 +16,17 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case rollMsg:
+		if s.rollTickCount < rollFrames {
+			s.rollTickCount++
+			s.model.game.DicePool.Roll()
+			s.model.game.Refresh()
+			return s.model, tea.Tick(rollInterval, func(time.Time) tea.Msg {
+				return rollMsg{}
+			})
+		}
+		s.rolling = false
+		s.model.game.RollDice()
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -25,9 +36,9 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				return s.model, nil
 			}
 
-			if !s.model.game.Rolled && !s.model.rolling {
-				s.model.rollTickCount = 0
-				s.model.rolling = true
+			if !s.model.game.Rolled && !s.rolling {
+				s.rollTickCount = 0
+				s.rolling = true
 				return s.model, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 					return rollMsg{}
 				})
@@ -75,6 +86,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		case "u", "backspace":
 			if len(s.model.game.DiceHeld) > 0 {
 				s.model.game.Undo()
+			}
+		case "U":
+			if len(s.model.game.DiceHeld) > 0 {
+				s.model.game.UndoAll()
 			}
 		case "c":
 			s.model.game.ClearHeld()

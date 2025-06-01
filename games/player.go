@@ -9,7 +9,7 @@ type Player struct {
 	Name           string
 	Score          int
 	Color          string
-	UpdateChan     chan any
+	UpdateChan     chan struct{}
 	Host           bool
 	PlayedLastTurn bool
 }

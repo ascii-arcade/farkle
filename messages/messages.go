@@ -8,5 +8,5 @@ import (
 type (
 	SwitchViewMsg   struct{ Model tea.Model }
 	SwitchScreenMsg struct{ Screen screen.Screen }
-	RefreshGame     any
+	RefreshGame     struct{}
 )
