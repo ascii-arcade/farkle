@@ -1,7 +1,8 @@
-package gamemodel
+package board
 
 import (
 	"github.com/ascii-arcade/farkle/dice"
+	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -10,11 +11,12 @@ type helpScreen struct {
 	model *Model
 }
 
-func (s *helpScreen) setModel(model *Model) {
-	s.model = model
+func (s *helpScreen) WithModel(model any) screen.Screen {
+	s.model = model.(*Model)
+	return s
 }
 
-func (s *helpScreen) view() string {
+func (s *helpScreen) View() string {
 	objective := "Be the player with the highest score."
 
 	scoring := dice.GetDieCharacter(1) + " = 100 points\n" +
@@ -50,6 +52,6 @@ func (s *helpScreen) view() string {
 
 }
 
-func (s *helpScreen) update(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (s *helpScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	return s.model, nil
 }

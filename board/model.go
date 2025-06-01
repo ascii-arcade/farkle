@@ -1,19 +1,14 @@
-package gamemodel
+package board
 
 import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-type screen interface {
-	setModel(*Model)
-	update(tea.KeyMsg) (tea.Model, tea.Cmd)
-	view() string
-}
 
 type Model struct {
 	width  int
@@ -25,7 +20,7 @@ type Model struct {
 	style  lipgloss.Style
 	player *games.Player
 	game   *games.Game
-	screen screen
+	screen screen.Screen
 
 	rolling bool
 }
@@ -73,7 +68,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			m.screen = &tableScreen{model: &m}
 		default:
-			return m.activeScreen().update(msg)
+			activeScreenModel, cmd := m.activeScreen().Update(msg)
+			return activeScreenModel.(*Model), cmd
 		}
 
 	case rollMsg:
@@ -97,12 +93,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return m.activeScreen().view()
+	return m.activeScreen().View()
 }
 
-func (m *Model) activeScreen() screen {
-	m.screen.setModel(m)
-	return m.screen
+func (m *Model) activeScreen() screen.Screen {
+	return m.screen.WithModel(m)
 }
 
 func waitForRefreshSignal(ch chan any) tea.Cmd {

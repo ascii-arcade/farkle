@@ -3,8 +3,8 @@ package menu
 import (
 	"strings"
 
+	"github.com/ascii-arcade/farkle/board"
 	"github.com/ascii-arcade/farkle/config"
-	gamemodel "github.com/ascii-arcade/farkle/game_model"
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -56,7 +56,7 @@ func New(style lipgloss.Style, width, height int) *Model {
 			action: func(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				game := games.New(m.style)
 				player := game.AddPlayer(true)
-				gm := gamemodel.NewModel(m.style, m.width, m.height, player, game)
+				gm := board.NewModel(m.style, m.width, m.height, player, game)
 				return m, tea.Batch(
 					func() tea.Msg {
 						return messages.SwitchViewMsg{
@@ -102,7 +102,7 @@ func New(style lipgloss.Style, width, height int) *Model {
 							return m, cmd
 						}
 						player := game.AddPlayer(false)
-						gm := gamemodel.NewModel(m.style, m.width, m.height, player, game)
+						gm := board.NewModel(m.style, m.width, m.height, player, game)
 						return m, tea.Batch(
 							func() tea.Msg {
 								return messages.SwitchViewMsg{

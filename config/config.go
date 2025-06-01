@@ -3,12 +3,12 @@ package config
 import "os"
 
 var (
-	debug  bool
-	logCli bool
+	debug  bool = false
+	logCli bool = false
 
-	serverHost    string
-	serverPortSSH string
-	serverPortWeb string
+	serverHost    string = "localhost"
+	serverPortSSH string = "2222"
+	serverPortWeb string = "8080"
 	webAdminKey   string
 )
 
@@ -34,6 +34,10 @@ func Setup() {
 	webPortStr := os.Getenv("ASCII_ARCADE_WEB_PORT")
 	if webPortStr != "" {
 		serverPortWeb = webPortStr
+	}
+	webAdminKey = os.Getenv("ASCII_ARCADE_WEB_ADMIN_KEY")
+	if webAdminKey == "" {
+		webAdminKey = "supersecretkey"
 	}
 }
 

@@ -1,4 +1,4 @@
-package gamemodel
+package board
 
 import (
 	"strconv"
@@ -8,15 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type tableScreen struct {
-	model *Model
-}
-
-func (s *tableScreen) setModel(model *Model) {
-	s.model = model
-}
-
-func (s *tableScreen) view() string {
+func (s *tableScreen) View() string {
 	borderColor := s.model.game.GetTurnPlayer().Color
 
 	paneStyle := s.model.style.
