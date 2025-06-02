@@ -106,7 +106,7 @@ func (g *Game) AddPlayer(host bool) *Player {
 		Name:       utils.GenerateName(),
 		UpdateChan: make(chan struct{}, 1),
 		Host:       host,
-		Color:      g.colors[len(g.players)%len(g.colors)],
+		Color:      lipgloss.Color(g.colors[len(g.players)%len(g.colors)]),
 	}
 
 	g.Lock()

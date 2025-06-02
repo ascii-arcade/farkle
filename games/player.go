@@ -8,12 +8,12 @@ type Player struct {
 	Id             string
 	Name           string
 	Score          int
-	Color          string
+	Color          lipgloss.Color
 	UpdateChan     chan struct{}
 	Host           bool
 	PlayedLastTurn bool
 }
 
 func (p *Player) StyledPlayerName(style lipgloss.Style) string {
-	return style.Foreground(lipgloss.Color(p.Color)).Render(p.Name)
+	return style.Foreground(p.Color).Render(p.Name)
 }
