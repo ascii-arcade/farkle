@@ -324,7 +324,7 @@ func (g *Game) Bank() error {
 
 	p := g.GetTurnPlayer()
 	if p.Score == 0 && turnScore < 500 {
-		return errors.New("need to bank 500 or more before you can bank less")
+		return errors.New("500+ required to get on board")
 	}
 	p.Score += turnScore
 
