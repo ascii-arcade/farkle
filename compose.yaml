@@ -4,7 +4,7 @@ services:
       context: .
       args:
         - GIT_TAG=latest
-    image: ascii-arcade/farkle:${GIT_TAG}
+    image: ascii-arcade/farkle:GIT_TAG
     ports:
       - "2022:2022"
       - "8080:8080"
