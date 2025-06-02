@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	logger *slog.Logger
+	logger  *slog.Logger
+	version = "dev"
 )
 
 func init() {
@@ -32,7 +33,6 @@ func init() {
 		slogLevel = slog.LevelDebug
 	}
 
-	// Set up logging
 	handlerOpts := &slog.HandlerOptions{
 		Level: slogLevel,
 	}
@@ -42,7 +42,7 @@ func init() {
 		handler = slog.NewTextHandler(os.Stdout, handlerOpts)
 	}
 
-	logger = slog.New(handler)
+	logger = slog.New(handler).With("app", "farkle", "version", version)
 }
 
 func main() {
