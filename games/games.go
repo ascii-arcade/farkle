@@ -2,6 +2,7 @@ package games
 
 import (
 	"encoding/json"
+	"errors"
 	"math/rand/v2"
 	"strconv"
 	"strings"
@@ -308,7 +309,7 @@ func (g *Game) LockDice() {
 	g.Refresh()
 }
 
-func (g *Game) Bank() {
+func (g *Game) Bank() error {
 	g.Lock()
 	defer g.Unlock()
 
@@ -316,14 +317,14 @@ func (g *Game) Bank() {
 	for _, diceLocked := range g.DiceLocked {
 		score, err := diceLocked.Score()
 		if err != nil {
-			return
+			return err
 		}
 		turnScore += score
 	}
 
 	p := g.GetTurnPlayer()
 	if p.Score == 0 && turnScore < 500 {
-		return
+		return errors.New("need to bank 500 or more before you can bank less")
 	}
 	p.Score += turnScore
 
@@ -333,6 +334,8 @@ func (g *Game) Bank() {
 
 	g.NextTurn()
 	g.Refresh()
+
+	return nil
 }
 
 func (g *Game) GetWinningPlayer() *Player {

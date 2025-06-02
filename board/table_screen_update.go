@@ -77,7 +77,9 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			}
 		case "y", "b":
 			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
-				s.model.game.Bank()
+				if err := s.model.game.Bank(); err != nil {
+					s.model.error = err.Error()
+				}
 			}
 		case "a":
 			for _, face := range score.GetScorableDieFaces(s.model.game.DicePool) {
