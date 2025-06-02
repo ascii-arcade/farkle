@@ -29,6 +29,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		s.model.game.RollDice()
 
 	case tea.KeyMsg:
+		s.model.error = ""
 		switch msg.String() {
 		case "r":
 			if s.model.game.IsGameOver() && s.model.player.Host {
