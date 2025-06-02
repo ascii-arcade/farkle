@@ -1,6 +1,8 @@
 package board
 
 import (
+	"strings"
+
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
@@ -18,9 +20,21 @@ func (s *helpScreen) WithModel(model any) screen.Screen {
 }
 
 func (s *helpScreen) View() string {
-	objective := "First to 10,000 points triggers the end of the game.\n" +
-		"After end game starts, rest of players get one last turn.\n" +
-		"The player with the most points at the end of the game wins."
+	objective := strings.Builder{}
+	objective.WriteString("Objective\n")
+	objective.WriteString("First to 10,000 points triggers the end of the game.\n")
+	objective.WriteString("After end game starts, rest of players get one last turn.\n")
+	objective.WriteString("The player with the most points at the end of the game wins.\n\n")
+
+	rules := strings.Builder{}
+	rules.WriteString("Rules\n")
+	rules.WriteString("Players take turns rolling six dice.\n")
+	rules.WriteString("On each turn, the player rolls and choosing any dice that can be scored (holding).\n")
+	rules.WriteString("The player can hold any number of dice, but must hold at least one die.\n")
+	rules.WriteString("The player can then keep the dice (locking).\n")
+	rules.WriteString("The player then either rolls the remaining dice or stops and score the points (banking).\n")
+	rules.WriteString("The first time a player banks points, it must equal 500 or more.\n")
+	rules.WriteString("If the player rolls and can not score any points, they lose all points for that turn (bust).\n\n")
 
 	scoring := []string{dice.GetDieCharacter(1) + " = 100 points",
 		dice.GetDieCharacter(5) + " = 50 points",
@@ -39,14 +53,17 @@ func (s *helpScreen) View() string {
 		"Two triplets = 2500 points",
 	}
 
-	content := "Help\n"
-	content += "Press 'q' to return to the game.\n\n"
-	content += "Objective\n" + objective + "\n\n"
-	content += "Scoring\n" + s.model.style.Render(
+	content := strings.Builder{}
+	content.WriteString("Help\n")
+	content.WriteString("Press 'q' to return to the game.\n\n")
+	content.WriteString(objective.String())
+	content.WriteString(rules.String())
+	content.WriteString("Scoring\n" + s.model.style.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			scoring...,
-		))
+		)),
+	)
 
 	return s.model.style.Render(
 		lipgloss.Place(
@@ -54,7 +71,7 @@ func (s *helpScreen) View() string {
 			s.model.height,
 			lipgloss.Center,
 			lipgloss.Center,
-			content,
+			content.String(),
 		),
 	)
 
