@@ -32,10 +32,7 @@ func Run() error {
 		http.ServeFile(w, r, "web"+r.URL.Path)
 	})
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Eventually implement admin only information
-		// params := r.URL.Query()
-		// if params.Get("admin_key") == config.GetWebAdminKey() {}
+	mux.Handle("/", requiresAdminKeyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		totalGames := len(games.GetAll())
 		totalStartedGames := 0
 		for _, game := range games.GetAll() {
@@ -59,7 +56,18 @@ func Run() error {
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-	})
+	})))
 
 	return http.ListenAndServe(":"+config.GetServerPortWeb(), mux)
+}
+
+func requiresAdminKeyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		adminKey := r.URL.Query().Get("admin_key")
+		if adminKey != config.GetWebAdminKey() {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

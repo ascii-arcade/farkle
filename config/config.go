@@ -14,7 +14,7 @@ var (
 	serverHost    string = "localhost"
 	serverPortSSH string = "2222"
 	serverPortWeb string = "8080"
-	webAdminKey   string
+	webAdminKey   string = "supersecretkey"
 
 	Version string = "dev"
 )
@@ -34,17 +34,20 @@ func Setup() {
 	if hostStr != "" {
 		serverHost = hostStr
 	}
+
 	portStr := os.Getenv("ASCII_ARCADE_SSH_PORT")
 	if portStr != "" {
 		serverPortSSH = portStr
 	}
+
 	webPortStr := os.Getenv("ASCII_ARCADE_WEB_PORT")
 	if webPortStr != "" {
 		serverPortWeb = webPortStr
 	}
-	webAdminKey = os.Getenv("ASCII_ARCADE_WEB_ADMIN_KEY")
-	if webAdminKey == "" {
-		webAdminKey = "supersecretkey"
+
+	webAdminKeyStr := os.Getenv("ASCII_ARCADE_WEB_ADMIN_KEY")
+	if webAdminKeyStr != "" {
+		webAdminKey = webAdminKeyStr
 	}
 }
 

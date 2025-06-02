@@ -63,6 +63,7 @@ func main() {
 	logger.Info("Starting SSH server", "host", config.GetServerHost(), "port", config.GetServerPortSSH())
 
 	go func() {
+		logger.Info("Starting Web server", "host", config.GetServerHost(), "port", config.GetServerPortWeb())
 		if err = s.ListenAndServe(); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
 			logger.Error("Could not start server", "error", err)
 			done <- nil
