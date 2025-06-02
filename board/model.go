@@ -56,8 +56,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height, m.width = msg.Height, msg.Width
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
+		switch msg.Type {
+		case tea.KeyCtrlC:
 			m.game.RemovePlayer(m.player)
 			return m, tea.Quit
 		}

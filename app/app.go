@@ -20,12 +20,6 @@ func (m rootModel) Init() tea.Cmd {
 
 func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			return m, tea.Quit
-		}
-
 	case messages.SwitchViewMsg:
 		m.active = msg.Model
 		initcmd := m.active.Init()
