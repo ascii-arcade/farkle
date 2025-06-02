@@ -3,8 +3,8 @@ services:
     build: 
       context: .
       args:
-        - GIT_TAG=latest
-    image: ascii-arcade/farkle:GIT_TAG
+        - GIT_TAG=${GIT_TAG:-latest}
+    image: ascii-arcade/farkle:${GIT_TAG:-latest}
     ports:
       - "2022:2022"
       - "8080:8080"
