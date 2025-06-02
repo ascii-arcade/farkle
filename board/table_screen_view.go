@@ -9,44 +9,46 @@ import (
 )
 
 func (s *tableScreen) View() string {
-	borderColor := s.model.game.GetTurnPlayer().Color
+	playerColor := s.model.game.GetTurnPlayer().Color
 
 	paneStyle := s.model.style.
-		Width(s.model.width).
-		Height(s.model.height).
-		Align(lipgloss.Center, lipgloss.Center)
+		Width(s.model.width-2).
+		Height(s.model.height-2).
+		Align(lipgloss.Center, lipgloss.Center).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(s.model.player.Color)
 	logPaneStyle := s.model.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(borderColor)).
+		BorderForeground(playerColor).
 		Height(12).
 		Width(35)
 	poolPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(borderColor)).
+		BorderForeground(playerColor).
 		Padding(1, 0).
 		Width(32).
 		Height(12)
 	heldPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(borderColor)).
+		BorderForeground(playerColor).
 		Width(48).
 		Height(12)
 	heldScorePaneStyle := s.model.style
 	lockedPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(borderColor)).
+		BorderForeground(playerColor).
 		Padding(0, 1).
 		Width(19).
 		Height(12)
 
 	if !s.model.game.Started {
-		playersString := []string{}
+		playerNames := []string{}
 		for _, player := range s.model.game.GetPlayers() {
-			n := player.Name
+			n := player.StyledPlayerName(s.model.style)
 			if player.Host {
 				n += " (host)"
 			}
@@ -54,7 +56,7 @@ func (s *tableScreen) View() string {
 				n += " (you)"
 			}
 
-			playersString = append(playersString, n)
+			playerNames = append(playerNames, n)
 		}
 
 		lobbyPaneStyle := s.model.style.
@@ -72,7 +74,7 @@ func (s *tableScreen) View() string {
 						lipgloss.Center,
 						[]string{
 							"Game Code: " + s.model.game.Code + "\n",
-							strings.Join(playersString, "\n"),
+							strings.Join(playerNames, "\n"),
 						}...,
 					),
 				),
