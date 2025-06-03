@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ascii-arcade/farkle/colors"
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -62,7 +63,7 @@ func (s *tableScreen) View() string {
 		lobbyPaneStyle := s.model.style.
 			Align(lipgloss.Center).
 			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#3B82F6")).
+			BorderForeground(colors.Farkle).
 			Height(12).
 			Width(40)
 
@@ -99,7 +100,7 @@ func (s *tableScreen) View() string {
 		return paneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
-				s.model.style.Bold(true).Foreground(lipgloss.Color("#3B82F6")).Render("Game Over!"),
+				s.model.style.Bold(true).Foreground(colors.Farkle).Render("Game Over!"),
 				s.model.style.Bold(true).Render("Winner: "+winner.StyledPlayerName(s.model.style)),
 				s.model.style.Render("The host can press 'r' to restart the game"),
 			),
@@ -111,7 +112,7 @@ func (s *tableScreen) View() string {
 			Width(s.model.width - 2).
 			Height(s.model.height - 2).
 			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(lipgloss.Color("#ff0000"))
+			BorderForeground(colors.Debug)
 	}
 
 	poolRollStrings := []string{}
@@ -128,7 +129,7 @@ func (s *tableScreen) View() string {
 	heldScore, err := s.model.game.DiceHeld.Score()
 	if err != nil {
 		s.model.error = err.Error()
-		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color(colorError))
+		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
 	}
 
 	heldDie := s.model.style.
@@ -138,10 +139,10 @@ func (s *tableScreen) View() string {
 	if s.model.game.Busted {
 		heldDie = s.model.style.
 			Height(10).
-			Foreground(lipgloss.Color(colorError)).
+			Foreground(colors.Error).
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("BUSTED")
-		heldScorePaneStyle = heldScorePaneStyle.Foreground(lipgloss.Color("#ff0000"))
+		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
 	}
 
 	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
@@ -174,7 +175,7 @@ func (s *tableScreen) View() string {
 
 	centeredText := ""
 	if s.model.error != "" {
-		centeredText = s.model.style.Bold(true).Foreground(lipgloss.Color(colorError)).Render(s.model.error)
+		centeredText = s.model.style.Bold(true).Foreground(colors.Error).Render(s.model.error)
 	}
 
 	poolPane := lipgloss.JoinVertical(

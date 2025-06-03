@@ -25,9 +25,6 @@ type Model struct {
 const (
 	rollFrames   = 15
 	rollInterval = 200 * time.Millisecond
-
-	colorCurrentTurn = "#FF9E1A"
-	colorError       = "#9E1A1A"
 )
 
 func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game) Model {
