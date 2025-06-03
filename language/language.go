@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"log"
+	"strings"
 )
 
 //go:embed en.json
@@ -36,16 +37,16 @@ func (l *Language) Get(pathList ...string) string {
 	for i, key := range pathList {
 		m, ok := current.(map[string]any)
 		if !ok {
-			return missingTranslationValue(pathList[0], key)
+			return missingTranslationValue(pathList)
 		}
 		val, exists := m[key]
 		if !exists {
-			return missingTranslationValue(pathList[0], key)
+			return missingTranslationValue(pathList)
 		}
 		if i == len(pathList)-1 {
 			str, ok := val.(string)
 			if !ok {
-				return missingTranslationValue(pathList[0], key)
+				return missingTranslationValue(pathList)
 			}
 			return str
 		}
@@ -54,8 +55,8 @@ func (l *Language) Get(pathList ...string) string {
 	return ""
 }
 
-func missingTranslationValue(section, key string) string {
-	return "i18n-missing:'" + section + "." + key + "'"
+func missingTranslationValue(pathList []string) string {
+	return "i18n-missing:'" + strings.Join(pathList, ".") + "'"
 }
 
 func LoadLanguage(data []byte) *Language {

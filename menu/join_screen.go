@@ -30,7 +30,7 @@ func (m *Model) newJoinScreen() *joinScreen {
 	s.gameCodeInput.Cursor.Style = m.style.Foreground(lipgloss.Color("205"))
 	s.gameCodeInput.CharLimit = 7
 	s.gameCodeInput.Width = 8
-	s.gameCodeInput.Placeholder = "Game code"
+	s.gameCodeInput.Placeholder = m.lang().Get("menu", "join", "game_code_placeholder")
 	s.gameCodeInput.PromptStyle = m.style.Foreground(lipgloss.Color("#00ff00"))
 	s.gameCodeInput.Focus()
 	return s

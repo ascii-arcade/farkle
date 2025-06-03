@@ -33,7 +33,7 @@
       "press_to_create": "Press %s to create a new game",
       "press_to_join": "Press %s to join an existing game",
       "join": {
-        "code": "Game Code",
+        "game_code_placeholder": "Game Code",
         "enter_code": "Enter the game code to join:"
       }
     },
