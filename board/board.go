@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/ascii-arcade/farkle/games"
+	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,6 +21,8 @@ type Model struct {
 	player *games.Player
 	game   *games.Game
 	screen screen.Screen
+
+	languagePreference *language.LanguagePreference
 }
 
 const (
@@ -27,14 +30,15 @@ const (
 	rollInterval = 200 * time.Millisecond
 )
 
-func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game) Model {
+func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game, lang *language.LanguagePreference) Model {
 	return Model{
-		player: player,
-		game:   game,
-		style:  style,
-		width:  width,
-		height: height,
-		screen: &tableScreen{},
+		player:             player,
+		game:               game,
+		style:              style,
+		width:              width,
+		height:             height,
+		screen:             &tableScreen{},
+		languagePreference: lang,
 	}
 }
 
@@ -83,4 +87,8 @@ func waitForRefreshSignal(ch chan struct{}) tea.Cmd {
 	return func() tea.Msg {
 		return messages.RefreshGame(<-ch)
 	}
+}
+
+func (m *Model) lang() *language.Language {
+	return m.languagePreference.Lang
 }

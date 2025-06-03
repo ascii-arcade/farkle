@@ -46,7 +46,7 @@ func (s *tableScreen) View() string {
 		Width(19).
 		Height(12)
 
-	if !s.model.game.Started {
+	if !s.model.game.InProgress {
 		playerNames := []string{}
 		for _, player := range s.model.game.GetPlayers() {
 			n := player.StyledPlayerName(s.model.style)
@@ -81,17 +81,21 @@ func (s *tableScreen) View() string {
 				),
 			),
 		)
-		out := []string{
-			lobbyPane,
+
+		var statusMsg string
+		switch {
+		case s.model.player.Host && s.model.game.Ready():
+			statusMsg = "Press 's' to start the game"
+		case s.model.player.Host:
+			statusMsg = "Waiting for more players to join..."
+		default:
+			statusMsg = "Waiting for host to start the game..."
 		}
-		if s.model.player.Host {
-			out = append(out, s.model.style.Render("Press 's' to start the game"))
-		} else {
-			out = append(out, s.model.style.Render("Waiting for host to start the game..."))
-		}
+
 		return paneStyle.Render(lipgloss.JoinVertical(
 			lipgloss.Center,
-			out...,
+			lobbyPane,
+			statusMsg,
 		))
 	}
 

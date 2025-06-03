@@ -68,7 +68,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 			}
 		case "s":
-			if !s.model.game.Started && s.model.player.Host {
+			if s.model.game.Ready() && s.model.player.Host {
 				s.model.game.Start()
 			}
 		case "l":
@@ -79,7 +79,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		case "y", "b":
 			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
 				if err := s.model.game.Bank(); err != nil {
-					s.model.error = err.Error()
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
 				}
 			}
 		case "a":

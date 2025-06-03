@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
 
+	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/menu"
 	"github.com/ascii-arcade/farkle/messages"
 )
@@ -41,7 +42,9 @@ func TeaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		return nil, nil
 	}
 	return rootModel{
-		sess:   s,
-		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle()),
+		sess: s,
+		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle(), &language.LanguagePreference{
+			Lang: language.DefaultLanguage,
+		}),
 	}, []tea.ProgramOption{tea.WithAltScreen()}
 }
