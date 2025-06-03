@@ -45,7 +45,7 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			player := game.AddPlayer(true)
 			return s.model, func() tea.Msg {
 				return messages.SwitchViewMsg{
-					Model: board.NewModel(s.style, s.model.Width, s.model.Height, player, game),
+					Model: board.NewModel(s.style, s.model.Width, s.model.Height, player, game, s.model.languagePreference),
 				}
 			}
 		}

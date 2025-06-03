@@ -43,10 +43,10 @@ func (s *joinScreen) WithModel(model any) screen.Screen {
 
 func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	var cmd tea.Cmd
-	s.model.error = ""
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		s.model.error = ""
 		if keys.PreviousScreen.TriggeredBy(msg.String()) {
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
@@ -59,12 +59,12 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				code := strings.ToUpper(s.gameCodeInput.Value())
 				game, err := games.GetOpenGame(code)
 				if err != nil {
-					s.model.error = err.Error()
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
 					return s.model, nil
 				}
 
 				player := game.AddPlayer(false)
-				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, player, game)
+				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, player, game, s.model.languagePreference)
 
 				return s.model, func() tea.Msg { return messages.SwitchViewMsg{Model: boardModel} }
 			}
@@ -95,9 +95,10 @@ func (s *joinScreen) View() string {
 	errorMessage := s.model.error
 
 	var content strings.Builder
-	content.WriteString(s.model.lang().Get("menu", "enter_code") + "\n\n")
+	content.WriteString(s.model.lang().Get("menu", "join", "enter_code") + "\n\n")
 	content.WriteString(s.gameCodeInput.View() + "\n\n")
 	content.WriteString(s.style.Foreground(colors.Error).Render(errorMessage))
+	content.WriteString("\n\n")
 
 	return content.String()
 }
