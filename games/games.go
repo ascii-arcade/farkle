@@ -184,6 +184,13 @@ func (g *Game) Restart() {
 	g.Refresh()
 }
 
+func (g *Game) Ready() bool {
+	g.Lock()
+	defer g.Unlock()
+
+	return len(g.players) >= 2 && !g.InProgress
+}
+
 func (g *Game) NextTurn() {
 	player := g.GetTurnPlayer()
 	if player.Score >= 10000 && !g.endGame {

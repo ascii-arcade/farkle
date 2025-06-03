@@ -68,7 +68,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 			}
 		case "s":
-			if !s.model.game.InProgress && s.model.player.Host {
+			if s.model.game.Ready() && s.model.player.Host {
 				s.model.game.Start()
 			}
 		case "l":

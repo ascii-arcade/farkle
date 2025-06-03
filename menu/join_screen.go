@@ -95,7 +95,7 @@ func (s *joinScreen) View() string {
 	errorMessage := s.model.error
 
 	var content strings.Builder
-	content.WriteString(s.model.lang().Get("menu.enter_code") + "\n\n")
+	content.WriteString(s.model.lang().Get("menu", "enter_code") + "\n\n")
 	content.WriteString(s.gameCodeInput.View() + "\n\n")
 	content.WriteString(s.style.Foreground(colors.Error).Render(errorMessage))
 

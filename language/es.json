@@ -24,7 +24,7 @@
     "menu": {
       "choose_language": "Para español, presiona %s",
       "enter_code": "Ingresa el código del juego para unirte:",
-      "welcome": "¡Bienvenido al juego!",
+      "welcome": "¡Bienvenido al Farkle!",
       "press_to_create": "Presiona %s para crear un nuevo juego",
       "press_to_join": "Presiona %s para unirte a un juego existente"
     },
