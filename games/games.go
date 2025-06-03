@@ -23,7 +23,7 @@ type Game struct {
 	DiceLocked []dice.DicePool
 	Busted     bool
 	Code       string
-	Started    bool
+	InProgress bool
 	FirstRoll  bool
 	Rolled     bool
 
@@ -83,6 +83,18 @@ func GetAll() []*Game {
 	return gamesList
 }
 
+func GetOpenGame(code string) (*Game, error) {
+	game, exists := games[code]
+	if !exists {
+		return nil, errors.New("error.game_not_found")
+	}
+	if game.InProgress {
+		return nil, errors.New("error.game_already_in_progress")
+	}
+
+	return game, nil
+}
+
 func (g *Game) Lock() {
 	g.mu.Lock()
 }
@@ -93,10 +105,10 @@ func (g *Game) Unlock() {
 func (g *Game) Start() {
 	g.Lock()
 	defer g.Unlock()
-	if g.Started {
+	if g.InProgress {
 		return
 	}
-	g.Started = true
+	g.InProgress = true
 	g.Refresh()
 }
 
@@ -132,8 +144,8 @@ func (g *Game) RemovePlayer(player *Player) {
 		g.players[0].Host = true
 	}
 
-	if len(g.players) == 1 && g.Started {
-		g.Started = false
+	if len(g.players) == 1 && g.InProgress {
+		g.InProgress = false
 	}
 
 	if len(g.players) == 0 {

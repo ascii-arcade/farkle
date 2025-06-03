@@ -20,13 +20,15 @@ func (k Keys) String(style lipgloss.Style) string {
 }
 
 var (
+	ExitApplication = Keys{"ctrl+c"}
+
 	MenuJoinGame     = Keys{"j"}
 	MenuStartNewGame = Keys{"n"}
+	MenuEnglish      = Keys{"1"}
+	MenuSpanish      = Keys{"2"}
 
 	PreviousScreen = Keys{"esc"}
 	Submit         = Keys{"enter"}
 
-	ExitApplication    = Keys{"ctrl+c"}
-	GameIncrementPoint = Keys{"a"}
-	LobbyStartGame     = Keys{"s"}
+	LobbyStartGame = Keys{"s"}
 )

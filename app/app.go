@@ -42,6 +42,6 @@ func TeaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	}
 	return rootModel{
 		sess:   s,
-		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle()),
+		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle(), nil),
 	}, []tea.ProgramOption{tea.WithAltScreen()}
 }

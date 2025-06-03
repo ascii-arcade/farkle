@@ -2,6 +2,11 @@ package config
 
 import "os"
 
+const (
+	MinimumHeight = 40
+	MinimumWidth  = 120
+)
+
 var (
 	debug  bool = false
 	logCli bool = false

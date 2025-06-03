@@ -3,6 +3,9 @@ package menu
 import (
 	"time"
 
+	"github.com/ascii-arcade/farkle/colors"
+	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -10,26 +13,24 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type menuChoice struct {
-	action func(Model, tea.Msg) (tea.Model, tea.Cmd)
-	render func(Model, bool) string
-	input  bool
-}
-
 type Model struct {
 	Width  int
 	Height int
 
-	screen screen.Screen
-	style  lipgloss.Style
+	screen             screen.Screen
+	style              lipgloss.Style
+	languagePreference *language.LanguagePreference
+
+	error string
 }
 
-func New(width, height int, style lipgloss.Style) *Model {
+func New(width, height int, style lipgloss.Style, languagePreference *language.LanguagePreference) *Model {
 	m := &Model{
 		Width:  width,
 		Height: height,
 
-		style: style,
+		style:              style,
+		languagePreference: languagePreference,
 	}
 	m.screen = m.newSplashScreen()
 	return m
@@ -67,5 +68,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return m.screen.View()
+	if m.Width < config.MinimumWidth {
+		return m.lang().Get("error.window_too_narrow")
+	}
+	if m.Height < config.MinimumHeight {
+		return m.lang().Get("error.window_too_short")
+	}
+
+	style := m.style.Width(m.Width).Height(m.Height)
+	paneStyle := m.style.Width(m.Width).PaddingTop(1)
+
+	panes := lipgloss.JoinVertical(
+		lipgloss.Center,
+		paneStyle.Align(lipgloss.Center, lipgloss.Bottom).Foreground(colors.Logo).Height(m.Height/2).Render(m.style.Align(lipgloss.Left).Render(logo)),
+		// paneStyle.Align(lipgloss.Center, lipgloss.Top).Render(lipgloss.JoinHorizontal(lipgloss.Top, m.displayDice...)),
+		paneStyle.Align(lipgloss.Center, lipgloss.Top).Render(m.screen.View()),
+	)
+
+	return style.Render(panes)
+}
+
+func (m *Model) lang() *language.Language {
+	if m.languagePreference == nil {
+		return language.DefaultLanguage
+	}
+	return m.languagePreference.Lang
 }

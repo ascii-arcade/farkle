@@ -46,7 +46,7 @@ func (s *tableScreen) View() string {
 		Width(19).
 		Height(12)
 
-	if !s.model.game.Started {
+	if !s.model.game.InProgress {
 		playerNames := []string{}
 		for _, player := range s.model.game.GetPlayers() {
 			n := player.StyledPlayerName(s.model.style)

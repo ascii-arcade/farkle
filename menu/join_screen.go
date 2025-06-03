@@ -1,0 +1,103 @@
+package menu
+
+import (
+	"strings"
+
+	"github.com/ascii-arcade/farkle/board"
+	"github.com/ascii-arcade/farkle/colors"
+	"github.com/ascii-arcade/farkle/games"
+	"github.com/ascii-arcade/farkle/keys"
+	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/screen"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+type joinScreen struct {
+	model *Model
+	style lipgloss.Style
+
+	gameCodeInput textinput.Model
+}
+
+func (m *Model) newJoinScreen() *joinScreen {
+	s := &joinScreen{
+		model:         m,
+		style:         m.style,
+		gameCodeInput: textinput.New(),
+	}
+	s.gameCodeInput.Cursor.Style = m.style.Foreground(lipgloss.Color("205"))
+	s.gameCodeInput.CharLimit = 7
+	s.gameCodeInput.Width = 8
+	s.gameCodeInput.Placeholder = "Game code"
+	s.gameCodeInput.PromptStyle = m.style.Foreground(lipgloss.Color("#00ff00"))
+	s.gameCodeInput.Focus()
+	return s
+}
+
+func (s *joinScreen) WithModel(model any) screen.Screen {
+	s.model = model.(*Model)
+	return s
+}
+
+func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
+	var cmd tea.Cmd
+	s.model.error = ""
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if keys.PreviousScreen.TriggeredBy(msg.String()) {
+			return s.model, func() tea.Msg {
+				return messages.SwitchScreenMsg{
+					Screen: s.model.newOptionScreen(),
+				}
+			}
+		}
+		if keys.Submit.TriggeredBy(msg.String()) {
+			if len(s.gameCodeInput.Value()) == 7 {
+				code := strings.ToUpper(s.gameCodeInput.Value())
+				game, err := games.GetOpenGame(code)
+				if err != nil {
+					s.model.error = err.Error()
+					return s.model, nil
+				}
+
+				player := game.AddPlayer(false)
+				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, player, game)
+
+				return s.model, func() tea.Msg { return messages.SwitchViewMsg{Model: boardModel} }
+			}
+		}
+
+		if msg.Type == tea.KeyCtrlQuestionMark {
+			if len(s.gameCodeInput.Value()) == 4 {
+				s.gameCodeInput.SetValue(s.gameCodeInput.Value()[:len(s.gameCodeInput.Value())-1])
+			}
+		}
+
+		if msg.Type == tea.KeyEnter {
+			s.model.error = ""
+		}
+	}
+
+	s.gameCodeInput, cmd = s.gameCodeInput.Update(msg)
+	s.gameCodeInput.SetValue(strings.ToUpper(s.gameCodeInput.Value()))
+
+	if len(s.gameCodeInput.Value()) == 3 && !strings.Contains(s.gameCodeInput.Value(), "-") {
+		s.gameCodeInput.SetValue(s.gameCodeInput.Value() + "-")
+		s.gameCodeInput.CursorEnd()
+	}
+	return s.model, cmd
+}
+
+func (s *joinScreen) View() string {
+	errorMessage := s.model.error
+
+	var content strings.Builder
+	content.WriteString(s.model.lang().Get("menu.enter_code") + "\n\n")
+	content.WriteString(s.gameCodeInput.View() + "\n\n")
+	content.WriteString(s.style.Foreground(colors.Error).Render(errorMessage))
+
+	return content.String()
+}
