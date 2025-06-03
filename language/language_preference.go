@@ -5,6 +5,10 @@ type LanguagePreference struct {
 }
 
 func (lp *LanguagePreference) SetLanguage(abbr string) {
+	if lp == nil {
+		lp = &LanguagePreference{}
+	}
+
 	lang, exists := Languages[abbr]
 	if !exists {
 		return

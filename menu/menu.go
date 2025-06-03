@@ -89,8 +89,5 @@ func (m Model) View() string {
 }
 
 func (m *Model) lang() *language.Language {
-	if m.languagePreference == nil {
-		return language.DefaultLanguage
-	}
 	return m.languagePreference.Lang
 }
