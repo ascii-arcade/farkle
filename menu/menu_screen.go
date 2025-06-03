@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/board"
+	"github.com/ascii-arcade/farkle/colors"
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/keys"
@@ -26,11 +27,11 @@ type optionScreen struct {
 
 func (m *Model) newOptionScreen() *optionScreen {
 	gameRoomInput := textinput.New()
-	gameRoomInput.Cursor.Style = m.style.Foreground(lipgloss.Color("205"))
+	gameRoomInput.Cursor.Style = m.style.Foreground(colors.Cursor)
 	gameRoomInput.CharLimit = 7
 	gameRoomInput.Width = 8
 	gameRoomInput.Placeholder = "Game code"
-	gameRoomInput.PromptStyle = m.style.Foreground(lipgloss.Color("#00ff00"))
+	gameRoomInput.PromptStyle = m.style.Foreground(colors.Prompt)
 	gameRoomInput.Focus()
 
 	return &optionScreen{
@@ -131,25 +132,23 @@ func (s *optionScreen) View() string {
 	}
 
 	panelStyle := s.model.style.Width(s.model.Width).Height(s.model.Height - 1).AlignVertical(lipgloss.Center)
-	logoStyle := s.model.style.Foreground(lipgloss.Color("#0000ff")).Margin(1, 2)
+	logoStyle := s.model.style.Foreground(colors.Logo).Margin(1, 2)
 	titleStyle := s.model.style.Border(lipgloss.NormalBorder()).Padding(1, 2)
-	menuStyle := s.model.style.Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(20)
-	controlsStyle := s.model.style.Foreground(lipgloss.Color("#666666")).AlignHorizontal(lipgloss.Left).Width(s.model.Width / 2)
-	errorsStyle := s.model.style.Foreground(lipgloss.Color("#ff0000")).AlignHorizontal(lipgloss.Right).Width(s.model.Width / 2)
+	menuStyle := s.model.style.Foreground(colors.Default).AlignHorizontal(lipgloss.Left).Width(20)
+	controlsStyle := s.model.style.Foreground(colors.Default).AlignHorizontal(lipgloss.Left).Width(s.model.Width / 2)
+	errorsStyle := s.model.style.Foreground(colors.Error).AlignHorizontal(lipgloss.Right).Width(s.model.Width / 2)
 
 	if config.GetDebug() {
-		panelStyle = panelStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Width(s.model.Width - 2).Height(s.model.Height - 3)
-		logoStyle = logoStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
-		menuStyle = menuStyle.BorderForeground(lipgloss.Color("#ff0000")).BorderStyle(lipgloss.ASCIIBorder())
-		controlsStyle = controlsStyle.Background(lipgloss.Color("#000066")).Foreground(lipgloss.Color("#ffffff"))
-		errorsStyle = errorsStyle.Background(lipgloss.Color("#660000")).Foreground(lipgloss.Color("#ffffff"))
+		panelStyle = panelStyle.BorderForeground(colors.Debug).BorderStyle(lipgloss.ASCIIBorder()).Width(s.model.Width - 2).Height(s.model.Height - 3)
+		logoStyle = logoStyle.BorderForeground(colors.Debug).BorderStyle(lipgloss.ASCIIBorder()).Margin(0, 1)
+		menuStyle = menuStyle.BorderForeground(colors.Debug).BorderStyle(lipgloss.ASCIIBorder())
 	}
 
 	logoPanel := logoStyle.Render(logo)
 	titlePanel := titleStyle.Render("Farkle")
 
 	menu := make([]string, 0)
-	style := s.model.style.Foreground(lipgloss.Color("#00ff00"))
+	style := s.model.style.Foreground(colors.Prompt)
 	prefix := "   "
 	if s.index == 0 {
 		prefix = "-> "
