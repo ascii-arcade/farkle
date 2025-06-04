@@ -27,6 +27,8 @@ var (
 	MenuEnglish      = Keys{"1"}
 	MenuSpanish      = Keys{"2"}
 
+	Back = Keys{"q"}
+
 	PreviousScreen = Keys{"esc"}
 	Submit         = Keys{"enter"}
 

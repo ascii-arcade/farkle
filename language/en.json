@@ -43,6 +43,40 @@
       "player_list_you": "you",
       "player_list_host": "host",
       "you_are": "You are %s"
+    },
+    "help": {
+      "title": "Help",
+      "back": "Press %s to return back to the game.",
+      "objective": {
+        "title": "Objective",
+        "text": [
+          "The first player to reach 10,000 points starts the end game.",
+          "After the end game starts, the rest of the players get one last turn.",
+          "The player with the most points at the end of the game wins."
+        ]
+      },
+      "rules": {
+        "title": "Rules",
+        "text": [
+          "Players take turns rolling six dice.",
+          "On each turn, the player rolls and chooses any dice that can be scored (holding).",
+          "The player can hold any number of dice, but must hold at least one die.",
+          "The player can then keep the dice (locking).",
+          "The player then either rolls the remaining dice or stops and scores the points (banking).",
+          "The first time a player banks points, it must equal 500 or more.",
+          "If the player rolls and cannot score any points, they lose all points for that turn (bust)."
+        ]
+      },
+      "scoring": {
+        "title": "Scoring",
+        "points": "Points",
+        "four_of_a_kind": "Four of a kind",
+        "five_of_a_kind": "Five of a kind",
+        "six_of_a_kind": "Six of a kind",
+        "three_pairs": "Three pairs",
+        "four_of_a_kind_pair": "Four of a kind + pair",
+        "two_triplets": "Two triplets"
+      }
     }
   },
   "username_first_words": [

@@ -3,6 +3,7 @@ package board
 import (
 	"time"
 
+	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
@@ -76,6 +77,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.width < config.MinimumWidth {
+		return m.lang().Get("error", "window_too_narrow")
+	}
+	if m.height < config.MinimumHeight {
+		return m.lang().Get("error", "window_too_short")
+	}
 	return m.activeScreen().View()
 }
 
