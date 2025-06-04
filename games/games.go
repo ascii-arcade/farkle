@@ -11,7 +11,7 @@ import (
 var games = make(map[string]*Game)
 
 func New(style lipgloss.Style) *Game {
-	colors := []string{
+	colors := []lipgloss.Color{
 		"#3B82F6", // Blue
 		"#10B981", // Green
 		"#FACC15", // Yellow

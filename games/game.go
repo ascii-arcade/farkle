@@ -22,7 +22,7 @@ type Game struct {
 	Rolled     bool
 
 	endGame bool
-	colors  []string
+	colors  []lipgloss.Color
 	turn    int
 	log     []string
 	players []*Player
@@ -59,6 +59,8 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			<-player.ctx.Done()
 			g.RemovePlayer(player)
 		}()
+
+		player.Color = g.colors[len(g.players)%len(g.colors)]
 
 		if isHost {
 			player.IsHost = true
@@ -123,38 +125,34 @@ func (g *Game) Ready() bool {
 }
 
 func (g *Game) NextTurn() {
-	_ = g.withLock(func() error {
-		player := g.GetTurnPlayer()
-		if player.Score >= 10000 && !g.endGame {
-			g.endGame = true
-			g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
-		}
+	player := g.GetTurnPlayer()
+	if player.Score >= 10000 && !g.endGame {
+		g.endGame = true
+		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
+	}
 
-		if g.endGame && !player.PlayedLastTurn {
-			player.PlayedLastTurn = true
-		}
+	if g.endGame && !player.PlayedLastTurn {
+		player.PlayedLastTurn = true
+	}
 
-		if g.IsGameOver() {
-			winner := g.GetWinningPlayer()
-			g.log = append(g.log, winner.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winner.Score)+"!")
-			return nil
-		}
+	if g.IsGameOver() {
+		winner := g.GetWinningPlayer()
+		g.log = append(g.log, winner.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winner.Score)+"!")
+		return
+	}
 
-		g.turn++
-		if g.turn >= len(g.players) {
-			g.turn = 0
-		}
-		g.FirstRoll = true
-		g.Rolled = false
-		g.Busted = false
-		g.DiceLocked = []dice.DicePool{}
-		g.DicePool = dice.NewDicePool(6)
-		g.DiceHeld = dice.NewDicePool(0)
-		g.DiceLocked = make([]dice.DicePool, 0)
-		g.FirstRoll = false
-
-		return nil
-	})
+	g.turn++
+	if g.turn >= len(g.players) {
+		g.turn = 0
+	}
+	g.FirstRoll = true
+	g.Rolled = false
+	g.Busted = false
+	g.DiceLocked = []dice.DicePool{}
+	g.DicePool = dice.NewDicePool(6)
+	g.DiceHeld = dice.NewDicePool(0)
+	g.DiceLocked = make([]dice.DicePool, 0)
+	g.FirstRoll = false
 }
 
 func (g *Game) GetHost() *Player {
@@ -188,54 +186,41 @@ func (g *Game) RollDice() {
 }
 
 func (g *Game) GetTurnPlayer() *Player {
-	var player *Player
-	_ = g.withLock(func() error {
-		for i, p := range g.players {
-			if i == g.turn {
-				player = p
-				break
-			}
+	for i, p := range g.players {
+		if i == g.turn {
+			return p
 		}
-		return nil
-	})
-	return player
+	}
+	return nil
 }
 
 func (g *Game) HoldDie(dieToHold int) {
-	_ = g.withLock(func() error {
-		if g.DicePool.Remove(dieToHold) {
-			g.DiceHeld.Add(dieToHold)
-		}
-		return nil
-	})
+	if g.DicePool.Remove(dieToHold) {
+		g.DiceHeld.Add(dieToHold)
+	}
 }
 
 func (g *Game) ClearHeld() error {
-	return g.withLock(func() error {
-		if len(g.DiceHeld) == 0 {
-			return ErrNoDiceHeld
-		}
+	if len(g.DiceHeld) == 0 {
+		return ErrNoDiceHeld
+	}
 
-		for _, die := range g.DiceHeld {
-			g.DicePool.Add(die)
-		}
-		g.DiceHeld = dice.NewDicePool(0)
+	for _, die := range g.DiceHeld {
+		g.DicePool.Add(die)
+	}
+	g.DiceHeld = dice.NewDicePool(0)
 
-		return nil
-	})
+	return nil
 }
 
 func (g *Game) Undo() {
-	g.withLock(func() error {
-		if len(g.DiceHeld) == 0 {
-			return nil
-		}
-		lastDie := g.DiceHeld[len(g.DiceHeld)-1]
-		if g.DiceHeld.Remove(lastDie) {
-			g.DicePool.Add(lastDie)
-		}
-		return nil
-	})
+	if len(g.DiceHeld) == 0 {
+		return
+	}
+	lastDie := g.DiceHeld[len(g.DiceHeld)-1]
+	if g.DiceHeld.Remove(lastDie) {
+		g.DicePool.Add(lastDie)
+	}
 }
 
 func (g *Game) UndoAll() {
@@ -245,29 +230,26 @@ func (g *Game) UndoAll() {
 }
 
 func (g *Game) LockDice() error {
-	return g.withLock(func() error {
-		if len(g.DiceHeld) == 0 {
-			return nil
-		}
-		if _, err := score.Calculate(g.DiceHeld, false); err != nil {
-			return err
-		}
-
-		g.DiceLocked = append(g.DiceLocked, g.DiceHeld)
-		g.DiceHeld = dice.NewDicePool(0)
-		g.Rolled = false
-
-		if len(g.DicePool) == 0 {
-			g.DicePool = dice.NewDicePool(6)
-		}
-		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+	if len(g.DiceHeld) == 0 {
 		return nil
-	})
+	}
+	if _, err := score.Calculate(g.DiceHeld, false); err != nil {
+		return err
+	}
+
+	g.DiceLocked = append(g.DiceLocked, g.DiceHeld)
+	g.DiceHeld = dice.NewDicePool(0)
+	g.Rolled = false
+
+	if len(g.DicePool) == 0 {
+		g.DicePool = dice.NewDicePool(6)
+	}
+	g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+	return nil
 }
 
 func (g *Game) Bank() error {
 	return g.withLock(func() error {
-
 		turnScore := 0
 		for _, diceLocked := range g.DiceLocked {
 			score, err := diceLocked.Score()
@@ -332,26 +314,23 @@ func (g *Game) IsTurn(p *Player) bool {
 func (g *Game) PlayerScores() string {
 	scores := make([]string, 0, len(g.players))
 
-	_ = g.withLock(func() error {
-		for i, p := range g.players {
-			if p == nil {
-				continue
-			}
-
-			isCurrentPlayer := g.turn == i
-			isWinner := g.GetWinningPlayer() != nil && g.GetWinningPlayer().Name == p.Name
-			playerName := p.StyledPlayerName(g.style)
-			if isWinner {
-				playerName = "★" + playerName + "★"
-			}
-			scores = append(scores, g.style.
-				PaddingRight(2).
-				Bold(isCurrentPlayer).
-				Italic(isCurrentPlayer).
-				Render(playerName+": "+strconv.Itoa(p.Score)))
+	for i, p := range g.players {
+		if p == nil {
+			continue
 		}
-		return nil
-	})
+
+		isCurrentPlayer := g.turn == i
+		isWinner := g.GetWinningPlayer() != nil && g.GetWinningPlayer().Name == p.Name
+		playerName := p.StyledPlayerName(g.style)
+		if isWinner {
+			playerName = "★" + playerName + "★"
+		}
+		scores = append(scores, g.style.
+			PaddingRight(2).
+			Bold(isCurrentPlayer).
+			Italic(isCurrentPlayer).
+			Render(playerName+": "+strconv.Itoa(p.Score)))
+	}
 
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,

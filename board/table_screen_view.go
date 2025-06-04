@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/colors"
-	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -110,14 +109,6 @@ func (s *tableScreen) View() string {
 				s.model.style.Render(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style)),
 			),
 		)
-	}
-
-	if config.GetDebug() {
-		paneStyle = paneStyle.
-			Width(s.model.width - 2).
-			Height(s.model.height - 2).
-			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(colors.Debug)
 	}
 
 	poolRollStrings := []string{}
