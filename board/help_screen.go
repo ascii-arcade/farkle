@@ -21,6 +21,24 @@ func (s *helpScreen) WithModel(model any) screen.Screen {
 	return s
 }
 
+func (s *helpScreen) Update(msg tea.Msg) (any, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.model.height, s.model.width = msg.Height, msg.Width
+		return s.model, nil
+
+	case tea.KeyMsg:
+		if msg.String() == "q" {
+			return s.model, func() tea.Msg {
+				return messages.SwitchScreenMsg{
+					Screen: &tableScreen{},
+				}
+			}
+		}
+	}
+	return s.model, nil
+}
+
 func (s *helpScreen) View() string {
 	objective := strings.Builder{}
 	objective.WriteString(s.model.lang().Get("help", "objective", "title") + "\n")
@@ -69,18 +87,4 @@ func (s *helpScreen) View() string {
 		),
 	)
 
-}
-
-func (s *helpScreen) Update(msg tea.Msg) (any, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "q" {
-			return s.model, func() tea.Msg {
-				return messages.SwitchScreenMsg{
-					Screen: &tableScreen{},
-				}
-			}
-		}
-	}
-	return s.model, nil
 }

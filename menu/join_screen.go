@@ -46,8 +46,13 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.model.height, s.model.width = msg.Height, msg.Width
+		return s.model, nil
+
 	case cursor.BlinkMsg:
 		return s.model, nil
+
 	case tea.KeyMsg:
 		s.model.error = ""
 		if keys.PreviousScreen.TriggeredBy(msg.String()) {
@@ -70,9 +75,12 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
 					return s.model, nil
 				}
-				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, s.model.player, game)
 
-				return s.model, func() tea.Msg { return messages.SwitchViewMsg{Model: boardModel} }
+				return s.model, func() tea.Msg {
+					return messages.SwitchViewMsg{
+						Model: board.NewModel(s.style, s.model.width, s.model.height, s.model.player, game),
+					}
+				}
 			}
 		}
 

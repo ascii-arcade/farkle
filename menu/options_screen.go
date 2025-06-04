@@ -33,6 +33,10 @@ func (s *optionScreen) WithModel(model any) screen.Screen {
 
 func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.model.height, s.model.width = msg.Height, msg.Width
+		return s.model, nil
+
 	case tea.KeyMsg:
 		if keys.MenuEnglish.TriggeredBy(msg.String()) {
 			s.model.player.LanguagePreference.SetLanguage("EN")
@@ -48,7 +52,7 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			}
 			return s.model, func() tea.Msg {
 				return messages.SwitchViewMsg{
-					Model: board.NewModel(s.style, s.model.Width, s.model.Height, s.model.player, game),
+					Model: board.NewModel(s.style, s.model.width, s.model.height, s.model.player, game),
 				}
 			}
 		}

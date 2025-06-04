@@ -16,6 +16,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.model.height, s.model.width = msg.Height, msg.Width
+		return s.model, nil
+
 	case rollMsg:
 		if s.rollTickCount < rollFrames {
 			s.rollTickCount++
