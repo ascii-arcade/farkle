@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/colors"
-	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -51,7 +50,7 @@ func (s *tableScreen) View() string {
 		playerNames := []string{}
 		for _, player := range s.model.game.GetPlayers() {
 			n := player.StyledPlayerName(s.model.style)
-			if player.Host {
+			if player.IsHost {
 				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))
 			}
 			if player.Name == s.model.player.Name {
@@ -85,9 +84,9 @@ func (s *tableScreen) View() string {
 
 		var statusMsg string
 		switch {
-		case s.model.player.Host && s.model.game.Ready():
+		case s.model.player.IsHost && s.model.game.Ready():
 			statusMsg = fmt.Sprintf(s.model.lang().Get("board", "press_to_start"), keys.LobbyStartGame.String(s.model.style))
-		case s.model.player.Host:
+		case s.model.player.IsHost:
 			statusMsg = s.model.lang().Get("board", "waiting_for_players")
 		default:
 			statusMsg = s.model.lang().Get("board", "waiting_for_start")
@@ -112,16 +111,8 @@ func (s *tableScreen) View() string {
 		)
 	}
 
-	if config.GetDebug() {
-		paneStyle = paneStyle.
-			Width(s.model.width - 2).
-			Height(s.model.height - 2).
-			BorderStyle(lipgloss.ASCIIBorder()).
-			BorderForeground(colors.Debug)
-	}
-
 	poolRollStrings := []string{}
-	if s.model.game.GetTurnPlayer().Id == s.model.player.Id {
+	if s.model.game.GetTurnPlayer().Name == s.model.player.Name {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
 		poolRollStrings = append(poolRollStrings, s.model.lang().Get("board", "your_turn")+"\n")
 	}
@@ -174,7 +165,7 @@ func (s *tableScreen) View() string {
 		lipgloss.Left,
 		fmt.Sprintf(s.model.lang().Get("board", "to_be_banked"), keys.ActionBank.String(s.model.style)),
 		s.model.style.Height(10).Render(bankedDie),
-		fmt.Sprintf(s.model.lang().Get("board", "score"), heldScore),
+		fmt.Sprintf(s.model.lang().Get("board", "score"), lockedScore),
 	))
 
 	centeredText := ""
@@ -203,7 +194,7 @@ func (s *tableScreen) View() string {
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "bank"), keys.ActionBank.String(s.model.style)),
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "undo"), keys.ActionUndo.String(s.model.style)),
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "help"), keys.OpenHelp.String(s.model.style)),
-		fmt.Sprintf(s.model.lang().Get("board", "controls", "juit"), keys.ExitApplication.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("global", "quit"), keys.ExitApplication.String(s.model.style)),
 	}, ", ")
 
 	return paneStyle.Render(

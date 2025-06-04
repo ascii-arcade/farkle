@@ -5,21 +5,22 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
 
+	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/menu"
 	"github.com/ascii-arcade/farkle/messages"
 )
 
-type rootModel struct {
+type Model struct {
 	active tea.Model
 	sess   ssh.Session
 }
 
-func (m rootModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return m.active.Init()
 }
 
-func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case messages.SwitchViewMsg:
 		m.active = msg.Model
@@ -32,19 +33,21 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m rootModel) View() string {
+func (m Model) View() string {
 	return m.active.View()
 }
 
 func TeaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-	pty, _, active := s.Pty()
-	if !active {
-		return nil, nil
-	}
-	return rootModel{
-		sess: s,
-		active: menu.New(pty.Window.Width, pty.Window.Height, bubbletea.MakeRenderer(s).NewStyle(), &language.LanguagePreference{
-			Lang: language.DefaultLanguage,
-		}),
+	pty, _, _ := s.Pty()
+	renderer := bubbletea.MakeRenderer(s)
+	style := renderer.NewStyle()
+
+	languagePreference := language.LanguagePreference{Lang: language.DefaultLanguage}
+
+	player := games.NewPlayer(s.Context(), &languagePreference)
+
+	return Model{
+		sess:   s,
+		active: menu.New(pty.Window.Width, pty.Window.Height, style, player),
 	}, []tea.ProgramOption{tea.WithAltScreen()}
 }

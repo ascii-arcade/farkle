@@ -5,6 +5,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/colors"
 	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
@@ -38,20 +39,22 @@ type Model struct {
 	Width  int
 	Height int
 
-	screen             screen.Screen
-	style              lipgloss.Style
-	languagePreference *language.LanguagePreference
+	screen screen.Screen
+	style  lipgloss.Style
+
+	player *games.Player
 
 	error string
 }
 
-func New(width, height int, style lipgloss.Style, languagePreference *language.LanguagePreference) *Model {
+func New(width, height int, style lipgloss.Style, player *games.Player) *Model {
 	m := &Model{
 		Width:  width,
 		Height: height,
 
-		style:              style,
-		languagePreference: languagePreference,
+		style: style,
+
+		player: player,
 	}
 	m.screen = m.newSplashScreen()
 	return m
@@ -108,5 +111,5 @@ func (m Model) View() string {
 }
 
 func (m *Model) lang() *language.Language {
-	return m.languagePreference.Lang
+	return m.player.LanguagePreference.Lang
 }

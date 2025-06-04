@@ -16,7 +16,7 @@ func (k Keys) String(style lipgloss.Style) string {
 	if len(k) == 0 {
 		return ""
 	}
-	return style.Bold(true).Italic(true).Render("'" + k[0] + "'")
+	return style.Bold(true).Italic(true).Render(k[0])
 }
 
 var (

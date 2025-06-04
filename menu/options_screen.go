@@ -35,17 +35,20 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if keys.MenuEnglish.TriggeredBy(msg.String()) {
-			s.model.languagePreference.SetLanguage("EN")
+			s.model.player.LanguagePreference.SetLanguage("EN")
 		}
 		if keys.MenuSpanish.TriggeredBy(msg.String()) {
-			s.model.languagePreference.SetLanguage("ES")
+			s.model.player.LanguagePreference.SetLanguage("ES")
 		}
 		if keys.MenuStartNewGame.TriggeredBy(msg.String()) {
 			game := games.New(s.style)
-			player := game.AddPlayer(true)
+			if err := game.AddPlayer(s.model.player, true); err != nil {
+				s.model.error = s.model.lang().Get("error", "game", err.Error())
+				return s.model, nil
+			}
 			return s.model, func() tea.Msg {
 				return messages.SwitchViewMsg{
-					Model: board.NewModel(s.style, s.model.Width, s.model.Height, player, game, s.model.languagePreference),
+					Model: board.NewModel(s.style, s.model.Width, s.model.Height, s.model.player, game),
 				}
 			}
 		}
