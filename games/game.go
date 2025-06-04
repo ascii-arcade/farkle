@@ -56,11 +56,6 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			return ErrGameAlreadyInProgress
 		}
 
-		go func() {
-			<-player.ctx.Done()
-			g.RemovePlayer(player)
-		}()
-
 		player.Color = g.colors[len(g.players)%len(g.colors)]
 
 		if isHost {

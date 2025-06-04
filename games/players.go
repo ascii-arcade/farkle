@@ -13,6 +13,7 @@ var players = make(map[string]*Player)
 func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.LanguagePreference) *Player {
 	if player := getPlayer(sess); player != nil {
 		player.UpdateChan = make(chan struct{})
+		player.connected = true
 		return player
 	}
 
@@ -20,10 +21,17 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.Languag
 		Name:               utils.GenerateName(langPref.Lang),
 		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
+		connected:          true,
 		sess:               sess,
 		ctx:                ctx,
 	}
 	players[sess.User()] = player
+
+	go func() {
+		<-player.ctx.Done()
+		player.connected = false
+	}()
+
 	return player
 }
 
@@ -41,6 +49,16 @@ func RemovePlayer(player *Player) {
 	}
 }
 
-func PlayerCount() int {
+func GetPlayerCount() int {
 	return len(players)
+}
+
+func GetDisconnectedPlayerCount() int {
+	count := 0
+	for _, player := range players {
+		if !player.connected {
+			count++
+		}
+	}
+	return count
 }
