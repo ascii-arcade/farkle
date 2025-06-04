@@ -55,7 +55,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			m.game.RemovePlayer(m.player)
-			games.RemovePlayer(m.player)
 			return m, tea.Quit
 		}
 

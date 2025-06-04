@@ -53,10 +53,10 @@ func GetPlayerCount() int {
 	return len(players)
 }
 
-func GetDisconnectedPlayerCount() int {
+func GetConnectedPlayerCount() int {
 	count := 0
 	for _, player := range players {
-		if !player.connected {
+		if player.connected {
 			count++
 		}
 	}
