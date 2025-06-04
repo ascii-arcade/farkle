@@ -194,7 +194,7 @@ func (s *tableScreen) View() string {
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "bank"), keys.ActionBank.String(s.model.style)),
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "undo"), keys.ActionUndo.String(s.model.style)),
 		fmt.Sprintf(s.model.lang().Get("board", "controls", "help"), keys.OpenHelp.String(s.model.style)),
-		fmt.Sprintf(s.model.lang().Get("board", "controls", "juit"), keys.ExitApplication.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "join"), keys.ExitApplication.String(s.model.style)),
 	}, ", ")
 
 	return paneStyle.Render(
