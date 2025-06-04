@@ -39,10 +39,28 @@
     },
     "board": {
       "waiting_for_start": "Waiting for the host to start the game...",
+      "waiting_for_players": "Waiting for players to join...",
+      "game_code": "Game Code",
       "press_to_start": "Press %s to start the game",
       "player_list_you": "you",
       "player_list_host": "host",
-      "you_are": "You are %s"
+      "you_are": "You are %s",
+      "game_over": "Game Over",
+      "winner": "Winner: %s",
+      "host_can_restart": "The host can press %s to restart the game",
+      "your_turn": "Your turn",
+      "busted": "BUSTED",
+      "to_be_locked": "To be locked (%s)",
+      "to_be_banked": "To be banked (%s)",
+      "score": "Score: %d",
+      "controls": {
+        "roll": "%s to roll",
+        "lock": "%s to lock",
+        "bank": "%s to bank",
+        "undo": "%s to undo",
+        "help": "%s for help",
+        "quit": "%s to quit"
+      }
     },
     "help": {
       "title": "Help",

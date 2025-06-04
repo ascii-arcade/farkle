@@ -1,11 +1,12 @@
 package board
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/ascii-arcade/farkle/colors"
 	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/keys"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -51,10 +52,10 @@ func (s *tableScreen) View() string {
 		for _, player := range s.model.game.GetPlayers() {
 			n := player.StyledPlayerName(s.model.style)
 			if player.Host {
-				n += " (host)"
+				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))
 			}
 			if player.Name == s.model.player.Name {
-				n += " (you)"
+				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_you"))
 			}
 
 			playerNames = append(playerNames, n)
@@ -74,7 +75,7 @@ func (s *tableScreen) View() string {
 					lipgloss.JoinVertical(
 						lipgloss.Center,
 						[]string{
-							"Game Code: " + s.model.game.Code + "\n",
+							fmt.Sprintf("%s: %s\n", s.model.lang().Get("board", "game_code"), s.model.game.Code),
 							strings.Join(playerNames, "\n"),
 						}...,
 					),
@@ -85,11 +86,11 @@ func (s *tableScreen) View() string {
 		var statusMsg string
 		switch {
 		case s.model.player.Host && s.model.game.Ready():
-			statusMsg = "Press 's' to start the game"
+			statusMsg = fmt.Sprintf(s.model.lang().Get("board", "press_to_start"), keys.LobbyStartGame.String(s.model.style))
 		case s.model.player.Host:
-			statusMsg = "Waiting for more players to join..."
+			statusMsg = s.model.lang().Get("board", "waiting_for_players")
 		default:
-			statusMsg = "Waiting for host to start the game..."
+			statusMsg = s.model.lang().Get("board", "waiting_for_start")
 		}
 
 		return paneStyle.Render(lipgloss.JoinVertical(
@@ -104,9 +105,9 @@ func (s *tableScreen) View() string {
 		return paneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
-				s.model.style.Bold(true).Foreground(colors.Farkle).Render("Game Over!"),
-				s.model.style.Bold(true).Render("Winner: "+winner.StyledPlayerName(s.model.style)),
-				s.model.style.Render("The host can press 'r' to restart the game"),
+				s.model.style.Bold(true).Foreground(colors.Farkle).Render(s.model.lang().Get("board", "game_over")),
+				s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("board", "winner"), winner.StyledPlayerName(s.model.style))),
+				s.model.style.Render(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style)),
 			),
 		)
 	}
@@ -122,7 +123,7 @@ func (s *tableScreen) View() string {
 	poolRollStrings := []string{}
 	if s.model.game.GetTurnPlayer().Id == s.model.player.Id {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
-		poolRollStrings = append(poolRollStrings, "Your Turn!\n")
+		poolRollStrings = append(poolRollStrings, s.model.lang().Get("board", "your_turn")+"\n")
 	}
 	poolRollStrings = append(poolRollStrings, s.model.game.DicePool.Render(0, 6))
 	poolRollPane := lipgloss.JoinVertical(
@@ -145,15 +146,15 @@ func (s *tableScreen) View() string {
 			Height(10).
 			Foreground(colors.Error).
 			Align(lipgloss.Center, lipgloss.Center).
-			Render("BUSTED")
+			Render(s.model.lang().Get("board", "busted"))
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
 	}
 
 	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
-		"To be Locked (l)",
+		fmt.Sprintf(s.model.lang().Get("board", "to_be_locked"), keys.ActionLock.String(s.model.style)),
 		heldDie,
-		heldScorePaneStyle.Render("Score: "+strconv.Itoa(heldScore)),
+		heldScorePaneStyle.Render(fmt.Sprintf(s.model.lang().Get("board", "score"), heldScore)),
 	))
 
 	bankedDie := ""
@@ -171,10 +172,9 @@ func (s *tableScreen) View() string {
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
-		"To be Banked (b)",
-		s.model.style.
-			Height(10).Render(bankedDie),
-		"Score: "+strconv.Itoa(lockedScore),
+		fmt.Sprintf(s.model.lang().Get("board", "to_be_banked"), keys.ActionBank.String(s.model.style)),
+		s.model.style.Height(10).Render(bankedDie),
+		fmt.Sprintf(s.model.lang().Get("board", "score"), heldScore),
 	))
 
 	centeredText := ""
@@ -197,7 +197,14 @@ func (s *tableScreen) View() string {
 		centeredText,
 	)
 
-	controls := "r to roll, l to lock, b to bank, u to undo, ? for help, esc to quit"
+	controls := strings.Join([]string{
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "roll"), keys.ActionRoll.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "lock"), keys.ActionLock.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "bank"), keys.ActionBank.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "undo"), keys.ActionUndo.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "help"), keys.OpenHelp.String(s.model.style)),
+		fmt.Sprintf(s.model.lang().Get("board", "controls", "juit"), keys.ExitApplication.String(s.model.style)),
+	}, ", ")
 
 	return paneStyle.Render(
 		lipgloss.JoinVertical(
