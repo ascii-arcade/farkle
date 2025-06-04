@@ -9,6 +9,7 @@ import (
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -45,6 +46,8 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case cursor.BlinkMsg:
+		return s.model, nil
 	case tea.KeyMsg:
 		s.model.error = ""
 		if keys.PreviousScreen.TriggeredBy(msg.String()) {

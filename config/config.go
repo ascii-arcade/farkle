@@ -3,7 +3,7 @@ package config
 import "os"
 
 const (
-	MinimumHeight = 40
+	MinimumHeight = 33
 	MinimumWidth  = 120
 )
 

@@ -38,6 +38,40 @@
       "player_list_you": "tú",
       "player_list_host": "anfitrión",
       "you_are": "Eres %s"
+    },
+    "help": {
+      "title": "Ayuda",
+      "back": "Presiona %s para volver al juego.",
+      "objective": {
+        "title": "Objetivo",
+        "text": [
+          "El primer jugador en alcanzar 10,000 puntos inicia el final del juego.",
+          "Después de que comienza el final del juego, el resto de los jugadores tiene un último turno.",
+          "El jugador con más puntos al final del juego gana."
+        ]
+      },
+      "rules": {
+        "title": "Reglas",
+        "text": [
+          "Los jugadores se turnan para lanzar seis dados.",
+          "En cada turno, el jugador lanza y elige cualquier dado que pueda sumar puntos (reteniendo).",
+          "El jugador puede retener cualquier cantidad de dados, pero debe retener al menos uno.",
+          "El jugador puede entonces guardar los dados (bloqueando).",
+          "Luego, el jugador puede lanzar los dados restantes o detenerse y sumar los puntos (guardar).",
+          "La primera vez que un jugador guarda puntos, debe ser igual o mayor a 500.",
+          "Si el jugador lanza y no puede sumar puntos, pierde todos los puntos de ese turno (quiebra)."
+        ]
+      },
+      "scoring": {
+        "title": "Puntuación",
+        "points": "Puntos",
+        "four_of_a_kind": "Cuatro iguales",
+        "five_of_a_kind": "Cinco iguales",
+        "six_of_a_kind": "Seis iguales",
+        "three_pairs": "Tres pares",
+        "four_of_a_kind_pair": "Cuatro iguales + un par",
+        "two_triplets": "Dos tríos"
+      }
     }
   },
   "username_first_words": [
