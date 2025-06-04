@@ -15,6 +15,8 @@ var (
 	serverPortSSH string = "2222"
 	serverPortWeb string = "8080"
 	webAdminKey   string
+
+	Version string = "dev"
 )
 
 func Setup() {

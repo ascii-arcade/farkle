@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	logger  *slog.Logger
-	version = "dev"
+	logger *slog.Logger
 )
 
 func init() {
@@ -42,7 +41,7 @@ func init() {
 		handler = slog.NewTextHandler(os.Stdout, handlerOpts)
 	}
 
-	logger = slog.New(handler).With("app", "farkle", "version", version)
+	logger = slog.New(handler).With("app", "farkle", "version", config.Version)
 }
 
 func main() {
