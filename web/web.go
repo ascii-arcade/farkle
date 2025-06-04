@@ -53,9 +53,11 @@ func Run() error {
 		if err = t.Execute(w, struct {
 			TotalGames        int
 			TotalStartedGames int
+			TotalPlayers      int
 		}{
 			TotalGames:        totalGames,
 			TotalStartedGames: totalStartedGames,
+			TotalPlayers:      games.PlayerCount(),
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
