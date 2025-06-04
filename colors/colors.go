@@ -10,4 +10,5 @@ const (
 	Cursor  = lipgloss.Color("205")
 	Debug   = lipgloss.Color("#ff0000")
 	Farkle  = lipgloss.Color("#3B82F6")
+	Faded   = lipgloss.Color("#4f4f4f")
 )

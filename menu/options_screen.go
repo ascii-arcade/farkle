@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/board"
+	"github.com/ascii-arcade/farkle/colors"
+	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/language"
@@ -80,6 +82,8 @@ func (s *optionScreen) View() string {
 	} else if s.model.lang() == language.Languages["ES"] {
 		content.WriteString(fmt.Sprintf(language.Languages["EN"].Get("menu", "choose_language"), keys.MenuEnglish.String(s.style)))
 	}
+
+	content.WriteString(s.model.style.Foreground(colors.Faded).Render("\n\nVersion: " + config.Version))
 
 	return content.String()
 }
