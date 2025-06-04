@@ -30,7 +30,7 @@ func (s *helpScreen) View() string {
 	rules.WriteString(s.model.lang().Get("help", "rules", "title") + "\n")
 	rules.WriteString(s.model.lang().Get("help", "rules", "text") + "\n\n")
 
-	scoring := []string{dice.GetDieCharacter(1) + " = 100 " + s.model.lang().Get("help", "scoring", "title"),
+	scoring := []string{dice.GetDieCharacter(1) + " = 100 " + s.model.lang().Get("help", "scoring", "points"),
 		dice.GetDieCharacter(5) + " = 50 " + s.model.lang().Get("help", "scoring", "points"),
 		dice.GetDieCharacter(1) + " " + dice.GetDieCharacter(1) + " " + dice.GetDieCharacter(1) + " = 300 " + s.model.lang().Get("help", "scoring", "points"),
 		dice.GetDieCharacter(2) + " " + dice.GetDieCharacter(2) + " " + dice.GetDieCharacter(2) + " = 200 " + s.model.lang().Get("help", "scoring", "points"),
