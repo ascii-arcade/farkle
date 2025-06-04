@@ -162,7 +162,7 @@ func (s *tableScreen) View() string {
 		}
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		fmt.Sprintf(s.model.lang().Get("board", "to_be_banked"), keys.ActionBank.String(s.model.style)),
 		s.model.style.Height(10).Render(bankedDie),
 		fmt.Sprintf(s.model.lang().Get("board", "score"), lockedScore),
