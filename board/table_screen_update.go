@@ -32,7 +32,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		s.model.error = ""
 		switch msg.String() {
 		case "r":
-			if s.model.game.IsGameOver() && s.model.player.Host {
+			if s.model.game.IsGameOver() && s.model.player.IsHost {
 				s.model.game.Restart()
 				return s.model, nil
 			}
@@ -68,8 +68,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 			}
 		case "s":
-			if s.model.game.Ready() && s.model.player.Host {
-				s.model.game.Start()
+			if s.model.game.Ready() && s.model.player.IsHost {
+				if err := s.model.game.Start(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+				}
 			}
 		case "l":
 			_, err := s.model.game.DiceHeld.Score()

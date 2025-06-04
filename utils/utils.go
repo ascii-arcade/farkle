@@ -7,7 +7,7 @@ import (
 	"github.com/ascii-arcade/farkle/language"
 )
 
-func Name(lang *language.Language) string {
+func GenerateName(lang *language.Language) string {
 	a := lang.UsernameFirstWords[rand.IntN(len(lang.UsernameFirstWords))]
 	b := lang.UsernameSecondWords[rand.IntN(len(lang.UsernameSecondWords))]
 

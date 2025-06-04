@@ -51,7 +51,7 @@ func (s *tableScreen) View() string {
 		playerNames := []string{}
 		for _, player := range s.model.game.GetPlayers() {
 			n := player.StyledPlayerName(s.model.style)
-			if player.Host {
+			if player.IsHost {
 				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))
 			}
 			if player.Name == s.model.player.Name {
@@ -85,9 +85,9 @@ func (s *tableScreen) View() string {
 
 		var statusMsg string
 		switch {
-		case s.model.player.Host && s.model.game.Ready():
+		case s.model.player.IsHost && s.model.game.Ready():
 			statusMsg = fmt.Sprintf(s.model.lang().Get("board", "press_to_start"), keys.LobbyStartGame.String(s.model.style))
-		case s.model.player.Host:
+		case s.model.player.IsHost:
 			statusMsg = s.model.lang().Get("board", "waiting_for_players")
 		default:
 			statusMsg = s.model.lang().Get("board", "waiting_for_start")
@@ -121,7 +121,7 @@ func (s *tableScreen) View() string {
 	}
 
 	poolRollStrings := []string{}
-	if s.model.game.GetTurnPlayer().Id == s.model.player.Id {
+	if s.model.game.GetTurnPlayer().Name == s.model.player.Name {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
 		poolRollStrings = append(poolRollStrings, s.model.lang().Get("board", "your_turn")+"\n")
 	}

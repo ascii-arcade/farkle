@@ -22,8 +22,6 @@ type Model struct {
 	player *games.Player
 	game   *games.Game
 	screen screen.Screen
-
-	languagePreference *language.LanguagePreference
 }
 
 const (
@@ -31,15 +29,14 @@ const (
 	rollInterval = 200 * time.Millisecond
 )
 
-func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game, lang *language.LanguagePreference) Model {
+func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game) Model {
 	return Model{
-		player:             player,
-		game:               game,
-		style:              style,
-		width:              width,
-		height:             height,
-		screen:             &tableScreen{},
-		languagePreference: lang,
+		player: player,
+		game:   game,
+		style:  style,
+		width:  width,
+		height: height,
+		screen: &tableScreen{},
 	}
 }
 
@@ -97,5 +94,5 @@ func waitForRefreshSignal(ch chan struct{}) tea.Cmd {
 }
 
 func (m *Model) lang() *language.Language {
-	return m.languagePreference.Lang
+	return m.player.LanguagePreference.Lang
 }

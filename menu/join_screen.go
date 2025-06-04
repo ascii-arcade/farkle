@@ -66,8 +66,11 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					return s.model, nil
 				}
 
-				player := game.AddPlayer(false)
-				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, player, game, s.model.languagePreference)
+				if err := game.AddPlayer(s.model.player, false); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+					return s.model, nil
+				}
+				boardModel := board.NewModel(s.style, s.model.Width, s.model.Height, s.model.player, game)
 
 				return s.model, func() tea.Msg { return messages.SwitchViewMsg{Model: boardModel} }
 			}
