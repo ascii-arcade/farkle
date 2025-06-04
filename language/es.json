@@ -29,15 +29,34 @@
       "press_to_create": "Presiona %s para crear un nuevo juego",
       "press_to_join": "Presiona %s para unirte a un juego existente",
       "join": {
+        "game_code_placeholder": "Código",
         "enter_code": "EIngresa el código del juego para unirte:"
       }
     },
     "board": {
       "waiting_for_start": "Esperando a que el anfitrión inicie el juego...",
+      "waiting_for_players": "Esperando a que los jugadores se unan...",
+      "game_code": "Código del juego",
       "press_to_start": "Presiona %s para iniciar el juego",
       "player_list_you": "tú",
       "player_list_host": "anfitrión",
-      "you_are": "Eres %s"
+      "you_are": "Eres %s",
+      "game_over": "¡Juego terminado!",
+      "winner": "Ganador: %s",
+      "host_can_restart": "El anfitrión puede presionar %s para reiniciar el juego",
+      "your_turn": "Es tu turno",
+      "busted": "QUIEBRA",
+      "to_be_locked": "Para ser bloqueado (%s)",
+      "to_be_banked": "Para ser guardado (%s)",
+      "score": "Puntuación: %d",
+      "controls": {
+        "roll": "%s para lanzar",
+        "lock": "%s para bloquear",
+        "bank": "%s para guardar",
+        "undo": "%s para deshacer",
+        "help": "%s para ayuda",
+        "quit": "%s para salir"
+      }
     },
     "help": {
       "title": "Ayuda",

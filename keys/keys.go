@@ -33,4 +33,11 @@ var (
 	Submit         = Keys{"enter"}
 
 	LobbyStartGame = Keys{"s"}
+	RestartGame    = Keys{"r"}
+
+	ActionLock = Keys{"l"}
+	ActionBank = Keys{"b", "y"}
+	ActionRoll = Keys{"r"}
+	ActionUndo = Keys{"u", "backspace"}
+	OpenHelp   = Keys{"?"}
 )
