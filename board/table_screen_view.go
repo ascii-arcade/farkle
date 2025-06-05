@@ -115,8 +115,8 @@ func (s *tableScreen) View() string {
 		return paneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
-				s.model.style.Bold(true).Foreground(colors.Error).Render(s.model.lang().Get("board", "player_disconnected", dcPlayers[0].Name)),
-				s.model.style.Render(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style)),
+				s.model.style.Bold(true).Foreground(colors.Error).Render(fmt.Sprintf(s.model.lang().Get("board", "player_disconnected"), dcPlayers[0].Name)),
+				s.model.style.Render(fmt.Sprintf(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style))),
 			),
 		)
 	}
