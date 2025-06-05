@@ -111,6 +111,16 @@ func (s *tableScreen) View() string {
 		)
 	}
 
+	if dcPlayers := s.model.game.GetDisconnectedPlayers(); len(dcPlayers) > 0 {
+		return paneStyle.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Center,
+				s.model.style.Bold(true).Foreground(colors.Error).Render(s.model.lang().Get("board", "player_disconnected", dcPlayers[0].Name)),
+				s.model.style.Render(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style)),
+			),
+		)
+	}
+
 	poolRollStrings := []string{}
 	if s.model.game.GetTurnPlayer().Name == s.model.player.Name {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)

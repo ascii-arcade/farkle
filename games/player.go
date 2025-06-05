@@ -16,12 +16,13 @@ type Player struct {
 
 	IsHost bool
 
+	connected bool
+
 	UpdateChan         chan struct{}
 	LanguagePreference *language.LanguagePreference
 
-	connected bool
-	sess      ssh.Session
-	ctx       context.Context
+	Sess ssh.Session
+	ctx  context.Context
 }
 
 func (p *Player) SetName(name string) *Player {
