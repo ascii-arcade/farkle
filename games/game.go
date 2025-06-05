@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/score"
 	"github.com/charmbracelet/lipgloss"
@@ -125,8 +126,13 @@ func (g *Game) Ready() bool {
 }
 
 func (g *Game) NextTurn() {
+	score := 10000
+	if config.GetDebug() {
+		score = 1000
+	}
+
 	player := g.GetTurnPlayer()
-	if player.Score >= 10000 && !g.endGame {
+	if player.Score >= score && !g.endGame {
 		g.endGame = true
 		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
 	}
@@ -276,19 +282,15 @@ func (g *Game) Bank() error {
 
 func (g *Game) GetWinningPlayer() *Player {
 	var player *Player
-	_ = g.withLock(func() error {
-		if !g.endGame {
-			return nil
-		}
-
-		for _, p := range g.players {
-			if player == nil || p.Score > player.Score {
-				player = p
-			}
-		}
-
+	if !g.endGame {
 		return nil
-	})
+	}
+
+	for _, p := range g.players {
+		if player == nil || p.Score > player.Score {
+			player = p
+		}
+	}
 
 	return player
 }

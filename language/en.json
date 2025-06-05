@@ -25,6 +25,10 @@
       "join": {
         "invalid_code": "Invalid game code, please try again",
         "lobby_full": "Lobby is full"
+      },
+      "disconnected": {
+        "title": "Disconnected",
+        "text": "%s has disconnected from the game. Waiting for them to reconnect..."
       }
     },
     "menu": {
@@ -47,7 +51,7 @@
       "you_are": "You are %s",
       "game_over": "Game Over",
       "winner": "Winner: %s",
-      "host_can_restart": "The host can press %s to restart the game",
+      "host_can_restart": "The host can press '%s' to restart the game",
       "your_turn": "Your turn",
       "busted": "BUSTED",
       "to_be_locked": "To be locked (%s)",

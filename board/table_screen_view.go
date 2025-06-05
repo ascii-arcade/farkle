@@ -106,7 +106,7 @@ func (s *tableScreen) View() string {
 				lipgloss.Center,
 				s.model.style.Bold(true).Foreground(colors.Farkle).Render(s.model.lang().Get("board", "game_over")),
 				s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("board", "winner"), winner.StyledPlayerName(s.model.style))),
-				s.model.style.Render(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style)),
+				s.model.style.Render(fmt.Sprintf(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style))),
 			),
 		)
 	}
