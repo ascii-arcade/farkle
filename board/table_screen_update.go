@@ -48,6 +48,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					return rollMsg{}
 				})
 			}
+
 		case "1", "2", "3", "4", "5", "6":
 			if s.model.game.Rolled && slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
 				face, _ := strconv.Atoi(msg.String())
@@ -56,6 +57,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					return s.model, nil
 				}
 			}
+
 		case "!", "@", "#", "$", "%", "^":
 			if s.model.game.Rolled {
 				faceMap := map[string]int{"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6}
@@ -71,37 +73,45 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				}
 
 			}
-		case "s":
-			if s.model.game.Ready() && s.model.player.IsHost {
-				if err := s.model.game.Start(); err != nil {
-					s.model.error = s.model.lang().Get("error", "game", err.Error())
-				}
-			}
+
 		case "l":
 			_, err := s.model.game.DiceHeld.Score()
 			if len(s.model.game.DiceHeld) != 0 && err == nil {
-				s.model.game.LockDice()
+				if err := s.model.game.LockDice(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+					return s.model, nil
+				}
 			}
+
 		case "y", "b":
 			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
 				if err := s.model.game.Bank(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
+					return s.model, nil
 				}
 			}
+
 		case "a":
 			for _, face := range score.GetScorableDieFaces(s.model.game.DicePool) {
 				s.model.game.HoldDie(face)
 			}
+
 		case "u", "backspace":
 			if len(s.model.game.DiceHeld) > 0 {
 				s.model.game.Undo()
 			}
+
 		case "U":
 			if len(s.model.game.DiceHeld) > 0 {
 				s.model.game.UndoAll()
 			}
+
 		case "c":
-			s.model.game.ClearHeld()
+			if err := s.model.game.ClearHeld(); err != nil {
+				s.model.error = s.model.lang().Get("error", "game", err.Error())
+				return s.model, nil
+			}
+
 		case "?":
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
