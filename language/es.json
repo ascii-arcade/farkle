@@ -21,7 +21,11 @@
         "already_in_progress": "El juego ya está en curso",
         "not_enough_players": "No hay suficientes jugadores"
       },
-      "join": {}
+      "join": {},
+      "disconnected": {
+        "title": "Desconectado",
+        "text": "%s se ha desconectado del juego. Esperando a que se reconecte..."
+      }
     },
     "menu": {
       "choose_language": "Para español, presiona %s",
@@ -43,7 +47,7 @@
       "you_are": "Eres %s",
       "game_over": "¡Juego terminado!",
       "winner": "Ganador: %s",
-      "host_can_restart": "El anfitrión puede presionar %s para reiniciar el juego",
+      "host_can_restart": "El anfitrión puede presionar '%s' para reiniciar el juego",
       "your_turn": "Es tu turno",
       "busted": "QUIEBRA",
       "to_be_locked": "Para ser bloqueado (%s)",
