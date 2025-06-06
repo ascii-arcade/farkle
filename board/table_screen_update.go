@@ -71,7 +71,13 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				for range c {
 					s.model.game.HoldDie(face)
 				}
+			}
 
+		case "s":
+			if s.model.game.Ready() && s.model.player.IsHost {
+				if err := s.model.game.Start(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+				}
 			}
 
 		case "l":

@@ -67,7 +67,7 @@ func (s *joinScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			if len(s.gameCodeInput.Value()) == 7 {
 				code := strings.ToUpper(s.gameCodeInput.Value())
 				game, err := games.GetOpenGame(code)
-				if err != nil && (errors.Is(err, games.ErrGameAlreadyInProgress) && game.HasPlayer(s.model.player)) {
+				if err != nil && !(errors.Is(err, games.ErrGameAlreadyInProgress) && game.HasPlayer(s.model.player)) {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
 					return s.model, nil
 				}

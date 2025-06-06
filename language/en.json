@@ -26,10 +26,7 @@
         "invalid_code": "Invalid game code, please try again",
         "lobby_full": "Lobby is full"
       },
-      "disconnected": {
-        "title": "Disconnected",
-        "text": "%s has disconnected from the game. Waiting for them to reconnect..."
-      }
+      "disconnected": "%s has disconnected from the game. Waiting for them to reconnect..."
     },
     "menu": {
       "choose_language": "For English, press %s",

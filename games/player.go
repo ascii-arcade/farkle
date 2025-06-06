@@ -20,9 +20,9 @@ type Player struct {
 
 	UpdateChan         chan struct{}
 	LanguagePreference *language.LanguagePreference
+	Sess               ssh.Session
 
-	Sess ssh.Session
-	ctx  context.Context
+	ctx context.Context
 }
 
 func (p *Player) SetName(name string) *Player {
