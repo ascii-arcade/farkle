@@ -37,17 +37,17 @@ func (m Model) View() string {
 	return m.active.View()
 }
 
-func TeaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-	pty, _, _ := s.Pty()
-	renderer := bubbletea.MakeRenderer(s)
+func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
+	pty, _, _ := sess.Pty()
+	renderer := bubbletea.MakeRenderer(sess)
 	style := renderer.NewStyle()
 
 	languagePreference := language.LanguagePreference{Lang: language.DefaultLanguage}
 
-	player := games.NewPlayer(s.Context(), &languagePreference)
+	player := games.NewPlayer(sess.Context(), sess, &languagePreference)
 
 	return Model{
-		sess:   s,
+		sess:   sess,
 		active: menu.New(pty.Window.Width, pty.Window.Height, style, player),
 	}, []tea.ProgramOption{tea.WithAltScreen()}
 }

@@ -22,10 +22,7 @@
         "not_enough_players": "No hay suficientes jugadores"
       },
       "join": {},
-      "disconnected": {
-        "title": "Desconectado",
-        "text": "%s se ha desconectado del juego. Esperando a que se reconecte..."
-      }
+      "disconnected": "%s se ha desconectado del juego. Esperando a que se reconecte..."
     },
     "menu": {
       "choose_language": "Para español, presiona %s",

@@ -61,7 +61,7 @@ func GetOpenGame(code string) (*Game, error) {
 		return nil, ErrGameNotFound
 	}
 	if game.InProgress {
-		return nil, ErrGameAlreadyInProgress
+		return game, ErrGameAlreadyInProgress
 	}
 
 	return game, nil

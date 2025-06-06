@@ -10,6 +10,7 @@ import (
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/score"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/ssh"
 )
 
 type Game struct {
@@ -52,14 +53,13 @@ func (g *Game) Start() error {
 
 func (g *Game) AddPlayer(player *Player, isHost bool) error {
 	return g.withLock(func() error {
+		if _, ok := g.getPlayer(player.Sess); ok {
+			return nil
+		}
+
 		if g.InProgress {
 			return ErrGameAlreadyInProgress
 		}
-
-		go func() {
-			<-player.ctx.Done()
-			g.RemovePlayer(player)
-		}()
 
 		player.Color = g.colors[len(g.players)%len(g.colors)]
 
@@ -366,16 +366,29 @@ func (g *Game) Refresh() {
 	}
 }
 
-func (g *Game) GetPlayer(name string) *Player {
-	var player *Player
-	_ = g.withLock(func() error {
-		for _, p := range g.players {
-			if p.Name == name {
-				player = p
-				break
+func (s *Game) getPlayer(sess ssh.Session) (*Player, bool) {
+	for _, p := range s.players {
+		if p.Sess.User() == sess.User() {
+			return p, true
+		}
+	}
+	return nil, false
+}
+
+func (s *Game) GetDisconnectedPlayers() []*Player {
+	var players []*Player
+	_ = s.withLock(func() error {
+		for _, p := range s.players {
+			if !p.connected {
+				players = append(players, p)
 			}
 		}
 		return nil
 	})
-	return player
+	return players
+}
+
+func (s *Game) HasPlayer(player *Player) bool {
+	_, exists := s.getPlayer(player.Sess)
+	return exists
 }
