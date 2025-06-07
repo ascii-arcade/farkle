@@ -9,6 +9,7 @@ import (
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/score"
+	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 )
@@ -62,6 +63,7 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 		}
 
 		player.Color = g.colors[len(g.players)%len(g.colors)]
+		player.Name = utils.GenerateName(player.LanguagePreference.Lang)
 
 		if isHost {
 			player.IsHost = true

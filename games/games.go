@@ -33,6 +33,7 @@ func New(style lipgloss.Style) *Game {
 		style:     style,
 		colors:    colors,
 	}
+	game.Restart()
 	games[game.Code] = game
 	return game
 }
