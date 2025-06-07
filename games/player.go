@@ -21,6 +21,7 @@ type Player struct {
 	UpdateChan         chan struct{}
 	LanguagePreference *language.LanguagePreference
 	Sess               ssh.Session
+	onDisconnect       []func()
 
 	ctx context.Context
 }
@@ -36,5 +37,12 @@ func (p *Player) MakeHost() *Player {
 }
 
 func (p *Player) StyledPlayerName(style lipgloss.Style) string {
+	if p == nil {
+		return ""
+	}
 	return style.Foreground(p.Color).Render(p.Name)
+}
+
+func (p *Player) OnDisconnect(fn func()) {
+	p.onDisconnect = append(p.onDisconnect, fn)
 }

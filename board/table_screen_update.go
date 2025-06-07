@@ -11,10 +11,6 @@ import (
 )
 
 func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
-	if !s.model.game.IsTurn(s.model.player) {
-		return s.model, nil
-	}
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		s.model.height, s.model.width = msg.Height, msg.Width
@@ -33,6 +29,17 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		s.model.game.RollDice()
 
 	case tea.KeyMsg:
+		if msg.String() == "?" {
+			return s.model, func() tea.Msg {
+				return messages.SwitchScreenMsg{
+					Screen: &helpScreen{model: s.model},
+				}
+			}
+		}
+
+		if !s.model.game.IsTurn(s.model.player) {
+			return s.model, nil
+		}
 		s.model.error = ""
 		switch msg.String() {
 		case "r":
@@ -116,13 +123,6 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			if err := s.model.game.ClearHeld(); err != nil {
 				s.model.error = s.model.lang().Get("error", "game", err.Error())
 				return s.model, nil
-			}
-
-		case "?":
-			return s.model, func() tea.Msg {
-				return messages.SwitchScreenMsg{
-					Screen: &helpScreen{model: s.model},
-				}
 			}
 		}
 	}

@@ -67,6 +67,12 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			player.IsHost = true
 		}
 
+		player.OnDisconnect(func() {
+			if !g.InProgress {
+				g.RemovePlayer(player)
+			}
+		})
+
 		g.players = append(g.players, player)
 		return nil
 	})
@@ -89,7 +95,7 @@ func (g *Game) RemovePlayer(player *Player) {
 			g.InProgress = false
 		}
 
-		if len(g.players) == 0 {
+		if g.GetPlayerCount(false) == 0 {
 			delete(games, g.Code)
 		}
 
@@ -391,4 +397,14 @@ func (s *Game) GetDisconnectedPlayers() []*Player {
 func (s *Game) HasPlayer(player *Player) bool {
 	_, exists := s.getPlayer(player.Sess)
 	return exists
+}
+
+func (s *Game) GetPlayerCount(includeDisconnected bool) int {
+	count := 0
+	for _, p := range s.players {
+		if includeDisconnected || p.connected {
+			count++
+		}
+	}
+	return count
 }
