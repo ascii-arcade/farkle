@@ -67,6 +67,12 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			player.IsHost = true
 		}
 
+		player.OnDisconnect(func() {
+			if !g.InProgress {
+				g.RemovePlayer(player)
+			}
+		})
+
 		g.players = append(g.players, player)
 		return nil
 	})

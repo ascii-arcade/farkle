@@ -26,6 +26,7 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.Languag
 		LanguagePreference: langPref,
 		connected:          true,
 		Sess:               sess,
+		onDisconnect:       []func(){},
 		ctx:                ctx,
 	}
 	players[sess.User()] = player
@@ -34,6 +35,9 @@ RETURN:
 	go func() {
 		<-player.ctx.Done()
 		player.connected = false
+		for _, fn := range player.onDisconnect {
+			fn()
+		}
 	}()
 
 	return player
