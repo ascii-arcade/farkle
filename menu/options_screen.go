@@ -83,7 +83,7 @@ func (s *optionScreen) View() string {
 		content.WriteString(fmt.Sprintf(language.Languages["EN"].Get("menu", "choose_language"), keys.MenuEnglish.String(s.style)))
 	}
 
-	content.WriteString(s.model.style.Foreground(colors.Faded).Render("\n\nVersion: " + config.Version))
+	content.WriteString(s.model.style.Foreground(colors.Faded).Render("\n\n" + config.Version))
 
 	return content.String()
 }
