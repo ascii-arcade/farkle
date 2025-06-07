@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/score"
 	tea "github.com/charmbracelet/bubbletea"
@@ -29,7 +30,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		s.model.game.RollDice()
 
 	case tea.KeyMsg:
-		if msg.String() == "?" {
+		if keys.OpenHelp.TriggeredBy(msg.String()) {
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
 					Screen: &helpScreen{model: s.model},
@@ -41,8 +42,8 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			return s.model, nil
 		}
 		s.model.error = ""
-		switch msg.String() {
-		case "r":
+
+		if keys.ActionRoll.TriggeredBy(msg.String()) {
 			if s.model.game.IsGameOver() && s.model.player.IsHost {
 				s.model.game.Restart()
 				return s.model, nil
@@ -55,7 +56,61 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					return rollMsg{}
 				})
 			}
+		}
 
+		if keys.LobbyStartGame.TriggeredBy(msg.String()) {
+			if s.model.game.Ready() && s.model.player.IsHost {
+				if err := s.model.game.Start(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+				}
+			}
+		}
+
+		if keys.ActionLock.TriggeredBy(msg.String()) {
+			_, err := s.model.game.DiceHeld.Score()
+			if len(s.model.game.DiceHeld) != 0 && err == nil {
+				if err := s.model.game.LockDice(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+					return s.model, nil
+				}
+			}
+		}
+
+		if keys.ActionBank.TriggeredBy(msg.String()) {
+			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
+				if err := s.model.game.Bank(); err != nil {
+					s.model.error = s.model.lang().Get("error", "game", err.Error())
+					return s.model, nil
+				}
+			}
+		}
+
+		if keys.ActionTakeAll.TriggeredBy(msg.String()) {
+			for _, face := range score.GetScorableDieFaces(s.model.game.DicePool) {
+				s.model.game.HoldDie(face)
+			}
+		}
+
+		if keys.ActionUndo.TriggeredBy(msg.String()) {
+			if len(s.model.game.DiceHeld) > 0 {
+				s.model.game.Undo()
+			}
+		}
+
+		if keys.ActionUndoAll.TriggeredBy(msg.String()) {
+			if len(s.model.game.DiceHeld) > 0 {
+				s.model.game.UndoAll()
+			}
+		}
+
+		if keys.ActionClear.TriggeredBy(msg.String()) {
+			if err := s.model.game.ClearHeld(); err != nil {
+				s.model.error = s.model.lang().Get("error", "game", err.Error())
+				return s.model, nil
+			}
+		}
+
+		switch msg.String() {
 		case "1", "2", "3", "4", "5", "6":
 			if s.model.game.Rolled && slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
 				face, _ := strconv.Atoi(msg.String())
@@ -78,51 +133,6 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				for range c {
 					s.model.game.HoldDie(face)
 				}
-			}
-
-		case "s":
-			if s.model.game.Ready() && s.model.player.IsHost {
-				if err := s.model.game.Start(); err != nil {
-					s.model.error = s.model.lang().Get("error", "game", err.Error())
-				}
-			}
-
-		case "l":
-			_, err := s.model.game.DiceHeld.Score()
-			if len(s.model.game.DiceHeld) != 0 && err == nil {
-				if err := s.model.game.LockDice(); err != nil {
-					s.model.error = s.model.lang().Get("error", "game", err.Error())
-					return s.model, nil
-				}
-			}
-
-		case "y", "b":
-			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
-				if err := s.model.game.Bank(); err != nil {
-					s.model.error = s.model.lang().Get("error", "game", err.Error())
-					return s.model, nil
-				}
-			}
-
-		case "a":
-			for _, face := range score.GetScorableDieFaces(s.model.game.DicePool) {
-				s.model.game.HoldDie(face)
-			}
-
-		case "u", "backspace":
-			if len(s.model.game.DiceHeld) > 0 {
-				s.model.game.Undo()
-			}
-
-		case "U":
-			if len(s.model.game.DiceHeld) > 0 {
-				s.model.game.UndoAll()
-			}
-
-		case "c":
-			if err := s.model.game.ClearHeld(); err != nil {
-				s.model.error = s.model.lang().Get("error", "game", err.Error())
-				return s.model, nil
 			}
 		}
 	}

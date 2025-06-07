@@ -35,9 +35,12 @@ var (
 	LobbyStartGame = Keys{"s"}
 	RestartGame    = Keys{"r"}
 
-	ActionLock = Keys{"l"}
-	ActionBank = Keys{"b", "y"}
-	ActionRoll = Keys{"r"}
-	ActionUndo = Keys{"u", "backspace"}
-	OpenHelp   = Keys{"?"}
+	ActionClear   = Keys{"c"}
+	ActionLock    = Keys{"l"}
+	ActionBank    = Keys{"b", "y"}
+	ActionRoll    = Keys{"r"}
+	ActionUndo    = Keys{"u", "backspace"}
+	ActionUndoAll = Keys{"U"}
+	ActionTakeAll = Keys{"a"}
+	OpenHelp      = Keys{"?"}
 )

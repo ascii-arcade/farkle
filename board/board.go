@@ -5,6 +5,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
+	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/screen"
@@ -52,8 +53,7 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		if keys.ExitApplication.TriggeredBy(msg.String()) {
 			m.game.RemovePlayer(m.player)
 			return m, tea.Quit
 		}
