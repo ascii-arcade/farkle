@@ -35,7 +35,6 @@ var (
 	LobbyStartGame = Keys{"s"}
 	RestartGame    = Keys{"r"}
 
-	ActionClear   = Keys{"c"}
 	ActionLock    = Keys{"l"}
 	ActionBank    = Keys{"b", "y"}
 	ActionRoll    = Keys{"r"}
