@@ -64,6 +64,7 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 
 		player.Color = g.colors[len(g.players)%len(g.colors)]
 		player.Name = utils.GenerateName(player.LanguagePreference.Lang)
+		player.Score = 0
 
 		if isHost {
 			player.IsHost = true
