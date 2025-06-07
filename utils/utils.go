@@ -8,10 +8,15 @@ import (
 )
 
 func GenerateName(lang *language.Language) string {
+AGAIN:
 	a := lang.UsernameFirstWords[rand.IntN(len(lang.UsernameFirstWords))]
 	b := lang.UsernameSecondWords[rand.IntN(len(lang.UsernameSecondWords))]
+	n := fmt.Sprintf("%s %s", a, b)
+	if len(n) > 15 {
+		goto AGAIN
+	}
 
-	return fmt.Sprintf("%s %s", a, b)
+	return n
 }
 
 func GenerateCode() string {
