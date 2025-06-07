@@ -20,14 +20,13 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	case rollMsg:
 		if s.rollTickCount < rollFrames {
 			s.rollTickCount++
-			s.model.game.DicePool.Roll()
-			s.model.game.Refresh()
+			s.model.game.RollDice(s.rolling)
 			return s.model, tea.Tick(rollInterval, func(time.Time) tea.Msg {
 				return rollMsg{}
 			})
 		}
 		s.rolling = false
-		s.model.game.RollDice()
+		s.model.game.RollDice(s.rolling)
 
 	case tea.KeyMsg:
 		if keys.OpenHelp.TriggeredBy(msg.String()) {
@@ -100,13 +99,6 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		if keys.ActionUndoAll.TriggeredBy(msg.String()) {
 			if len(s.model.game.DiceHeld) > 0 {
 				s.model.game.UndoAll()
-			}
-		}
-
-		if keys.ActionClear.TriggeredBy(msg.String()) {
-			if err := s.model.game.ClearHeld(); err != nil {
-				s.model.error = s.model.lang().Get("error", "game", err.Error())
-				return s.model, nil
 			}
 		}
 
