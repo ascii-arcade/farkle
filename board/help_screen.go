@@ -28,7 +28,7 @@ func (s *helpScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		return s.model, nil
 
 	case tea.KeyMsg:
-		if msg.String() == "q" {
+		if keys.Back.TriggeredBy(msg.String()) {
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
 					Screen: &tableScreen{},
