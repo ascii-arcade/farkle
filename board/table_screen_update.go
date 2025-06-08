@@ -85,6 +85,9 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionTakeAll.TriggeredBy(msg.String()) {
+			if len(s.model.game.DiceHeld) > 0 {
+				s.model.game.UndoAll()
+			}
 			_, all, _ := score.Calculate(s.model.game.DicePool, true)
 			allCopy := slices.Clone(all)
 			for _, face := range allCopy {
