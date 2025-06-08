@@ -132,7 +132,7 @@ func (s *tableScreen) View() string {
 		poolPaneStyle.Render(poolRollStrings...),
 	)
 
-	heldScore, err := s.model.game.DiceHeld.Score()
+	heldScore, _, err := s.model.game.DiceHeld.Score()
 	if err != nil {
 		s.model.error = err.Error()
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
@@ -164,7 +164,7 @@ func (s *tableScreen) View() string {
 	}
 	lockedScore := 0
 	for _, diePool := range s.model.game.DiceLocked {
-		ls, err := diePool.Score()
+		ls, _, err := diePool.Score()
 		if err != nil {
 			s.model.error = err.Error()
 		} else {

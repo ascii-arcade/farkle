@@ -240,7 +240,7 @@ func (g *Game) RenderLog(limit int) string {
 }
 
 func (g *Game) busted() bool {
-	if _, err := score.Calculate(g.DicePool, true); err != nil {
+	if _, _, err := score.Calculate(g.DicePool, true); err != nil {
 		return true
 	}
 	return false
