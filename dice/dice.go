@@ -13,7 +13,7 @@ type DicePool []int
 
 func NewDicePool(size int) DicePool {
 	if size == 6 {
-		return DicePool{3, 3, 4, 4, 4, 4}
+		return DicePool{1, 1, 1, 1, 1, 1}
 	}
 	p := make(DicePool, size)
 	for i := range p {
