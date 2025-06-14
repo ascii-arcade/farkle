@@ -83,7 +83,7 @@ func (g *Game) LockDice() error {
 		if len(g.DiceHeld) == 0 {
 			return nil
 		}
-		if _, err := score.Calculate(g.DiceHeld, false); err != nil {
+		if _, _, err := score.Calculate(g.DiceHeld, false); err != nil {
 			return err
 		}
 
@@ -103,7 +103,7 @@ func (g *Game) Bank() error {
 	return g.withErrLock(func() error {
 		turnScore := 0
 		for _, diceLocked := range g.DiceLocked {
-			score, err := diceLocked.Score()
+			score, _, err := diceLocked.Score()
 			if err != nil {
 				return err
 			}

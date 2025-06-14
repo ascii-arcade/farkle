@@ -66,7 +66,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionLock.TriggeredBy(msg.String()) {
-			_, err := s.model.game.DiceHeld.Score()
+			_, _, err := s.model.game.DiceHeld.Score()
 			if len(s.model.game.DiceHeld) != 0 && err == nil {
 				if err := s.model.game.LockDice(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
@@ -85,7 +85,12 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionTakeAll.TriggeredBy(msg.String()) {
-			for _, face := range score.GetScorableDieFaces(s.model.game.DicePool) {
+			if len(s.model.game.DiceHeld) > 0 {
+				s.model.game.UndoAll()
+			}
+			_, all, _ := score.Calculate(s.model.game.DicePool, true)
+			allCopy := slices.Clone(all)
+			for _, face := range allCopy {
 				s.model.game.HoldDie(face)
 			}
 		}

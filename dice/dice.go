@@ -12,6 +12,9 @@ import (
 type DicePool []int
 
 func NewDicePool(size int) DicePool {
+	if size == 6 {
+		return DicePool{1, 1, 1, 1, 1, 1}
+	}
 	p := make(DicePool, size)
 	for i := range p {
 		p[i] = 1
@@ -43,7 +46,7 @@ func (p *DicePool) Remove(face int) bool {
 	return false
 }
 
-func (p *DicePool) Score() (int, error) {
+func (p *DicePool) Score() (int, []int, error) {
 	return score.Calculate(*p, false)
 }
 
