@@ -44,7 +44,11 @@ func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
 
 	languagePreference := language.LanguagePreference{Lang: language.DefaultLanguage}
 
-	player := games.NewPlayer(sess.Context(), sess, &languagePreference)
+	player, err := games.NewPlayer(sess.Context(), sess, &languagePreference)
+	if err != nil {
+		sess.Write([]byte("Error connecting: " + err.Error() + "\n"))
+		return nil, nil
+	}
 
 	return Model{
 		sess:   sess,
