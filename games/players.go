@@ -2,6 +2,7 @@ package games
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/charmbracelet/ssh"
@@ -9,9 +10,17 @@ import (
 
 var players = make(map[string]*Player)
 
-func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.LanguagePreference) *Player {
+var (
+	ErrAlreadyConnected = errors.New("player already connected")
+)
+
+func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.LanguagePreference) (*Player, error) {
 	player, exists := players[sess.User()]
 	if exists {
+		if player.connected {
+			return nil, ErrAlreadyConnected
+		}
+
 		player.UpdateChan = make(chan struct{})
 		player.connected = true
 		player.ctx = ctx
@@ -38,7 +47,7 @@ RETURN:
 		}
 	}()
 
-	return player
+	return player, nil
 }
 
 func RemovePlayer(player *Player) {
