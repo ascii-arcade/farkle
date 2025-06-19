@@ -123,14 +123,14 @@ func (g *Game) nextTurn() {
 		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
 	}
 
-	if g.endGame && !player.PlayedLastTurn {
-		player.PlayedLastTurn = true
-	}
-
 	if g.IsGameOver() {
 		winner := g.GetWinningPlayer()
 		g.log = append(g.log, winner.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winner.Score)+"!")
 		return
+	}
+
+	if g.endGame && !player.PlayedLastTurn {
+		player.PlayedLastTurn = true
 	}
 
 	g.turn++
