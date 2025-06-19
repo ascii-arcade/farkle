@@ -137,7 +137,6 @@ func (g *Game) nextTurn() {
 	if g.turn >= len(g.players) {
 		g.turn = 0
 	}
-	g.FirstRoll = true
 	g.Rolled = false
 	g.Busted = false
 	g.DiceLocked = []dice.DicePool{}
