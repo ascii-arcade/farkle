@@ -12,10 +12,6 @@ func (g *Game) Start() error {
 		if g.InProgress {
 			return ErrGameAlreadyInProgress
 		}
-		for _, p := range g.players {
-			p.Score = 0
-			p.PlayedLastTurn = false
-		}
 		g.InProgress = true
 		return nil
 	})
