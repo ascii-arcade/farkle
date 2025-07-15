@@ -42,8 +42,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 		s.model.error = ""
 
+		playerData := s.model.game.GetPlayerData(s.model.player)
+
 		if keys.ActionRoll.TriggeredBy(msg.String()) {
-			if s.model.game.IsGameOver() && s.model.player.IsHost {
+			if s.model.game.IsGameOver() && playerData.IsHost {
 				s.model.game.Restart()
 				return s.model, nil
 			}
@@ -58,7 +60,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.LobbyStartGame.TriggeredBy(msg.String()) {
-			if s.model.game.Ready() && s.model.player.IsHost {
+			if s.model.game.Ready() && playerData.IsHost {
 				if err := s.model.game.Start(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
 				}

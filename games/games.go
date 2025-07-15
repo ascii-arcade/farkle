@@ -32,6 +32,7 @@ func New(style lipgloss.Style) *Game {
 		Code:      utils.GenerateCode(),
 		style:     style,
 		colors:    colors,
+		players:   make(map[*Player]*PlayerData),
 	}
 	game.Restart()
 	games[game.Code] = game

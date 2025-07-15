@@ -28,11 +28,13 @@ func (s *disconnectedPlayersScreen) View() string {
 	}
 
 	style := s.model.style.Width(s.model.width).Height(s.model.height)
-	paneStyle := style.Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(s.model.player.Color)
+	playerData := s.model.game.GetPlayerData(s.model.player)
+	paneStyle := style.Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(playerData.Color)
 
 	content := "Disconnected Players:\n"
 	for _, player := range s.model.game.GetDisconnectedPlayers() {
-		content += "- " + player.Name + "\n"
+		playerData := s.model.game.GetPlayerData(player)
+		content += "- " + playerData.Name + "\n"
 	}
 
 	return paneStyle.Render(content)
