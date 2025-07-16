@@ -42,6 +42,7 @@ func (g *Game) RollDice(rolling bool) {
 		if !rolling {
 			g.Rolled = true
 			g.log = append(g.log, g.players[g.GetTurnPlayer()].StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
+			g.DiceLocked = append(g.DiceLocked, dice.NewDicePool(0))
 
 			if g.busted() {
 				g.Busted = true
@@ -87,7 +88,11 @@ func (g *Game) LockDice() error {
 			return err
 		}
 
-		g.DiceLocked = append(g.DiceLocked, g.DiceHeld)
+		if len(g.DiceLocked) == 0 {
+			g.DiceLocked = append(g.DiceLocked, dice.NewDicePool(0))
+		}
+
+		g.DiceLocked[len(g.DiceLocked)-1] = g.DiceHeld.Copy()
 		g.DiceHeld = dice.NewDicePool(0)
 		g.Rolled = false
 

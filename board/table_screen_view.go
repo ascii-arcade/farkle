@@ -84,22 +84,12 @@ func (s *tableScreen) View() string {
 
 	heldScore, _, err := s.model.game.DiceHeld.Score()
 	if err != nil {
-		s.model.error = err.Error()
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
 	}
 
 	heldDie := s.model.style.
 		Height(10).
 		Render(s.model.game.DiceHeld.Render(0, 6))
-
-	if s.model.game.Busted {
-		heldDie = s.model.style.
-			Height(10).
-			Foreground(colors.Error).
-			Align(lipgloss.Center, lipgloss.Center).
-			Render(s.model.lang().Get("board", "busted"))
-		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
-	}
 
 	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -108,24 +98,26 @@ func (s *tableScreen) View() string {
 		heldScorePaneStyle.Render(fmt.Sprintf(s.model.lang().Get("board", "score"), heldScore)),
 	))
 
+	lockedScorePaneStyle := s.model.style.
+		Align(lipgloss.Left)
+
 	bankedDie := ""
 	for _, diePool := range s.model.game.DiceLocked {
 		bankedDie += diePool.RenderCharacters() + "\n"
 	}
 	lockedScore := 0
 	for _, diePool := range s.model.game.DiceLocked {
-		ls, _, err := diePool.Score()
-		if err != nil {
-			s.model.error = err.Error()
-		} else {
-			lockedScore += ls
-		}
+		ls, _, _ := diePool.Score()
+		lockedScore += ls
+	}
+	if lockedScore == 0 {
+		lockedScorePaneStyle = lockedScorePaneStyle.Foreground(colors.Error)
 	}
 	lockedPane := lockedPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
 		fmt.Sprintf(s.model.lang().Get("board", "to_be_banked"), keys.ActionBank.String(s.model.style)),
 		s.model.style.Height(10).Render(bankedDie),
-		fmt.Sprintf(s.model.lang().Get("board", "score"), lockedScore),
+		lockedScorePaneStyle.Render(fmt.Sprintf(s.model.lang().Get("board", "score"), lockedScore)),
 	))
 
 	centeredText := ""

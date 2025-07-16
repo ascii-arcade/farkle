@@ -17,9 +17,12 @@
       "window_too_narrow": "La ventana es demasiado angosta, por favor cambia el tamaño",
       "window_too_short": "La ventana es demasiado baja, por favor cambia el tamaño",
       "game": {
+        "score_too_low": "Se requieren 500+ para entrar",
         "not_found": "Juego no encontrado",
         "already_in_progress": "El juego ya está en curso",
-        "not_enough_players": "No hay suficientes jugadores"
+        "not_enough_players": "No hay suficientes jugadores",
+        "lock_before_banking": "Debes bloquear al menos un dado después de lanzar y antes de guardar",
+        "did_not_roll": "Debes lanzar antes de realizar cualquier acción"
       },
       "join": {},
       "disconnected": "%s se ha desconectado del juego. Esperando a que se reconecte..."

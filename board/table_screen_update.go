@@ -78,6 +78,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionBank.TriggeredBy(msg.String()) {
+			if s.model.game.Rolled && len(s.model.game.DiceLocked[len(s.model.game.DiceLocked)-1]) == 0 {
+				s.model.error = s.model.lang().Get("error", "game", "lock_before_banking")
+				return s.model, nil
+			}
 			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
 				if err := s.model.game.Bank(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
@@ -87,6 +91,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionTakeAll.TriggeredBy(msg.String()) {
+			if !s.model.game.Rolled {
+				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
+				return s.model, nil
+			}
 			if len(s.model.game.DiceHeld) > 0 {
 				s.model.game.UndoAll()
 			}
@@ -111,7 +119,12 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 		switch msg.String() {
 		case "1", "2", "3", "4", "5", "6":
-			if s.model.game.Rolled && slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
+			if !s.model.game.Rolled {
+				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
+				return s.model, nil
+			}
+
+			if slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
 				face, _ := strconv.Atoi(msg.String())
 				if s.model.game.DicePool.Contains(face) {
 					s.model.game.HoldDie(face)
@@ -120,18 +133,21 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			}
 
 		case "!", "@", "#", "$", "%", "^":
-			if s.model.game.Rolled {
-				faceMap := map[string]int{"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6}
-				face := faceMap[msg.String()]
-				c := 0
-				for _, die := range s.model.game.DicePool {
-					if die == face {
-						c++
-					}
+			if !s.model.game.Rolled {
+				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
+				return s.model, nil
+			}
+
+			faceMap := map[string]int{"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6}
+			face := faceMap[msg.String()]
+			c := 0
+			for _, die := range s.model.game.DicePool {
+				if die == face {
+					c++
 				}
-				for range c {
-					s.model.game.HoldDie(face)
-				}
+			}
+			for range c {
+				s.model.game.HoldDie(face)
 			}
 		}
 	}

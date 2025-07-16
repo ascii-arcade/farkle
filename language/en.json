@@ -20,7 +20,9 @@
         "score_too_low": "500+ required to get on board",
         "not_found": "Game not found",
         "already_in_progress": "Game already in progress",
-        "not_enough_players": "Not enough players"
+        "not_enough_players": "Not enough players",
+        "lock_before_banking": "You must lock at least one die after rolling and before banking",
+        "did_not_roll": "You must roll before taking any action"
       },
       "join": {
         "invalid_code": "Invalid game code, please try again",
