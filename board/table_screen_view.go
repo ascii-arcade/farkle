@@ -14,6 +14,9 @@ func (s *tableScreen) View() string {
 	playerData := s.model.game.GetPlayerData(s.model.player)
 	playerColor := playerData.Color
 
+	turnPlayerData := s.model.game.GetPlayerData(s.model.game.GetTurnPlayer())
+	turnPlayerColor := turnPlayerData.Color
+
 	paneStyle := s.model.style.
 		Width(s.model.width-2).
 		Height(s.model.height-2).
@@ -23,27 +26,27 @@ func (s *tableScreen) View() string {
 	logPaneStyle := s.model.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(playerColor).
+		BorderForeground(turnPlayerColor).
 		Height(12).
 		Width(35)
 	poolPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(playerColor).
+		BorderForeground(turnPlayerColor).
 		Padding(1, 0).
 		Width(32).
 		Height(12)
 	heldPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(playerColor).
+		BorderForeground(turnPlayerColor).
 		Width(48).
 		Height(12)
 	heldScorePaneStyle := s.model.style
 	lockedPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(playerColor).
+		BorderForeground(turnPlayerColor).
 		Padding(0, 1).
 		Width(19).
 		Height(12)
@@ -68,8 +71,6 @@ func (s *tableScreen) View() string {
 	}
 
 	poolRollStrings := []string{}
-
-	turnPlayerData := s.model.game.GetPlayerData(s.model.game.GetTurnPlayer())
 
 	if turnPlayerData.Name == playerData.Name {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
