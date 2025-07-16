@@ -97,3 +97,12 @@ func (p *DicePool) Render(start int, end int) string {
 		lipgloss.JoinHorizontal(lipgloss.Top, bottomDice...),
 	)
 }
+
+func (p *DicePool) Copy() DicePool {
+	if len(*p) == 0 {
+		return NewDicePool(0)
+	}
+	newPool := make(DicePool, len(*p))
+	copy(newPool, *p)
+	return newPool
+}
