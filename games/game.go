@@ -28,7 +28,7 @@ type Game struct {
 	colors  []lipgloss.Color
 	turn    int
 	log     []string
-	players []*Player
+	players map[*Player]*PlayerData
 	style   lipgloss.Style
 	mu      sync.Mutex
 }
@@ -61,12 +61,15 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			return ErrGameAlreadyInProgress
 		}
 
-		player.Color = g.colors[len(g.players)%len(g.colors)]
-		player.Name = utils.GenerateName(player.LanguagePreference.Lang)
-		player.Score = 0
+		playerData := &PlayerData{
+			Name:      utils.GenerateName(player.LanguagePreference.Lang),
+			Score:     0,
+			Color:     g.colors[len(g.players)%len(g.colors)],
+			turnOrder: len(g.players),
+		}
 
 		if isHost {
-			player.IsHost = true
+			playerData.IsHost = true
 		}
 
 		player.OnDisconnect(func() {
@@ -75,22 +78,22 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 			}
 		})
 
-		g.players = append(g.players, player)
+		g.players[player] = playerData
 		return nil
 	})
 }
 
 func (g *Game) RemovePlayer(player *Player) {
 	g.withLock(func() {
-		for i, p := range g.players {
-			if p.Name == player.Name {
-				g.players = slices.Delete(g.players, i, i+1)
-				break
-			}
-		}
+		delete(g.players, player)
 
-		if len(g.players) > 0 && player.IsHost {
-			g.players[0].IsHost = true
+		if len(g.players) > 0 && g.players[player].IsHost {
+			for _, pd := range g.players {
+				if !pd.IsHost {
+					pd.IsHost = true
+					break
+				}
+			}
 		}
 
 		if len(g.players) == 1 && g.InProgress {
@@ -104,11 +107,27 @@ func (g *Game) RemovePlayer(player *Player) {
 }
 
 func (g *Game) GetPlayers() []*Player {
-	return g.players
+	players := make([]*Player, 0, len(g.players))
+	for p := range g.players {
+		players = append(players, p)
+	}
+	slices.SortFunc(players, func(a, b *Player) int {
+		return g.players[a].turnOrder - g.players[b].turnOrder
+	})
+	return players
 }
 
 func (g *Game) Ready() bool {
 	return len(g.players) >= 2 && !g.InProgress
+}
+
+func (g *Game) GetTurnPlayer() *Player {
+	for p, pd := range g.players {
+		if pd.turnOrder == g.turn {
+			return p
+		}
+	}
+	return nil
 }
 
 func (g *Game) nextTurn() {
@@ -118,19 +137,21 @@ func (g *Game) nextTurn() {
 	}
 
 	player := g.GetTurnPlayer()
-	if player.Score >= score && !g.endGame {
+	playerData := g.players[player]
+	if playerData.Score >= score && !g.endGame {
 		g.endGame = true
-		g.log = append(g.log, player.StyledPlayerName(g.style)+" triggered end game!")
+		g.log = append(g.log, playerData.StyledPlayerName(g.style)+" triggered end game!")
 	}
 
 	if g.IsGameOver() {
 		winner := g.GetWinningPlayer()
-		g.log = append(g.log, winner.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winner.Score)+"!")
+		winnerData := g.players[winner]
+		g.log = append(g.log, winnerData.StyledPlayerName(g.style)+" wins the game with a score of "+strconv.Itoa(winnerData.Score)+"!")
 		return
 	}
 
-	if g.endGame && !player.PlayedLastTurn {
-		player.PlayedLastTurn = true
+	if g.endGame && !playerData.PlayedLastTurn {
+		playerData.PlayedLastTurn = true
 	}
 
 	g.turn++
@@ -149,8 +170,8 @@ func (g *Game) nextTurn() {
 func (g *Game) GetHost() *Player {
 	var player *Player
 	g.withLock(func() {
-		for _, p := range g.players {
-			if p.IsHost {
+		for p, pd := range g.players {
+			if pd.IsHost {
 				player = p
 				break
 			}
@@ -159,28 +180,28 @@ func (g *Game) GetHost() *Player {
 	return player
 }
 
-func (g *Game) GetTurnPlayer() *Player {
-	for i, p := range g.players {
-		if i == g.turn {
-			return p
-		}
-	}
-	return nil
-}
-
 func (g *Game) GetWinningPlayer() *Player {
-	var player *Player
+	var winningPlayer *Player
+	var winningPlayerData *PlayerData
 	if !g.endGame {
 		return nil
 	}
 
-	for _, p := range g.players {
-		if player == nil || p.Score > player.Score {
-			player = p
+	for _, p := range g.GetPlayers() {
+		pd := g.GetPlayerData(p)
+		if winningPlayer == nil {
+			winningPlayer = p
+			winningPlayerData = pd
+			continue
+		}
+
+		if pd.Score > winningPlayerData.Score {
+			winningPlayer = p
+			winningPlayerData = pd
 		}
 	}
 
-	return player
+	return winningPlayer
 }
 
 func (g *Game) IsGameOver() bool {
@@ -198,28 +219,26 @@ func (g *Game) IsGameOver() bool {
 }
 
 func (g *Game) IsTurn(p *Player) bool {
-	return g.GetTurnPlayer().Name == p.Name
+	return g.players[g.GetTurnPlayer()].Name == g.players[p].Name
 }
 
 func (g *Game) PlayerScores() string {
 	scores := make([]string, 0, len(g.players))
 
-	for i, p := range g.players {
-		if p == nil {
-			continue
-		}
-
-		isCurrentPlayer := g.turn == i
-		isWinner := g.GetWinningPlayer() != nil && g.GetWinningPlayer().Name == p.Name
-		playerName := p.StyledPlayerName(g.style)
-		if isWinner {
+	for _, p := range g.GetPlayers() {
+		pd := g.GetPlayerData(p)
+		isCurrentPlayer := g.turn == pd.turnOrder
+		winningPlayer := g.GetWinningPlayer()
+		isWinning := winningPlayer != nil && g.players[winningPlayer].Name == pd.Name
+		playerName := pd.StyledPlayerName(g.style)
+		if isWinning {
 			playerName = "★" + playerName + "★"
 		}
 		scores = append(scores, g.style.
 			PaddingRight(2).
 			Bold(isCurrentPlayer).
 			Italic(isCurrentPlayer).
-			Render(playerName+": "+strconv.Itoa(p.Score)))
+			Render(playerName+": "+strconv.Itoa(pd.Score)))
 	}
 
 	return lipgloss.JoinHorizontal(
@@ -246,7 +265,7 @@ func (g *Game) busted() bool {
 }
 
 func (g *Game) Refresh() {
-	for _, p := range g.players {
+	for p, _ := range g.players {
 		select {
 		case p.UpdateChan <- struct{}{}:
 		default:
@@ -255,7 +274,7 @@ func (g *Game) Refresh() {
 }
 
 func (s *Game) getPlayer(sess ssh.Session) (*Player, bool) {
-	for _, p := range s.players {
+	for p, _ := range s.players {
 		if p.Sess.User() == sess.User() {
 			return p, true
 		}
@@ -266,7 +285,7 @@ func (s *Game) getPlayer(sess ssh.Session) (*Player, bool) {
 func (s *Game) GetDisconnectedPlayers() []*Player {
 	var players []*Player
 	s.withLock(func() {
-		for _, p := range s.players {
+		for p, _ := range s.players {
 			if !p.connected {
 				players = append(players, p)
 			}
@@ -282,10 +301,14 @@ func (s *Game) HasPlayer(player *Player) bool {
 
 func (s *Game) GetPlayerCount(includeDisconnected bool) int {
 	count := 0
-	for _, p := range s.players {
+	for p, _ := range s.players {
 		if includeDisconnected || p.connected {
 			count++
 		}
 	}
 	return count
+}
+
+func (s *Game) GetPlayerData(player *Player) *PlayerData {
+	return s.players[player]
 }

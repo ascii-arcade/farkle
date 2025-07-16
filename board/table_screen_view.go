@@ -5,19 +5,21 @@ import (
 	"strings"
 
 	"github.com/ascii-arcade/farkle/colors"
+	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/charmbracelet/lipgloss"
 )
 
 func (s *tableScreen) View() string {
-	playerColor := s.model.game.GetTurnPlayer().Color
+	playerData := s.model.game.GetPlayerData(s.model.player)
+	playerColor := playerData.Color
 
 	paneStyle := s.model.style.
 		Width(s.model.width-2).
 		Height(s.model.height-2).
 		Align(lipgloss.Center, lipgloss.Center).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(s.model.player.Color)
+		BorderForeground(playerColor)
 	logPaneStyle := s.model.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
@@ -47,82 +49,29 @@ func (s *tableScreen) View() string {
 		Height(12)
 
 	if !s.model.game.InProgress {
-		playerNames := []string{}
-		for _, player := range s.model.game.GetPlayers() {
-			n := player.StyledPlayerName(s.model.style)
-			if player.IsHost {
-				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))
-			}
-			if player.Name == s.model.player.Name {
-				n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_you"))
-			}
-
-			playerNames = append(playerNames, n)
-		}
-
-		lobbyPaneStyle := s.model.style.
-			Align(lipgloss.Center).
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(colors.Farkle).
-			Height(12).
-			Width(40)
-
-		lobbyPane := lobbyPaneStyle.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Center,
-				s.model.style.Render(
-					lipgloss.JoinVertical(
-						lipgloss.Center,
-						[]string{
-							fmt.Sprintf("%s: %s\n", s.model.lang().Get("board", "game_code"), s.model.game.Code),
-							strings.Join(playerNames, "\n"),
-						}...,
-					),
-				),
-			),
-		)
-
-		var statusMsg string
-		switch {
-		case s.model.player.IsHost && s.model.game.Ready():
-			statusMsg = fmt.Sprintf(s.model.lang().Get("board", "press_to_start"), keys.LobbyStartGame.String(s.model.style))
-		case s.model.player.IsHost:
-			statusMsg = s.model.lang().Get("board", "waiting_for_players")
-		default:
-			statusMsg = s.model.lang().Get("board", "waiting_for_start")
-		}
-
-		return paneStyle.Render(lipgloss.JoinVertical(
-			lipgloss.Center,
-			lobbyPane,
-			statusMsg,
-		))
+		return s.showLobby(playerData, paneStyle)
 	}
 
 	if s.model.game.IsGameOver() {
-		winner := s.model.game.GetWinningPlayer()
-		return paneStyle.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Center,
-				s.model.style.Bold(true).Foreground(colors.Farkle).Render(s.model.lang().Get("board", "game_over")),
-				s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("board", "winner"), winner.StyledPlayerName(s.model.style))),
-				s.model.style.Render(fmt.Sprintf(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style))),
-			),
-		)
+		return s.showEndScreen(paneStyle)
 	}
 
 	if dcPlayers := s.model.game.GetDisconnectedPlayers(); len(dcPlayers) > 0 {
+		data := s.model.game.GetPlayerData(dcPlayers[0])
 		return paneStyle.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Center,
 				s.model.game.Code,
-				s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("error", "disconnected"), dcPlayers[0].StyledPlayerName(s.model.style))),
+				s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("error", "disconnected"), data.StyledPlayerName(s.model.style))),
 			),
 		)
 	}
 
 	poolRollStrings := []string{}
-	if s.model.game.GetTurnPlayer().Name == s.model.player.Name {
+
+	turnPlayerData := s.model.game.GetPlayerData(s.model.game.GetTurnPlayer())
+
+	if turnPlayerData.Name == playerData.Name {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
 		poolRollStrings = append(poolRollStrings, s.model.lang().Get("board", "your_turn")+"\n")
 	}
@@ -213,6 +162,73 @@ func (s *tableScreen) View() string {
 			poolPane,
 			s.model.game.PlayerScores(),
 			controls,
+		),
+	)
+}
+
+func (s *tableScreen) showLobby(playerData *games.PlayerData, style lipgloss.Style) string {
+	playerNames := []string{}
+	for _, player := range s.model.game.GetPlayers() {
+		pd := s.model.game.GetPlayerData(player)
+		n := pd.StyledPlayerName(s.model.style)
+		if pd.IsHost {
+			n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))
+		}
+		if pd.Name == playerData.Name {
+			n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_you"))
+		}
+
+		playerNames = append(playerNames, n)
+	}
+
+	lobbyPaneStyle := s.model.style.
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(colors.Farkle).
+		Height(12).
+		Width(40)
+
+	lobbyPane := lobbyPaneStyle.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Center,
+			s.model.style.Render(
+				lipgloss.JoinVertical(
+					lipgloss.Center,
+					[]string{
+						fmt.Sprintf("%s: %s\n", s.model.lang().Get("board", "game_code"), s.model.game.Code),
+						strings.Join(playerNames, "\n"),
+					}...,
+				),
+			),
+		),
+	)
+
+	var statusMsg string
+	switch {
+	case playerData.IsHost && s.model.game.Ready():
+		statusMsg = fmt.Sprintf(s.model.lang().Get("board", "press_to_start"), keys.LobbyStartGame.String(s.model.style))
+	case playerData.IsHost:
+		statusMsg = s.model.lang().Get("board", "waiting_for_players")
+	default:
+		statusMsg = s.model.lang().Get("board", "waiting_for_start")
+	}
+
+	return style.Render(lipgloss.JoinVertical(
+		lipgloss.Center,
+		lobbyPane,
+		statusMsg,
+	))
+}
+
+func (s *tableScreen) showEndScreen(style lipgloss.Style) string {
+	winner := s.model.game.GetWinningPlayer()
+	winnerData := s.model.game.GetPlayerData(winner)
+	return style.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Center,
+			s.model.style.Bold(true).Foreground(colors.Farkle).Render(s.model.lang().Get("board", "game_over")),
+			s.model.style.Bold(true).Render(fmt.Sprintf(s.model.lang().Get("board", "winner"), winnerData.StyledPlayerName(s.model.style))),
+			s.model.style.Render(fmt.Sprintf(s.model.lang().Get("board", "host_can_restart"), keys.RestartGame.String(s.model.style))),
 		),
 	)
 }

@@ -41,11 +41,11 @@ func (g *Game) RollDice(rolling bool) {
 		g.DicePool.Roll()
 		if !rolling {
 			g.Rolled = true
-			g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
+			g.log = append(g.log, g.players[g.GetTurnPlayer()].StyledPlayerName(g.style)+" rolled: "+g.DicePool.RenderCharacters())
 
 			if g.busted() {
 				g.Busted = true
-				g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" busted!")
+				g.log = append(g.log, g.players[g.GetTurnPlayer()].StyledPlayerName(g.style)+" busted!")
 				g.nextTurn()
 			}
 		}
@@ -94,7 +94,7 @@ func (g *Game) LockDice() error {
 		if len(g.DicePool) == 0 {
 			g.DicePool = dice.NewDicePool(6)
 		}
-		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
+		g.log = append(g.log, g.players[g.GetTurnPlayer()].StyledPlayerName(g.style)+" locked: "+g.DiceLocked[len(g.DiceLocked)-1].RenderCharacters())
 		return nil
 	})
 }
@@ -111,14 +111,14 @@ func (g *Game) Bank() error {
 		}
 
 		p := g.GetTurnPlayer()
-		if p.Score == 0 && turnScore < 500 {
+		if g.players[p].Score == 0 && turnScore < 500 {
 			return ErrScoreTooLow
 		}
-		p.Score += turnScore
+		g.players[p].Score += turnScore
 
 		g.DiceHeld = dice.NewDicePool(0)
 		g.DiceLocked = []dice.DicePool{}
-		g.log = append(g.log, g.GetTurnPlayer().StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
+		g.log = append(g.log, g.players[p].StyledPlayerName(g.style)+" banked: "+strconv.Itoa(turnScore))
 
 		g.nextTurn()
 		return nil
