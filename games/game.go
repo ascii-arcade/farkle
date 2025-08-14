@@ -1,6 +1,7 @@
 package games
 
 import (
+	"math/rand/v2"
 	"slices"
 	"strconv"
 	"strings"
@@ -311,4 +312,19 @@ func (s *Game) GetPlayerCount(includeDisconnected bool) int {
 
 func (s *Game) GetPlayerData(player *Player) *PlayerData {
 	return s.players[player]
+}
+
+func (s *Game) randomizeTurnOrder() {
+	nums := make([]int, len(s.players))
+	for i := range nums {
+		nums[i] = i
+	}
+	rand.Shuffle(len(nums), func(i, j int) {
+		nums[i], nums[j] = nums[j], nums[i]
+	})
+	i := 0
+	for _, playerData := range s.players {
+		playerData.turnOrder = nums[i]
+		i++
+	}
 }

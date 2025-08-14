@@ -12,6 +12,8 @@ func (g *Game) Start() error {
 		if g.InProgress {
 			return ErrGameAlreadyInProgress
 		}
+
+		g.randomizeTurnOrder()
 		g.InProgress = true
 		return nil
 	})
