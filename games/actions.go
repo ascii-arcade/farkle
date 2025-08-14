@@ -1,6 +1,7 @@
 package games
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/ascii-arcade/farkle/dice"
@@ -48,7 +49,13 @@ func (g *Game) RollDice(rolling bool) {
 
 			if g.busted() {
 				g.Busted = true
-				g.log = append(g.log, g.players[g.GetTurnPlayer()].StyledPlayerName(g.style)+" busted!")
+				lockedScore := 0
+				for _, diePool := range g.DiceLocked {
+					ls, _, _ := diePool.Score()
+					lockedScore += ls
+				}
+				text := fmt.Sprintf("%s busted! (%d)", g.players[g.GetTurnPlayer()].StyledPlayerName(g.style), lockedScore)
+				g.log = append(g.log, text)
 				g.nextTurn()
 			}
 		}
