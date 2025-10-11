@@ -11,53 +11,54 @@ import (
 )
 
 func (s *tableScreen) View() string {
-	playerData := s.model.game.GetPlayerData(s.model.player)
-	playerColor := playerData.Color
-
-	turnPlayerData := s.model.game.GetPlayerData(s.model.game.GetTurnPlayer())
-	turnPlayerColor := turnPlayerData.Color
 
 	paneStyle := s.model.style.
 		Width(s.model.width-2).
 		Height(s.model.height-2).
 		Align(lipgloss.Center, lipgloss.Center).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(playerColor)
+		Border(lipgloss.RoundedBorder())
 	logPaneStyle := s.model.style.
 		Align(lipgloss.Left).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(turnPlayerColor).
 		Height(12).
 		Width(35)
 	poolPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(turnPlayerColor).
 		Padding(1, 0).
 		Width(32).
 		Height(12)
 	heldPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(turnPlayerColor).
 		Width(48).
 		Height(12)
 	heldScorePaneStyle := s.model.style
 	lockedPaneStyle := s.model.style.
 		Align(lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(turnPlayerColor).
 		Padding(0, 1).
 		Width(19).
 		Height(12)
 
-	if !s.model.game.InProgress {
+	playerData := s.model.game.GetPlayerData(s.model.player)
+	turnPlayerData := s.model.game.GetPlayerData(s.model.game.GetTurnPlayer())
+	if playerData == nil || turnPlayerData == nil || !s.model.game.InProgress || !s.model.game.ValidGame() {
 		return s.showLobby(playerData, paneStyle)
 	}
 
 	if s.model.game.IsGameOver() {
 		return s.showEndScreen(paneStyle)
 	}
+
+	playerColor := playerData.Color
+	turnPlayerColor := turnPlayerData.Color
+
+	paneStyle = paneStyle.BorderForeground(playerColor)
+	logPaneStyle = logPaneStyle.BorderForeground(turnPlayerColor)
+	poolPaneStyle = poolPaneStyle.BorderForeground(turnPlayerColor)
+	heldPaneStyle = heldPaneStyle.BorderForeground(turnPlayerColor)
+	lockedPaneStyle = lockedPaneStyle.BorderForeground(turnPlayerColor)
 
 	if dcPlayers := s.model.game.GetDisconnectedPlayers(); len(dcPlayers) > 0 {
 		data := s.model.game.GetPlayerData(dcPlayers[0])
@@ -160,6 +161,10 @@ func (s *tableScreen) View() string {
 }
 
 func (s *tableScreen) showLobby(playerData *games.PlayerData, style lipgloss.Style) string {
+	if playerData == nil {
+		return ""
+	}
+
 	playerNames := []string{}
 	for _, player := range s.model.game.GetPlayers() {
 		pd := s.model.game.GetPlayerData(player)

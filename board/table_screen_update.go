@@ -78,6 +78,10 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionBank.TriggeredBy(msg.String()) {
+			if s.rolling {
+				return s.model, nil
+			}
+
 			if s.model.game.Rolled && len(s.model.game.DiceLocked[len(s.model.game.DiceLocked)-1]) == 0 {
 				s.model.error = s.model.lang().Get("error", "game", "lock_before_banking")
 				return s.model, nil

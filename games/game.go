@@ -328,3 +328,7 @@ func (s *Game) randomizeTurnOrder() {
 		i++
 	}
 }
+
+func (s *Game) ValidGame() bool {
+	return len(s.players) >= 2
+}
