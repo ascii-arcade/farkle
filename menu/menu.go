@@ -5,9 +5,9 @@ import (
 
 	"github.com/ascii-arcade/farkle/colors"
 	"github.com/ascii-arcade/farkle/config"
-	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -42,12 +42,12 @@ type Model struct {
 	screen screen.Screen
 	style  lipgloss.Style
 
-	player *games.Player
+	player *players.Player
 
 	error string
 }
 
-func New(width, height int, style lipgloss.Style, player *games.Player) *Model {
+func New(width, height int, style lipgloss.Style, player *players.Player) *Model {
 	m := &Model{
 		width:  width,
 		height: height,

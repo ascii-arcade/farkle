@@ -16,6 +16,9 @@ var (
 	serverPortWeb string = "8080"
 	webAdminKey   string
 
+	database    string = "farkle"
+	databaseURI string = "mongodb://localhost:27017"
+
 	Version string = "dev"
 )
 
@@ -46,6 +49,15 @@ func Setup() {
 	if webAdminKey == "" {
 		webAdminKey = "supersecretkey"
 	}
+
+	dbStr := os.Getenv("ASCII_ARCADE_DB")
+	if dbStr != "" {
+		database = dbStr
+	}
+	dbURI := os.Getenv("ASCII_ARCADE_DB_URI")
+	if dbURI != "" {
+		databaseURI = dbURI
+	}
 }
 
 func GetDebug() bool {
@@ -65,4 +77,10 @@ func GetServerPortWeb() string {
 }
 func GetWebAdminKey() string {
 	return webAdminKey
+}
+func GetDatabase() string {
+	return database
+}
+func GetDatabaseURI() string {
+	return databaseURI
 }

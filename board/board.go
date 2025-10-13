@@ -8,6 +8,7 @@ import (
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/messages"
+	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/screen"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,7 +21,7 @@ type Model struct {
 	error string
 
 	style  lipgloss.Style
-	player *games.Player
+	player *players.Player
 	game   *games.Game
 	screen screen.Screen
 }
@@ -30,7 +31,7 @@ const (
 	rollInterval = 200 * time.Millisecond
 )
 
-func NewModel(style lipgloss.Style, width, height int, player *games.Player, game *games.Game) Model {
+func NewModel(style lipgloss.Style, width, height int, player *players.Player, game *games.Game) Model {
 	return Model{
 		player: player,
 		game:   game,

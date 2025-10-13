@@ -7,6 +7,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
+	"github.com/ascii-arcade/farkle/players"
 )
 
 func Run() error {
@@ -58,8 +59,8 @@ func Run() error {
 		}{
 			TotalGames:            totalGames,
 			TotalStartedGames:     totalStartedGames,
-			TotalPlayers:          games.GetPlayerCount(),
-			TotalConnectedPlayers: games.GetConnectedPlayerCount(),
+			TotalPlayers:          players.GetPlayerCount(),
+			TotalConnectedPlayers: players.GetConnectedPlayerCount(),
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

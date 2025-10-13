@@ -13,16 +13,6 @@ type PlayerData struct {
 	turnOrder int
 }
 
-func (pd *PlayerData) SetName(name string) *PlayerData {
-	pd.Name = name
-	return pd
-}
-
-func (pd *PlayerData) MakeHost() *PlayerData {
-	pd.IsHost = true
-	return pd
-}
-
 func (pd *PlayerData) StyledPlayerName(style lipgloss.Style) string {
 	if pd == nil {
 		return ""

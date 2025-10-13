@@ -1,4 +1,4 @@
-package games
+package players
 
 import (
 	"context"
@@ -20,4 +20,8 @@ type Player struct {
 
 func (p *Player) OnDisconnect(fn func()) {
 	p.onDisconnect = append(p.onDisconnect, fn)
+}
+
+func (p *Player) IsConnected() bool {
+	return p.connected
 }

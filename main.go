@@ -12,6 +12,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/app"
 	"github.com/ascii-arcade/farkle/config"
+	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/web"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
@@ -45,6 +46,12 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+	if err := database.Setup(ctx, config.GetDatabaseURI(), config.GetDatabase()); err != nil {
+		logger.Error("Could not connect to database", "error", err)
+		os.Exit(1)
+	}
+
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(config.GetServerHost(), config.GetServerPortSSH())),
 		wish.WithHostKeyPath(".ssh/id_ed25519"),

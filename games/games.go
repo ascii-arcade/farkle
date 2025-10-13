@@ -4,6 +4,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/ascii-arcade/farkle/dice"
+	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -32,7 +33,7 @@ func New(style lipgloss.Style) *Game {
 		Code:      utils.GenerateCode(),
 		style:     style,
 		colors:    colors,
-		players:   make(map[*Player]*PlayerData),
+		players:   make(map[*players.Player]*PlayerData),
 	}
 	game.Restart()
 	games[game.Code] = game

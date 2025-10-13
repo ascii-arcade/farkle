@@ -1,4 +1,4 @@
-package games
+package players
 
 import (
 	"context"
@@ -21,8 +21,6 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.Languag
 	}
 
 	player = &Player{
-		// Score:              0,
-		// PlayedLastTurn:     false,
 		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
 		connected:          true,

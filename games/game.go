@@ -2,13 +2,14 @@ package games
 
 import (
 	"math/rand/v2"
-	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
+	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/score"
 	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
@@ -29,7 +30,7 @@ type Game struct {
 	colors  []lipgloss.Color
 	turn    int
 	log     []string
-	players map[*Player]*PlayerData
+	players map[*players.Player]*PlayerData
 	style   lipgloss.Style
 	mu      sync.Mutex
 }
@@ -52,7 +53,7 @@ func (g *Game) withLock(fn func()) {
 	fn()
 }
 
-func (g *Game) AddPlayer(player *Player, isHost bool) error {
+func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
 	return g.withErrLock(func() error {
 		if _, ok := g.getPlayer(player.Sess); ok {
 			return nil
@@ -84,9 +85,9 @@ func (g *Game) AddPlayer(player *Player, isHost bool) error {
 	})
 }
 
-func (g *Game) RemovePlayer(player *Player) {
+func (g *Game) RemovePlayer(player *players.Player) {
 	g.withLock(func() {
-		delete(g.players, player)
+		defer delete(g.players, player)
 
 		if len(g.players) > 0 && g.players[player].IsHost {
 			for _, pd := range g.players {
@@ -107,13 +108,13 @@ func (g *Game) RemovePlayer(player *Player) {
 	})
 }
 
-func (g *Game) GetPlayers() []*Player {
-	players := make([]*Player, 0, len(g.players))
+func (g *Game) GetPlayers() []*players.Player {
+	players := make([]*players.Player, 0, len(g.players))
 	for p := range g.players {
 		players = append(players, p)
 	}
-	slices.SortFunc(players, func(a, b *Player) int {
-		return g.players[a].turnOrder - g.players[b].turnOrder
+	sort.Slice(players, func(i, j int) bool {
+		return g.players[players[i]].turnOrder < g.players[players[j]].turnOrder
 	})
 	return players
 }
@@ -122,7 +123,7 @@ func (g *Game) Ready() bool {
 	return len(g.players) >= 2 && !g.InProgress
 }
 
-func (g *Game) GetTurnPlayer() *Player {
+func (g *Game) GetTurnPlayer() *players.Player {
 	for p, pd := range g.players {
 		if pd.turnOrder == g.turn {
 			return p
@@ -168,8 +169,8 @@ func (g *Game) nextTurn() {
 	g.FirstRoll = false
 }
 
-func (g *Game) GetHost() *Player {
-	var player *Player
+func (g *Game) GetHost() *players.Player {
+	var player *players.Player
 	g.withLock(func() {
 		for p, pd := range g.players {
 			if pd.IsHost {
@@ -181,8 +182,8 @@ func (g *Game) GetHost() *Player {
 	return player
 }
 
-func (g *Game) GetWinningPlayer() *Player {
-	var winningPlayer *Player
+func (g *Game) GetWinningPlayer() *players.Player {
+	var winningPlayer *players.Player
 	var winningPlayerData *PlayerData
 	if !g.endGame {
 		return nil
@@ -219,7 +220,7 @@ func (g *Game) IsGameOver() bool {
 	return true
 }
 
-func (g *Game) IsTurn(p *Player) bool {
+func (g *Game) IsTurn(p *players.Player) bool {
 	return g.players[g.GetTurnPlayer()].Name == g.players[p].Name
 }
 
@@ -266,7 +267,7 @@ func (g *Game) busted() bool {
 }
 
 func (g *Game) Refresh() {
-	for p, _ := range g.players {
+	for p := range g.players {
 		select {
 		case p.UpdateChan <- struct{}{}:
 		default:
@@ -274,8 +275,8 @@ func (g *Game) Refresh() {
 	}
 }
 
-func (s *Game) getPlayer(sess ssh.Session) (*Player, bool) {
-	for p, _ := range s.players {
+func (s *Game) getPlayer(sess ssh.Session) (*players.Player, bool) {
+	for p := range s.players {
 		if p.Sess.User() == sess.User() {
 			return p, true
 		}
@@ -283,11 +284,11 @@ func (s *Game) getPlayer(sess ssh.Session) (*Player, bool) {
 	return nil, false
 }
 
-func (s *Game) GetDisconnectedPlayers() []*Player {
-	var players []*Player
+func (s *Game) GetDisconnectedPlayers() []*players.Player {
+	var players []*players.Player
 	s.withLock(func() {
-		for p, _ := range s.players {
-			if !p.connected {
+		for p := range s.players {
+			if !p.IsConnected() {
 				players = append(players, p)
 			}
 		}
@@ -295,7 +296,7 @@ func (s *Game) GetDisconnectedPlayers() []*Player {
 	return players
 }
 
-func (s *Game) HasPlayer(player *Player) bool {
+func (s *Game) HasPlayer(player *players.Player) bool {
 	_, exists := s.getPlayer(player.Sess)
 	return exists
 }
@@ -303,14 +304,14 @@ func (s *Game) HasPlayer(player *Player) bool {
 func (s *Game) GetPlayerCount(includeDisconnected bool) int {
 	count := 0
 	for p, _ := range s.players {
-		if includeDisconnected || p.connected {
+		if includeDisconnected || p.IsConnected() {
 			count++
 		}
 	}
 	return count
 }
 
-func (s *Game) GetPlayerData(player *Player) *PlayerData {
+func (s *Game) GetPlayerData(player *players.Player) *PlayerData {
 	return s.players[player]
 }
 
