@@ -41,10 +41,10 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if keys.MenuEnglish.TriggeredBy(msg.String()) {
-			s.model.player.LanguagePreference.SetLanguage("EN")
+			s.model.player.SetLanguage("EN")
 		}
 		if keys.MenuSpanish.TriggeredBy(msg.String()) {
-			s.model.player.LanguagePreference.SetLanguage("ES")
+			s.model.player.SetLanguage("ES")
 		}
 		if keys.MenuStartNewGame.TriggeredBy(msg.String()) {
 			game := games.New(s.style)

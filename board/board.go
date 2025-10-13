@@ -92,5 +92,5 @@ func waitForRefreshSignal(ch chan struct{}) tea.Cmd {
 }
 
 func (m *Model) lang() *language.Language {
-	return m.player.LanguagePreference.Lang
+	return language.Languages[m.player.LanguagePreference]
 }

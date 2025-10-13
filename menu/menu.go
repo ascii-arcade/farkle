@@ -107,5 +107,5 @@ func (m Model) View() string {
 }
 
 func (m *Model) lang() *language.Language {
-	return m.player.LanguagePreference.Lang
+	return language.Languages[m.player.LanguagePreference]
 }

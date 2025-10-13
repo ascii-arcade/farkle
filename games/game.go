@@ -9,6 +9,7 @@ import (
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
+	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/score"
 	"github.com/ascii-arcade/farkle/utils"
@@ -64,7 +65,7 @@ func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
 		}
 
 		playerData := &PlayerData{
-			Name:      utils.GenerateName(player.LanguagePreference.Lang),
+			Name:      utils.GenerateName(language.Languages[player.LanguagePreference]),
 			Score:     0,
 			Color:     g.colors[len(g.players)%len(g.colors)],
 			turnOrder: len(g.players),

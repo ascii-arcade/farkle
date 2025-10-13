@@ -3,16 +3,14 @@ package players
 import (
 	"context"
 
-	"github.com/ascii-arcade/farkle/language"
 	"github.com/charmbracelet/ssh"
 )
 
 var players = make(map[string]*Player)
 
-func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.LanguagePreference) *Player {
+func NewPlayer(ctx context.Context, sess ssh.Session, langPref string) (*Player, error) {
 	player, exists := players[sess.User()]
 	if exists {
-		// player.IsHost = false
 		player.UpdateChan = make(chan struct{})
 		player.connected = true
 		player.ctx = ctx
@@ -21,6 +19,7 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref *language.Languag
 	}
 
 	player = &Player{
+		id:                 sess.User(),
 		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
 		connected:          true,
@@ -39,7 +38,11 @@ RETURN:
 		}
 	}()
 
-	return player
+	if err := player.Save(); err != nil {
+		return nil, err
+	}
+
+	return player, nil
 }
 
 func RemovePlayer(player *Player) {

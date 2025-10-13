@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log/slog"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
@@ -44,7 +46,11 @@ func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
 
 	languagePreference := language.LanguagePreference{Lang: language.DefaultLanguage}
 
-	player := players.NewPlayer(sess.Context(), sess, &languagePreference)
+	player, err := players.NewPlayer(sess.Context(), sess, languagePreference.Lang.ID)
+	if err != nil {
+		slog.Error("failed to create or retrieve player", "error", err)
+		return Model{}, nil
+	}
 
 	return Model{
 		sess:   sess,

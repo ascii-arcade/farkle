@@ -14,8 +14,8 @@ var enJSON []byte
 var esJSON []byte
 
 var Languages = map[string]*Language{
-	"EN": LoadLanguage(enJSON),
-	"ES": LoadLanguage(esJSON),
+	"en": LoadLanguage(enJSON),
+	"es": LoadLanguage(esJSON),
 }
 
 type Language struct {
@@ -27,7 +27,7 @@ type Language struct {
 	UsernameSecondWords []string `json:"username_second_words"`
 }
 
-var DefaultLanguage = Languages["EN"]
+var DefaultLanguage = Languages["en"]
 
 func (l *Language) Get(pathList ...string) string {
 	if len(pathList) == 0 {
@@ -49,7 +49,7 @@ func (l *Language) Get(pathList ...string) string {
 				strOut = str
 			}
 
-			strSlc, ok := val.([]interface{})
+			strSlc, ok := val.([]any)
 			if ok {
 				for _, v := range strSlc {
 					if str, ok := v.(string); ok {

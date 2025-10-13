@@ -7,9 +7,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type Collection string
+
+const (
+	CollectionPlayers Collection = "players"
+)
+
 type MongoDB struct {
-	URI      string
-	Database string
+	uri      string
+	database string
+
+	collections map[string]*mongo.Collection
 
 	client *mongo.Client
 	ctx    context.Context
@@ -19,23 +27,31 @@ var db *MongoDB
 
 func Setup(ctx context.Context, uri, database string) error {
 	db = &MongoDB{
-		URI:      uri,
-		Database: database,
-		ctx:      ctx,
+		uri:         uri,
+		database:    database,
+		ctx:         ctx,
+		client:      &mongo.Client{},
+		collections: map[string]*mongo.Collection{},
 	}
-	return db.Connect()
+
+	var err error
+	db.client, err = mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	if err != nil {
+		return err
+	}
+
+	_ = db.client.Database(db.database).CreateCollection(ctx, string(CollectionPlayers))
+	db.collections[string(CollectionPlayers)] = db.client.Database(db.database).Collection(string(CollectionPlayers))
+
+	return nil
 }
 
 func GetDB() *MongoDB {
 	return db
 }
 
-func (m *MongoDB) Connect() (err error) {
-	m.client, err = mongo.Connect(m.ctx, options.Client().ApplyURI(m.URI))
-	if err != nil {
-		return err
-	}
-	return nil
+func (m *MongoDB) Collection(name Collection) *mongo.Collection {
+	return m.collections[string(name)]
 }
 
 func (m *MongoDB) Close() error {
