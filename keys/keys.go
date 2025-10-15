@@ -26,6 +26,7 @@ var (
 	MenuStartNewGame = Keys{"n"}
 	MenuEnglish      = Keys{"1"}
 	MenuSpanish      = Keys{"2"}
+	MenuAddSSHKey    = Keys{"k"}
 
 	Back = Keys{"q"}
 

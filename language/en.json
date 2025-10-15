@@ -5,13 +5,6 @@
     "global": {
       "quit": "Press %s to quit the game"
     },
-    "ssh": {
-      "server_version": "Version: %s",
-      "starting_server": "Starting SSH server on %s:%s",
-      "stopping_server": "Stopping SSH server",
-      "could_not_start_server": "Could not start server",
-      "could_not_stop_server": "Could not stop server"
-    },
     "error": {
       "player_not_found": "Player not found",
       "window_too_narrow": "Window too narrow, please resize",
@@ -35,9 +28,14 @@
       "welcome": "Welcome to Farkle!",
       "press_to_create": "Press %s to create a new game",
       "press_to_join": "Press %s to join an existing game",
+      "press_to_use_ssh_key": "Press %s to use your SSH public key",
       "join": {
         "game_code_placeholder": "Game Code",
         "enter_code": "Enter the game code to join:"
+      },
+      "use_key": {
+        "enter_key": "Enter your SSH public key to associate with your player profile:",
+        "invalid_key": "Invalid SSH public key, please try again\nMake sure it starts with 'ssh-rsa', 'ssh-ed25519', or 'ssh-dss'"
       }
     },
     "board": {

@@ -5,11 +5,12 @@ import (
 
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/charmbracelet/ssh"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Player struct {
-	id        string `bson:"_id"`
+	SshPubKey string `bson:"ssh_pub_key"`
 	connected bool   `bson:"-"`
 
 	UpdateChan         chan struct{} `bson:"-"`
@@ -28,12 +29,18 @@ func (p *Player) IsConnected() bool {
 	return p.connected
 }
 
+func (p *Player) SetPubKey(pKey string) {
+	p.SshPubKey = pKey
+}
+
 func (p *Player) Save() error {
-	opts := options.FindOneAndReplace().SetUpsert(true)
-	database.GetDB().Collection(database.CollectionPlayers).FindOneAndReplace(p.ctx, map[string]any{
-		"_id": p.id,
-	}, p, opts)
-	return nil
+	if p.SshPubKey == "" {
+		return nil
+	}
+
+	opts := options.Replace().SetUpsert(true)
+	_, err := database.GetDB().Collection(database.CollectionPlayers).ReplaceOne(p.ctx, bson.D{{Key: "ssh_pub_key", Value: p.SshPubKey}}, p, opts)
+	return err
 }
 
 func (p *Player) SetLanguage(lang string) {

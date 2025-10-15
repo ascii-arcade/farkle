@@ -19,7 +19,6 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref string) (*Player,
 	}
 
 	player = &Player{
-		id:                 sess.User(),
 		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
 		connected:          true,

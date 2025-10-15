@@ -41,10 +41,17 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if keys.MenuEnglish.TriggeredBy(msg.String()) {
-			s.model.player.SetLanguage("EN")
+			s.model.player.SetLanguage("en")
 		}
 		if keys.MenuSpanish.TriggeredBy(msg.String()) {
-			s.model.player.SetLanguage("ES")
+			s.model.player.SetLanguage("es")
+		}
+		if keys.MenuAddSSHKey.TriggeredBy(msg.String()) {
+			return s.model, func() tea.Msg {
+				return messages.SwitchScreenMsg{
+					Screen: s.model.newUseKeyScreen(),
+				}
+			}
 		}
 		if keys.MenuStartNewGame.TriggeredBy(msg.String()) {
 			game := games.New(s.style)
@@ -75,12 +82,14 @@ func (s *optionScreen) View() string {
 	content.WriteString(s.model.lang().Get("menu", "welcome") + "\n\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_create"), keys.MenuStartNewGame.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_join"), keys.MenuJoinGame.String(s.style)) + "\n")
+	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_use_ssh_key"), keys.MenuAddSSHKey.String(s.style)) + "\n")
 	content.WriteString("\n\n")
 
-	if s.model.lang() == language.Languages["EN"] {
-		content.WriteString(fmt.Sprintf(language.Languages["ES"].Get("menu", "choose_language"), keys.MenuSpanish.String(s.style)))
-	} else if s.model.lang() == language.Languages["ES"] {
-		content.WriteString(fmt.Sprintf(language.Languages["EN"].Get("menu", "choose_language"), keys.MenuEnglish.String(s.style)))
+	switch s.model.lang() {
+	case language.Languages["en"]:
+		content.WriteString(fmt.Sprintf(language.Languages["es"].Get("menu", "choose_language"), keys.MenuSpanish.String(s.style)))
+	case language.Languages["es"]:
+		content.WriteString(fmt.Sprintf(language.Languages["en"].Get("menu", "choose_language"), keys.MenuEnglish.String(s.style)))
 	}
 
 	content.WriteString(s.model.style.Foreground(colors.Faded).Render("\n\n" + config.Version))
