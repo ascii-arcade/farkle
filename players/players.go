@@ -3,13 +3,13 @@ package players
 import (
 	"context"
 
-	"github.com/charmbracelet/ssh"
+	"github.com/ascii-arcade/farkle/database"
 )
 
 var players = make(map[string]*Player)
 
-func NewPlayer(ctx context.Context, sess ssh.Session, langPref string) (*Player, error) {
-	player, exists := players[sess.User()]
+func NewPlayer(ctx context.Context, pk, langPref string) (*Player, error) {
+	player, exists := players[pk]
 	if exists {
 		player.UpdateChan = make(chan struct{})
 		player.connected = true
@@ -19,14 +19,14 @@ func NewPlayer(ctx context.Context, sess ssh.Session, langPref string) (*Player,
 	}
 
 	player = &Player{
+		SshPubKey:          pk,
 		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
 		connected:          true,
-		Sess:               sess,
 		onDisconnect:       []func(){},
 		ctx:                ctx,
 	}
-	players[sess.User()] = player
+	players[pk] = player
 
 RETURN:
 	go func() {
@@ -44,10 +44,16 @@ RETURN:
 	return player, nil
 }
 
+func Get(sshPubKey string) (*Player, bool) {
+	var player Player
+	err := database.GetDB().Collection(database.CollectionPlayers).FindOne(context.Background(), map[string]any{"ssh_pub_key": sshPubKey}).Decode(&player)
+	return &player, err == nil
+}
+
 func RemovePlayer(player *Player) {
-	if _, exists := players[player.Sess.User()]; exists {
+	if _, exists := players[player.SshPubKey]; exists {
 		close(player.UpdateChan)
-		delete(players, player.Sess.User())
+		delete(players, player.SshPubKey)
 	}
 }
 

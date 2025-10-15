@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
 
-	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/menu"
 	"github.com/ascii-arcade/farkle/messages"
 	"github.com/ascii-arcade/farkle/players"
@@ -44,12 +43,10 @@ func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
 	renderer := bubbletea.MakeRenderer(sess)
 	style := renderer.NewStyle()
 
-	languagePreference := language.LanguagePreference{Lang: language.DefaultLanguage}
-
-	player, err := players.NewPlayer(sess.Context(), sess, languagePreference.Lang.ID)
-	if err != nil {
-		slog.Error("failed to create or retrieve player", "error", err)
-		return Model{}, nil
+	player, found := players.Get(sess.User())
+	if !found {
+		slog.Error("Could not find player in database", "user", sess.User())
+		return nil, nil
 	}
 
 	return Model{

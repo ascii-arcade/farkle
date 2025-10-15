@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -13,12 +14,14 @@ import (
 	"github.com/ascii-arcade/farkle/app"
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/database"
+	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/web"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
 	tea "github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 var (
@@ -55,10 +58,32 @@ func main() {
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(config.GetServerHost(), config.GetServerPortSSH())),
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
+		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
+			decodedKey := string(bytes.TrimSuffix(gossh.MarshalAuthorizedKey(key), []byte{'\n'}))
+			if _, found := players.Get(decodedKey); !found {
+				var err error
+				if _, err = players.NewPlayer(ctx, decodedKey, "en"); err != nil {
+					slog.Error("Could not create player", "error", err)
+					return false
+				}
+			}
+
+			return true
+		}),
 		wish.WithMiddleware(
 			tea.Middleware(app.TeaHandler),
 			activeterm.Middleware(),
 			logging.Middleware(),
+			func(next ssh.Handler) ssh.Handler {
+				return func(s ssh.Session) {
+					k := s.RawCommand()
+
+					_ = k
+
+					slog.Debug("TEST")
+					next(s)
+				}
+			},
 		),
 	)
 	if err != nil {
