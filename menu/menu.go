@@ -97,10 +97,11 @@ func (m Model) View() string {
 	style := m.style.Width(m.width).Height(m.height)
 	paneStyle := m.style.Width(m.width).PaddingTop(1)
 
+	sView := m.screen.View()
 	panes := lipgloss.JoinVertical(
 		lipgloss.Center,
-		paneStyle.Align(lipgloss.Center, lipgloss.Top).Foreground(colors.Logo).Height(m.height/2).Render(m.style.Align(lipgloss.Left).Render(logo)),
-		paneStyle.Align(lipgloss.Center, lipgloss.Top).Render(m.screen.View()),
+		paneStyle.Align(lipgloss.Center, lipgloss.Center).Foreground(colors.Logo).Height(m.height/2).Render(m.style.Align(lipgloss.Left).Render(logo)),
+		paneStyle.Align(lipgloss.Center, lipgloss.Top).Width(lipgloss.Width(sView)).Render(sView),
 	)
 
 	return style.Render(panes)
