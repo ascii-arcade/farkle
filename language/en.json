@@ -26,9 +26,10 @@
     "menu": {
       "choose_language": "For English, press %s",
       "welcome": "Welcome to Farkle!",
-      "press_to_create": "Press %s to create a new game",
-      "press_to_join": "Press %s to join an existing game",
-      "press_to_use_ssh_key": "Press %s to use your SSH public key",
+      "press_to_create": "%s | new game",
+      "press_to_join": "%s | join game",
+      "press_to_use_ssh_key": "%s | set ssh key",
+      "press_to_edit_profile": "%s | edit profile",
       "join": {
         "game_code_placeholder": "Game Code",
         "enter_code": "Enter the game code to join:"

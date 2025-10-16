@@ -27,6 +27,7 @@ var (
 	MenuEnglish      = Keys{"1"}
 	MenuSpanish      = Keys{"2"}
 	MenuAddSSHKey    = Keys{"k"}
+	MenuEditProfile  = Keys{"p"}
 
 	Back = Keys{"q"}
 

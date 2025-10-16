@@ -40,20 +40,20 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		return s.model, nil
 
 	case tea.KeyMsg:
-		if keys.MenuEnglish.TriggeredBy(msg.String()) {
+		switch {
+		case keys.MenuEnglish.TriggeredBy(msg.String()):
 			s.model.player.SetLanguage("en")
-		}
-		if keys.MenuSpanish.TriggeredBy(msg.String()) {
+			return s.model, nil
+		case keys.MenuSpanish.TriggeredBy(msg.String()):
 			s.model.player.SetLanguage("es")
-		}
-		if keys.MenuAddSSHKey.TriggeredBy(msg.String()) {
+			return s.model, nil
+		case keys.MenuEditProfile.TriggeredBy(msg.String()):
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
-					Screen: s.model.newUseKeyScreen(),
+					Screen: s.model.newEditProfileScreen(),
 				}
 			}
-		}
-		if keys.MenuStartNewGame.TriggeredBy(msg.String()) {
+		case keys.MenuStartNewGame.TriggeredBy(msg.String()):
 			game := games.New(s.style)
 			if err := game.AddPlayer(s.model.player, true); err != nil {
 				s.model.error = s.model.lang().Get("error", "game", err.Error())
@@ -64,8 +64,7 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 					Model: board.NewModel(s.style, s.model.width, s.model.height, s.model.player, game),
 				}
 			}
-		}
-		if keys.MenuJoinGame.TriggeredBy(msg.String()) {
+		case keys.MenuJoinGame.TriggeredBy(msg.String()):
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
 					Screen: s.model.newJoinScreen(),
@@ -83,6 +82,7 @@ func (s *optionScreen) View() string {
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_create"), keys.MenuStartNewGame.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_join"), keys.MenuJoinGame.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_use_ssh_key"), keys.MenuAddSSHKey.String(s.style)) + "\n")
+	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_edit_profile"), keys.MenuEditProfile.String(s.style)) + "\n")
 	content.WriteString("\n\n")
 
 	switch s.model.lang() {

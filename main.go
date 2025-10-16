@@ -60,13 +60,17 @@ func main() {
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
 			decodedKey := string(bytes.TrimSuffix(gossh.MarshalAuthorizedKey(key), []byte{'\n'}))
-			if _, found := players.Get(decodedKey); !found {
+			player, found := players.Get(decodedKey)
+			if !found {
 				var err error
-				if _, err = players.NewPlayer(ctx, decodedKey, "en"); err != nil {
+				if player, err = players.NewPlayer(ctx, decodedKey, "en"); err != nil {
 					slog.Error("Could not create player", "error", err)
 					return false
 				}
 			}
+
+			ctx.SetValue("PLAYER", player)
+			ctx.SetValue("PUBKEY", decodedKey)
 
 			return true
 		}),
@@ -74,16 +78,6 @@ func main() {
 			tea.Middleware(app.TeaHandler),
 			activeterm.Middleware(),
 			logging.Middleware(),
-			func(next ssh.Handler) ssh.Handler {
-				return func(s ssh.Session) {
-					k := s.RawCommand()
-
-					_ = k
-
-					slog.Debug("TEST")
-					next(s)
-				}
-			},
 		),
 	)
 	if err != nil {

@@ -4,31 +4,32 @@ import (
 	"context"
 
 	"github.com/ascii-arcade/farkle/database"
+	"github.com/ascii-arcade/farkle/language"
+	"github.com/ascii-arcade/farkle/utils"
 )
 
 var players = make(map[string]*Player)
 
 func NewPlayer(ctx context.Context, pk, langPref string) (*Player, error) {
-	player, exists := players[pk]
-	if exists {
-		player.UpdateChan = make(chan struct{})
-		player.connected = true
-		player.ctx = ctx
-
-		goto RETURN
+	player, exists := Get(pk)
+	if !exists {
+		player = &Player{
+			Username:           utils.GenerateName(language.Languages[langPref]),
+			Discriminator:      utils.GenerateDescriminator(),
+			SshPubKeys:         []string{pk},
+			UpdateChan:         make(chan struct{}),
+			LanguagePreference: langPref,
+			connected:          true,
+			onDisconnect:       []func(){},
+			ctx:                ctx,
+		}
 	}
 
-	player = &Player{
-		SshPubKey:          pk,
-		UpdateChan:         make(chan struct{}),
-		LanguagePreference: langPref,
-		connected:          true,
-		onDisconnect:       []func(){},
-		ctx:                ctx,
-	}
-	players[pk] = player
+	player.UpdateChan = make(chan struct{})
+	player.connected = true
+	player.ctx = ctx
+	players[player.GetDisplayName()] = player
 
-RETURN:
 	go func() {
 		<-player.ctx.Done()
 		player.connected = false
@@ -37,11 +38,7 @@ RETURN:
 		}
 	}()
 
-	if err := player.Save(); err != nil {
-		return nil, err
-	}
-
-	return player, nil
+	return player, player.Save()
 }
 
 func Get(sshPubKey string) (*Player, bool) {
@@ -51,9 +48,9 @@ func Get(sshPubKey string) (*Player, bool) {
 }
 
 func RemovePlayer(player *Player) {
-	if _, exists := players[player.SshPubKey]; exists {
+	if _, exists := players[player.GetDisplayName()]; exists {
 		close(player.UpdateChan)
-		delete(players, player.SshPubKey)
+		delete(players, player.GetDisplayName())
 	}
 }
 

@@ -1,7 +1,6 @@
 package menu
 
 import (
-	"log/slog"
 	"strings"
 
 	"github.com/ascii-arcade/farkle/colors"
@@ -61,25 +60,25 @@ func (s *useKeyScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				}
 			}
 		}
-		if keys.Submit.TriggeredBy(msg.String()) {
-			if validPublicKey(s.keyInput.Value()) {
-				s.model.player.SetPubKey(s.keyInput.Value())
-				if err := s.model.player.Save(); err != nil {
-					s.model.error = "Internal Error"
-					slog.Error("error saving player with public key", "error", err)
-					return s.model, cmd
-				}
+		// if keys.Submit.TriggeredBy(msg.String()) {
+		// 	if utils.ValidPublicKey(s.keyInput.Value()) {
+		// 		s.model.player.AddPubKey(s.keyInput.Value())
+		// 		if err := s.model.player.Save(); err != nil {
+		// 			s.model.error = "Internal Error"
+		// 			slog.Error("error saving player with public key", "error", err)
+		// 			return s.model, cmd
+		// 		}
 
-				return s.model, func() tea.Msg {
-					return messages.SwitchScreenMsg{
-						Screen: s.model.newOptionScreen(),
-					}
-				}
-			}
+		// 		return s.model, func() tea.Msg {
+		// 			return messages.SwitchScreenMsg{
+		// 				Screen: s.model.newOptionScreen(),
+		// 			}
+		// 		}
+		// 	}
 
-			s.model.error = s.model.lang().Get("menu", "add_key", "invalid_key")
-			return s.model, cmd
-		}
+		// 	s.model.error = s.model.lang().Get("menu", "add_key", "invalid_key")
+		// 	return s.model, cmd
+		// }
 
 		if msg.Type == tea.KeyEnter {
 			s.model.error = ""
@@ -100,14 +99,4 @@ func (s *useKeyScreen) View() string {
 	content.WriteString("\n\n")
 
 	return content.String()
-}
-
-func validPublicKey(key string) bool {
-	validPrefixes := []string{"ssh-rsa", "ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"}
-	for _, prefix := range validPrefixes {
-		if strings.HasPrefix(key, prefix) && len(key) > len(prefix)+20 {
-			return true
-		}
-	}
-	return false
 }

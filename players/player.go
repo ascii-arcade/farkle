@@ -1,26 +1,29 @@
 package players
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/charmbracelet/ssh"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	gossh "golang.org/x/crypto/ssh"
 )
 
 type Player struct {
-	SshPubKey string `bson:"ssh_pub_key"`
-	connected bool   `bson:"-"`
+	Username           string   `bson:"username"`
+	Discriminator      string   `bson:"discriminator"`
+	SshPubKeys         []string `bson:"ssh_pub_keys"`
+	LanguagePreference string   `bson:"language_preference"`
 
-	UpdateChan         chan struct{} `bson:"-"`
-	LanguagePreference string        `bson:"language_preference"`
-	Sess               ssh.Session   `bson:"-"`
-	onDisconnect       []func()
+	Sess         ssh.Session   `bson:"-"`
+	UpdateChan   chan struct{} `bson:"-"`
+	onDisconnect []func()
+	connected    bool `bson:"-"`
+	ctx          context.Context
+}
 
-	ctx context.Context
+func (p *Player) GetDisplayName() string {
+	return p.Username + "#" + p.Discriminator
 }
 
 func (p *Player) OnDisconnect(fn func()) {
@@ -31,8 +34,8 @@ func (p *Player) IsConnected() bool {
 	return p.connected
 }
 
-func (p *Player) SetPubKey(pKey string) {
-	p.SshPubKey = pKey
+func (p *Player) AddPubKey(pKey string) {
+	p.SshPubKeys = append(p.SshPubKeys, pKey)
 }
 
 func (p *Player) SetSession(sess ssh.Session) {
@@ -40,18 +43,12 @@ func (p *Player) SetSession(sess ssh.Session) {
 }
 
 func (p *Player) Save() error {
-	if p.SshPubKey == "" {
+	if len(p.SshPubKeys) == 0 {
 		return nil
 	}
 
-	pk, _, _, _, err := gossh.ParseAuthorizedKey([]byte(p.SshPubKey))
-	if err != nil {
-		return err
-	}
-	decodedKey := string(bytes.TrimSuffix(gossh.MarshalAuthorizedKey(pk), []byte{'\n'}))
-
 	opts := options.Replace().SetUpsert(true)
-	_, err = database.GetDB().Collection(database.CollectionPlayers).ReplaceOne(p.ctx, bson.D{{Key: "ssh_pub_key", Value: decodedKey}}, p, opts)
+	_, err := database.GetDB().Collection(database.CollectionPlayers).ReplaceOne(p.ctx, bson.M{"username": p.Username, "discriminator": p.Discriminator}, p, opts)
 	return err
 }
 

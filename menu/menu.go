@@ -99,7 +99,7 @@ func (m Model) View() string {
 
 	panes := lipgloss.JoinVertical(
 		lipgloss.Center,
-		paneStyle.Align(lipgloss.Center, lipgloss.Bottom).Foreground(colors.Logo).Height(m.height/2).Render(m.style.Align(lipgloss.Left).Render(logo)),
+		paneStyle.Align(lipgloss.Center, lipgloss.Top).Foreground(colors.Logo).Height(m.height/2).Render(m.style.Align(lipgloss.Left).Render(logo)),
 		paneStyle.Align(lipgloss.Center, lipgloss.Top).Render(m.screen.View()),
 	)
 

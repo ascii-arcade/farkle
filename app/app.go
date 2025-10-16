@@ -1,8 +1,6 @@
 package app
 
 import (
-	"log/slog"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
@@ -43,10 +41,18 @@ func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
 	renderer := bubbletea.MakeRenderer(sess)
 	style := renderer.NewStyle()
 
-	player, found := players.Get(sess.User())
-	if !found {
-		slog.Error("Could not find player in database", "user", sess.User())
-		return nil, nil
+	player, ok := sess.Context().Value("PLAYER").(*players.Player)
+	if !ok {
+		pubKey, ok := sess.Context().Value("PUBKEY").(string)
+		if !ok {
+			pubKey = ""
+		}
+
+		var err error
+		player, err = players.NewPlayer(sess.Context(), pubKey, "en")
+		if err != nil {
+			return nil, nil
+		}
 	}
 
 	return Model{

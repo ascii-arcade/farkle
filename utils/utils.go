@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/rand/v2"
+	"strings"
 
 	"github.com/ascii-arcade/farkle/language"
 )
@@ -17,6 +18,10 @@ AGAIN:
 	}
 
 	return n
+}
+
+func GenerateDescriminator() string {
+	return fmt.Sprintf("%04d", rand.IntN(10000))
 }
 
 func GenerateCode() string {
@@ -37,4 +42,14 @@ func GenerateCode() string {
 
 func ToPointer[T any](v T) *T {
 	return &v
+}
+
+func ValidPublicKey(key string) bool {
+	validPrefixes := []string{"ssh-rsa", "ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"}
+	for _, prefix := range validPrefixes {
+		if strings.HasPrefix(key, prefix) && len(key) > len(prefix)+20 {
+			return true
+		}
+	}
+	return false
 }
