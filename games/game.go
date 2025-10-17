@@ -9,10 +9,8 @@ import (
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/dice"
-	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/score"
-	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 )
@@ -65,7 +63,7 @@ func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
 		}
 
 		playerData := &PlayerData{
-			Name:      utils.GenerateName(language.Languages[player.LanguagePreference]),
+			Name:      player.Username,
 			Score:     0,
 			Color:     g.colors[len(g.players)%len(g.colors)],
 			turnOrder: len(g.players),
@@ -304,7 +302,7 @@ func (s *Game) HasPlayer(player *players.Player) bool {
 
 func (s *Game) GetPlayerCount(includeDisconnected bool) int {
 	count := 0
-	for p, _ := range s.players {
+	for p := range s.players {
 		if includeDisconnected || p.IsConnected() {
 			count++
 		}
