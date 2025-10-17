@@ -79,9 +79,9 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 func (s *optionScreen) View() string {
 	var content strings.Builder
 	content.WriteString(s.model.lang().Get("menu", "welcome") + "\n\n")
+	content.WriteString(s.model.player.GetDisplayName(s.style) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_create"), keys.MenuStartNewGame.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_join"), keys.MenuJoinGame.String(s.style)) + "\n")
-	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_use_ssh_key"), keys.MenuAddSSHKey.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_edit_profile"), keys.MenuEditProfile.String(s.style)) + "\n")
 	content.WriteString("\n\n")
 
@@ -94,5 +94,7 @@ func (s *optionScreen) View() string {
 
 	content.WriteString(s.model.style.Foreground(colors.Faded).Render("\n\n" + config.Version))
 
-	return content.String()
+	style := lipgloss.NewStyle().AlignVertical(lipgloss.Center).AlignHorizontal(lipgloss.Left).Width(lipgloss.Width(content.String()))
+
+	return style.Render(content.String())
 }

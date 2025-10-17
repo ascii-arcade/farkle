@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log/slog"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish/bubbletea"
@@ -43,16 +45,9 @@ func TeaHandler(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
 
 	player, ok := sess.Context().Value("PLAYER").(*players.Player)
 	if !ok {
-		pubKey, ok := sess.Context().Value("PUBKEY").(string)
-		if !ok {
-			pubKey = ""
-		}
-
-		var err error
-		player, err = players.NewPlayer(sess.Context(), pubKey, "en")
-		if err != nil {
-			return nil, nil
-		}
+		slog.Warn("That's weird")
+		sess.Close()
+		return nil, nil
 	}
 
 	return Model{

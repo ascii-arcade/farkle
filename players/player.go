@@ -4,16 +4,19 @@ import (
 	"context"
 
 	"github.com/ascii-arcade/farkle/database"
+	"github.com/ascii-arcade/farkle/utils"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Player struct {
-	Username           string   `bson:"username"`
-	Discriminator      string   `bson:"discriminator"`
-	SshPubKeys         []string `bson:"ssh_pub_keys"`
-	LanguagePreference string   `bson:"language_preference"`
+	Id                 string            `bson:"_id,omitempty"`
+	Username           string            `bson:"username"`
+	Discriminator      string            `bson:"discriminator"`
+	SshPubKeys         map[string]string `bson:"ssh_pub_keys"`
+	LanguagePreference string            `bson:"language_preference"`
 
 	Sess         ssh.Session   `bson:"-"`
 	UpdateChan   chan struct{} `bson:"-"`
@@ -22,8 +25,8 @@ type Player struct {
 	ctx          context.Context
 }
 
-func (p *Player) GetDisplayName() string {
-	return p.Username + "#" + p.Discriminator
+func (p *Player) GetDisplayName(style lipgloss.Style) string {
+	return style.Foreground(lipgloss.Color("#1dc42bff")).Render(p.Username + "#" + p.Discriminator)
 }
 
 func (p *Player) OnDisconnect(fn func()) {
@@ -34,8 +37,8 @@ func (p *Player) IsConnected() bool {
 	return p.connected
 }
 
-func (p *Player) AddPubKey(pKey string) {
-	p.SshPubKeys = append(p.SshPubKeys, pKey)
+func (p *Player) AddPubKey(name, pKey string) {
+	p.SshPubKeys[name] = pKey
 }
 
 func (p *Player) SetSession(sess ssh.Session) {
@@ -47,8 +50,12 @@ func (p *Player) Save() error {
 		return nil
 	}
 
+	if _, exists := GetByName(p.Username, p.Discriminator); exists {
+		p.Discriminator = utils.GenerateDescriminator()
+	}
+
 	opts := options.Replace().SetUpsert(true)
-	_, err := database.GetDB().Collection(database.CollectionPlayers).ReplaceOne(p.ctx, bson.M{"username": p.Username, "discriminator": p.Discriminator}, p, opts)
+	_, err := database.GetDB().Collection(database.CollectionPlayers).ReplaceOne(p.ctx, bson.M{"_id": p.Id}, p, opts)
 	return err
 }
 

@@ -63,7 +63,7 @@ func main() {
 			player, found := players.Get(decodedKey)
 			if !found {
 				var err error
-				if player, err = players.NewPlayer(ctx, decodedKey, "en"); err != nil {
+				if player, err = players.NewPlayer(ctx, "default", decodedKey, "en"); err != nil {
 					slog.Error("Could not create player", "error", err)
 					return false
 				}

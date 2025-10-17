@@ -43,7 +43,27 @@ func Setup(ctx context.Context, uri, database string) error {
 	_ = db.client.Database(db.database).CreateCollection(ctx, string(CollectionPlayers))
 	db.collections[string(CollectionPlayers)] = db.client.Database(db.database).Collection(string(CollectionPlayers))
 
+	// Create indexes for better performance
+	if err := createIndexes(ctx); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func createIndexes(ctx context.Context) error {
+	playersCollection := db.collections[string(CollectionPlayers)]
+
+	// Create an index on ssh_pub_keys map values using a wildcard index
+	// This allows efficient searching of any value within the ssh_pub_keys map
+	_, err := playersCollection.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: map[string]any{
+			"ssh_pub_keys.$**": 1, // Wildcard index on all fields within ssh_pub_keys
+		},
+		Options: options.Index().SetName("ssh_pub_keys_wildcard"),
+	})
+
+	return err
 }
 
 func GetDB() *MongoDB {
