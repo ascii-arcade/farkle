@@ -3,7 +3,8 @@
   "name": "English",
   "translations": {
     "global": {
-      "quit": "Press %s to quit the game"
+      "quit": "Press %s to quit the game",
+      "go_back": "Press %s to go back"
     },
     "error": {
       "player_not_found": "Player not found",
@@ -21,22 +22,34 @@
         "invalid_code": "Invalid game code, please try again",
         "lobby_full": "Lobby is full"
       },
+      "edit_profile": {
+        "invalid_key": "Invalid SSH public key, please try again\nMake sure it starts with 'ssh-rsa', 'ssh-ed25519', or 'ssh-dss'",
+        "name_and_key_required": "Both SSH Key Name and Key are required",
+        "key_name_exists": "An SSH key with that name already exists",
+        "key_in_use": "This SSH key is already in use by another player",
+        "player_name_required": "Player name cannot be empty",
+        "player_name_format_required": "Player name must be in the format 'username#1234'",
+        "same_player_merge": "Cannot merge the same player",
+        "min_ssh_keys_required": "You must have at least one Public SSH key"
+      },
       "disconnected": "%s has disconnected from the game. Waiting for them to reconnect..."
     },
     "menu": {
       "choose_language": "For English, press %s",
       "welcome": "Welcome to Farkle!",
-      "press_to_create": "%s | new game",
-      "press_to_join": "%s | join game",
-      "press_to_use_ssh_key": "%s | set ssh key",
-      "press_to_edit_profile": "%s | edit profile",
+      "press_to_create": "%s | New game",
+      "press_to_join": "%s | Join game",
+      "press_to_edit_profile": "%s | Edit profile",
       "join": {
         "game_code_placeholder": "Game Code",
         "enter_code": "Enter the game code to join:"
       },
-      "use_key": {
-        "enter_key": "Enter your SSH public key to associate with your player profile:",
-        "invalid_key": "Invalid SSH public key, please try again\nMake sure it starts with 'ssh-rsa', 'ssh-ed25519', or 'ssh-dss'"
+      "edit_profile": {
+        "set_player_name": "Set Player Name",
+        "add_ssh_key": "Add Public SSH Key",
+        "manage_ssh_keys": "Manage Public SSH Keys",
+        "key_name": "Key Name",
+        "public_key": "Public Key"
       }
     },
     "board": {

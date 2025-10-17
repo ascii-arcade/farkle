@@ -33,6 +33,8 @@ var (
 
 	PreviousScreen = Keys{"esc"}
 	Submit         = Keys{"enter"}
+	Up             = Keys{"up", "shift+tab"}
+	Down           = Keys{"down", "tab"}
 
 	LobbyStartGame = Keys{"s"}
 	RestartGame    = Keys{"r"}
