@@ -2,6 +2,7 @@ package players
 
 import (
 	"context"
+	"maps"
 
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/language"
@@ -127,4 +128,21 @@ func GetConnectedPlayerCount() int {
 		}
 	}
 	return count
+}
+
+func DeletePlayer(player *Player) error {
+	RemovePlayer(player)
+	_, err := database.GetDB().Collection(database.CollectionPlayers).DeleteOne(context.Background(), map[string]any{
+		"id": player.Id,
+	})
+	return err
+}
+
+func Merge(target, source *Player) error {
+	maps.Copy(target.SshPubKeys, source.SshPubKeys)
+	if err := target.Save(); err != nil {
+		return err
+	}
+
+	return DeletePlayer(source)
 }

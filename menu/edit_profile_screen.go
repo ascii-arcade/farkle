@@ -27,6 +27,10 @@ type editProfileScreen struct {
 	manageKeys   bool
 	sshKeysTable table.Model
 
+	mergePlayers       bool
+	mergePlayersInput  textinput.Model
+	mergePlayersVerify bool
+
 	sshKeyInvalid bool
 }
 
@@ -57,6 +61,13 @@ func (m *Model) newEditProfileScreen() *editProfileScreen {
 	sshKeyInput.Width = 50
 	sshKeyInput.Blur()
 	s.sshKeyInput = sshKeyInput
+
+	mergePlayersInput := textinput.New()
+	mergePlayersInput.Cursor.Style = m.style.Foreground(lipgloss.Color("205"))
+	mergePlayersInput.Placeholder = "Enter player name to merge"
+	mergePlayersInput.CharLimit = 25
+	mergePlayersInput.Blur()
+	s.mergePlayersInput = mergePlayersInput
 
 	columns := []table.Column{
 		{Title: "", Width: 10},
@@ -126,7 +137,6 @@ func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "tab", "shift+tab", "up", "down":
-
 			if s.manageKeys {
 				s.sshKeysTable, cmd = s.sshKeysTable.Update(msg)
 				return s.model, cmd
@@ -158,14 +168,59 @@ func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				s.sshKeyNameInput.Blur()
 				s.sshKeyInput.Focus()
 			}
-		case "m":
+		case "k":
 			s.userNameInput.Blur()
 			s.sshKeyNameInput.Blur()
 			s.sshKeyInput.Blur()
 			s.sshKeysTable.Focus()
 			s.manageKeys = true
 			return s.model, nil
+		case "m":
+			s.mergePlayers = true
+			return s.model, nil
 		case "enter":
+			if s.mergePlayers {
+				playerName := strings.TrimSpace(s.mergePlayersInput.Value())
+				if playerName == "" {
+					s.model.error = "Player name cannot be empty"
+					return s.model, nil
+				}
+
+				playerNameSplit := strings.SplitN(playerName, "#", 2)
+				if len(playerNameSplit) != 2 {
+					s.model.error = "Player name must be in the format 'username#1234'"
+					return s.model, nil
+				}
+
+				mergePlayer, found := players.GetByName(playerNameSplit[0], playerNameSplit[1])
+				if !found {
+					s.model.error = "Player not found"
+					return s.model, nil
+				}
+
+				if mergePlayer.Id == s.model.player.Id {
+					s.model.error = "Cannot merge the same player"
+					return s.model, nil
+				}
+
+				err := players.Merge(s.model.player, mergePlayer)
+				if err != nil {
+					s.model.error = "Error merging players: " + err.Error()
+					return s.model, nil
+				}
+
+				players.RemovePlayer(mergePlayer)
+
+				s.mergePlayers = false
+				s.mergePlayersInput.SetValue("")
+				s.mergePlayersInput.Blur()
+				s.userNameInput.Focus()
+				s.cursorPos = 0
+
+				s.model.error = "Players merged successfully"
+				return s.model, nil
+			}
+
 			switch s.cursorPos {
 			case 0:
 				s.userNameInput, cmd = s.userNameInput.Update(msg)
@@ -248,6 +303,52 @@ func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 	}
 
+	if s.mergePlayers {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if s.mergePlayersVerify {
+				switch msg.String() {
+				case "y", "Y":
+					playerName := strings.TrimSpace(s.mergePlayersInput.Value())
+					playerNameSplit := strings.SplitN(playerName, "#", 2)
+					mergePlayer, _ := players.GetByName(playerNameSplit[0], playerNameSplit[1])
+
+					err := players.Merge(s.model.player, mergePlayer)
+					if err != nil {
+						s.model.error = "Error merging players: " + err.Error()
+						s.mergePlayersVerify = false
+						return s.model, nil
+					}
+
+					s.mergePlayers = false
+					s.mergePlayersVerify = false
+					s.mergePlayersInput.SetValue("")
+					s.mergePlayersInput.Blur()
+					s.userNameInput.Focus()
+					s.cursorPos = 0
+
+					return s.model, nil
+				case "n", "N", "esc":
+					s.mergePlayers = false
+					s.mergePlayersVerify = false
+					s.mergePlayersInput.SetValue("")
+					s.mergePlayersInput.Blur()
+					s.userNameInput.Focus()
+					s.cursorPos = 0
+					return s.model, nil
+				}
+			}
+
+			if msg.String() == "enter" {
+				s.mergePlayersVerify = true
+				return s.model, nil
+			}
+		}
+
+		s.mergePlayersInput, cmd = s.mergePlayersInput.Update(msg)
+		return s.model, cmd
+	}
+
 	switch s.cursorPos {
 	case 0:
 		s.userNameInput, cmd = s.userNameInput.Update(msg)
@@ -268,8 +369,9 @@ func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 }
 
 func (s *editProfileScreen) View() string {
+	var content strings.Builder
+
 	if s.manageKeys {
-		var content strings.Builder
 		content.WriteString(s.sshKeysTable.View())
 		if s.model.error != "" {
 			content.WriteString("\n")
@@ -283,7 +385,32 @@ func (s *editProfileScreen) View() string {
 		return style.Render(content.String())
 	}
 
-	var content strings.Builder
+	if s.mergePlayers {
+		if s.mergePlayersVerify {
+			style := lipgloss.NewStyle().Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("240")).Width(50)
+			content := strings.Builder{}
+
+			content.WriteString("Are you sure you want to merge the player accounts? This action cannot be undone.\n\n")
+			content.WriteString("Press 'y' to confirm or 'n' to cancel.")
+
+			return style.Render(content.String())
+		}
+
+		content.WriteString("Merge player accounts")
+		if s.model.error != "" {
+			content.WriteString("\n")
+			content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render(s.model.error))
+			s.model.error = ""
+		}
+		content.WriteString("\n\n")
+		content.WriteString("Enter player name to merge | ")
+		content.WriteString(s.mergePlayersInput.View())
+		content.WriteString("\n\nPress 'esc' to return to profile editing")
+
+		style := lipgloss.NewStyle().AlignVertical(lipgloss.Center).AlignHorizontal(lipgloss.Left).Width(lipgloss.Width(content.String()))
+		return style.Render(content.String())
+	}
+
 	content.WriteString("Set username | ")
 	content.WriteString(s.userNameInput.View())
 	content.WriteString("\n\n")
@@ -296,13 +423,13 @@ func (s *editProfileScreen) View() string {
 	if s.sshKeyInvalid {
 		content.WriteString(" (invalid)")
 	}
+
 	if s.model.error != "" {
 		content.WriteString("\n")
 		content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render(s.model.error))
 	}
-	content.WriteString("\n\n'c' to clear inputs | 'm' to manage SSH keys")
+	content.WriteString("\n\n'c' to clear inputs | 'k' to manage SSH keys | 'm' to merge players")
 
 	style := lipgloss.NewStyle().AlignVertical(lipgloss.Center).AlignHorizontal(lipgloss.Left).Width(lipgloss.Width(content.String()))
-
 	return style.Render(content.String())
 }
