@@ -345,7 +345,9 @@ func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 	}
 
 	if s.currentMode == modeEditPlayerName {
-		return s.userNameInput.Update(msg)
+		var cmd tea.Cmd
+		s.userNameInput, cmd = s.userNameInput.Update(msg)
+		return s.model, cmd
 	}
 
 	if s.currentMode == modeAddSSHKey {
