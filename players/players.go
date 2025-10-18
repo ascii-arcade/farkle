@@ -3,6 +3,7 @@ package players
 import (
 	"context"
 	"maps"
+	"time"
 
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/language"
@@ -18,19 +19,32 @@ func NewPlayer(ctx context.Context, pkn, pk, langPref string) (*Player, error) {
 		Username:           utils.GenerateName(language.Languages[langPref]),
 		Discriminator:      utils.GenerateDescriminator(),
 		SshPubKeys:         map[string]string{pkn: pk},
-		UpdateChan:         make(chan struct{}),
 		LanguagePreference: langPref,
-		connected:          true,
-		onDisconnect:       []func(){},
-		ctx:                ctx,
+
+		onDisconnect: []func(){},
+		ctx:          ctx,
 	}
 	players[player.Id] = player
 	return player, player.Save()
 }
 
 func (p *Player) Connect() {
-	p.UpdateChan = make(chan struct{})
+	p.updateChan = make(chan struct{})
 	p.connected = true
+
+	go func() {
+		for {
+			select {
+			case <-p.ctx.Done():
+				return
+			default:
+			}
+
+			p.LastConnectedAt = utils.ToPointer(time.Now())
+			_ = p.Save()
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	go func() {
 		<-p.ctx.Done()
@@ -108,7 +122,7 @@ func GetByName(username, discriminator string) (*Player, bool) {
 
 func RemovePlayer(player *Player) {
 	if _, exists := players[player.Id]; exists {
-		close(player.UpdateChan)
+		close(player.updateChan)
 		delete(players, player.Id)
 	}
 }

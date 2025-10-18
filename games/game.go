@@ -323,7 +323,7 @@ func (g *Game) Busted() bool {
 func (g *Game) Refresh() {
 	for p := range g.players {
 		select {
-		case p.UpdateChan <- struct{}{}:
+		case p.UpdateChan() <- struct{}{}:
 		default:
 		}
 	}

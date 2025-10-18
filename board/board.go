@@ -46,7 +46,7 @@ type rollMsg struct{}
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
-		waitForRefreshSignal(m.player.UpdateChan),
+		waitForRefreshSignal(m.player.UpdateChan()),
 		tea.WindowSize(),
 	)
 }
@@ -64,7 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case messages.RefreshGame:
-		return m, waitForRefreshSignal(m.player.UpdateChan)
+		return m, waitForRefreshSignal(m.player.UpdateChan())
 	}
 
 	activeScreenModel, cmd := m.activeScreen().Update(msg)

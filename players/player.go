@@ -2,6 +2,7 @@ package players
 
 import (
 	"context"
+	"time"
 
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/utils"
@@ -17,11 +18,12 @@ type Player struct {
 	Discriminator      string            `bson:"discriminator"`
 	SshPubKeys         map[string]string `bson:"ssh_pub_keys"`
 	LanguagePreference string            `bson:"language_preference"`
+	LastConnectedAt    *time.Time        `bson:"last_connected_at,omitempty"`
 
-	Sess         ssh.Session   `bson:"-"`
-	UpdateChan   chan struct{} `bson:"-"`
+	sess         ssh.Session
+	updateChan   chan struct{}
 	onDisconnect []func()
-	connected    bool `bson:"-"`
+	connected    bool
 	ctx          context.Context
 }
 
@@ -48,7 +50,7 @@ func (p *Player) AddPubKey(name, pKey string) {
 }
 
 func (p *Player) SetSession(sess ssh.Session) {
-	p.Sess = sess
+	p.sess = sess
 }
 
 func (p *Player) Save() error {
@@ -68,4 +70,11 @@ func (p *Player) Save() error {
 func (p *Player) SetLanguage(lang string) {
 	p.LanguagePreference = lang
 	_ = p.Save()
+}
+
+func (p *Player) UpdateChan() chan struct{} {
+	if p.updateChan == nil {
+		p.updateChan = make(chan struct{}, 1)
+	}
+	return p.updateChan
 }
