@@ -13,35 +13,32 @@ import (
 var players = make(map[string]*Player)
 
 func NewPlayer(ctx context.Context, pkn, pk, langPref string) (*Player, error) {
-	player, exists := Get(pk)
-	if !exists {
-		player = &Player{
-			Id:                 uuid.New().String(),
-			Username:           utils.GenerateName(language.Languages[langPref]),
-			Discriminator:      utils.GenerateDescriminator(),
-			SshPubKeys:         map[string]string{pkn: pk},
-			UpdateChan:         make(chan struct{}),
-			LanguagePreference: langPref,
-			connected:          true,
-			onDisconnect:       []func(){},
-			ctx:                ctx,
-		}
+	player := &Player{
+		Id:                 uuid.New().String(),
+		Username:           utils.GenerateName(language.Languages[langPref]),
+		Discriminator:      utils.GenerateDescriminator(),
+		SshPubKeys:         map[string]string{pkn: pk},
+		UpdateChan:         make(chan struct{}),
+		LanguagePreference: langPref,
+		connected:          true,
+		onDisconnect:       []func(){},
+		ctx:                ctx,
 	}
-
-	player.UpdateChan = make(chan struct{})
-	player.connected = true
-	player.ctx = ctx
 	players[player.Id] = player
+	return player, player.Save()
+}
+
+func (p *Player) Connect() {
+	p.UpdateChan = make(chan struct{})
+	p.connected = true
 
 	go func() {
-		<-player.ctx.Done()
-		player.connected = false
-		for _, fn := range player.onDisconnect {
+		<-p.ctx.Done()
+		p.connected = false
+		for _, fn := range p.onDisconnect {
 			fn()
 		}
 	}()
-
-	return player, player.Save()
 }
 
 func Get(sshPubKey string) (*Player, bool) {

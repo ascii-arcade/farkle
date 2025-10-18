@@ -2,16 +2,18 @@ package games
 
 import (
 	"math/rand/v2"
+	"time"
 
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 )
 
 var games = make(map[string]*Game)
 
-func New(style lipgloss.Style) *Game {
+func New(style lipgloss.Style) (*Game, error) {
 	colors := []lipgloss.Color{
 		"#3B82F6", // Blue
 		"#10B981", // Green
@@ -26,18 +28,21 @@ func New(style lipgloss.Style) *Game {
 	})
 
 	game := &Game{
-		turn:      0,
-		DicePool:  dice.NewDicePool(6),
-		DiceHeld:  dice.NewDicePool(0),
-		FirstRoll: true,
+		Id:        uuid.NewString(),
+		Turn:      0,
+		dicePool:  dice.NewDicePool(6),
+		diceHeld:  dice.NewDicePool(0),
+		firstRoll: true,
 		Code:      utils.GenerateCode(),
 		style:     style,
 		colors:    colors,
 		players:   make(map[*players.Player]*PlayerData),
+		CreatedAt: utils.ToPointer(time.Now()),
 	}
 	game.Restart()
 	games[game.Code] = game
-	return game
+
+	return game, game.Save()
 }
 
 func Exists(code string) bool {

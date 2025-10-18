@@ -68,6 +68,7 @@ func main() {
 					return false
 				}
 			}
+			player.WithContext(ctx).Connect()
 
 			ctx.SetValue("PLAYER", player)
 			ctx.SetValue("PUBKEY", decodedKey)

@@ -11,6 +11,8 @@ type Collection string
 
 const (
 	CollectionPlayers Collection = "players"
+	CollectionGames   Collection = "games"
+	CollectionActions Collection = "actions"
 )
 
 type MongoDB struct {
@@ -43,7 +45,13 @@ func Setup(ctx context.Context, uri, database string) error {
 	_ = db.client.Database(db.database).CreateCollection(ctx, string(CollectionPlayers))
 	db.collections[string(CollectionPlayers)] = db.client.Database(db.database).Collection(string(CollectionPlayers))
 
-	// Create indexes for better performance
+	_ = db.client.Database(db.database).CreateCollection(ctx, string(CollectionGames))
+	db.collections[string(CollectionGames)] = db.client.Database(db.database).Collection(string(CollectionGames))
+
+	opts := options.CreateCollection().SetTimeSeriesOptions(options.TimeSeries().SetTimeField("time"))
+	_ = db.client.Database(db.database).CreateCollection(ctx, string(CollectionActions), opts)
+	db.collections[string(CollectionActions)] = db.client.Database(db.database).Collection(string(CollectionActions))
+
 	if err := createIndexes(ctx); err != nil {
 		return err
 	}
@@ -54,11 +62,9 @@ func Setup(ctx context.Context, uri, database string) error {
 func createIndexes(ctx context.Context) error {
 	playersCollection := db.collections[string(CollectionPlayers)]
 
-	// Create an index on ssh_pub_keys map values using a wildcard index
-	// This allows efficient searching of any value within the ssh_pub_keys map
 	_, err := playersCollection.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: map[string]any{
-			"ssh_pub_keys.$**": 1, // Wildcard index on all fields within ssh_pub_keys
+			"ssh_pub_keys.$**": 1,
 		},
 		Options: options.Index().SetName("ssh_pub_keys_wildcard"),
 	})
@@ -76,4 +82,8 @@ func (m *MongoDB) Collection(name Collection) *mongo.Collection {
 
 func (m *MongoDB) Close() error {
 	return m.client.Disconnect(m.ctx)
+}
+
+func (m *MongoDB) Context() context.Context {
+	return m.ctx
 }

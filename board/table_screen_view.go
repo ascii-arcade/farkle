@@ -77,20 +77,20 @@ func (s *tableScreen) View() string {
 		poolPaneStyle = poolPaneStyle.Padding(0, 0, 1, 0)
 		poolRollStrings = append(poolRollStrings, s.model.lang().Get("board", "your_turn")+"\n")
 	}
-	poolRollStrings = append(poolRollStrings, s.model.game.DicePool.Render(0, 6))
+	poolRollStrings = append(poolRollStrings, s.model.game.RenderDicePool(0, 6))
 	poolRollPane := lipgloss.JoinVertical(
 		lipgloss.Left,
 		poolPaneStyle.Render(poolRollStrings...),
 	)
 
-	heldScore, _, err := s.model.game.DiceHeld.Score()
+	heldScore, _, err := s.model.game.ScoreDiceHeld()
 	if err != nil {
 		heldScorePaneStyle = heldScorePaneStyle.Foreground(colors.Error)
 	}
 
 	heldDie := s.model.style.
 		Height(10).
-		Render(s.model.game.DiceHeld.Render(0, 6))
+		Render(s.model.game.RenderDiceHeld(0, 6))
 
 	poolHeldPane := heldPaneStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -102,15 +102,8 @@ func (s *tableScreen) View() string {
 	lockedScorePaneStyle := s.model.style.
 		Align(lipgloss.Left)
 
-	bankedDie := ""
-	for _, diePool := range s.model.game.DiceLocked {
-		bankedDie += diePool.RenderCharacters() + "\n"
-	}
-	lockedScore := 0
-	for _, diePool := range s.model.game.DiceLocked {
-		ls, _, _ := diePool.Score()
-		lockedScore += ls
-	}
+	bankedDie := s.model.game.RenderBankedDice()
+	lockedScore := s.model.game.LockedScore()
 	if lockedScore == 0 {
 		lockedScorePaneStyle = lockedScorePaneStyle.Foreground(colors.Error)
 	}

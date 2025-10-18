@@ -7,7 +7,6 @@ import (
 
 	"github.com/ascii-arcade/farkle/keys"
 	"github.com/ascii-arcade/farkle/messages"
-	"github.com/ascii-arcade/farkle/score"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -50,7 +49,7 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				return s.model, nil
 			}
 
-			if !s.model.game.Rolled && !s.rolling {
+			if !s.model.game.Rolled() && !s.rolling {
 				s.rollTickCount = 0
 				s.rolling = true
 				return s.model, tea.Tick(rollInterval, func(time.Time) tea.Msg {
@@ -68,8 +67,8 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionLock.TriggeredBy(msg.String()) {
-			_, _, err := s.model.game.DiceHeld.Score()
-			if len(s.model.game.DiceHeld) != 0 && err == nil {
+			_, _, err := s.model.game.ScoreDiceHeld()
+			if s.model.game.DiceHeldCount() != 0 && err == nil {
 				if err := s.model.game.LockDice(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
 					return s.model, nil
@@ -82,11 +81,11 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				return s.model, nil
 			}
 
-			if s.model.game.Rolled && len(s.model.game.DiceLocked[len(s.model.game.DiceLocked)-1]) == 0 {
+			if s.model.game.Rolled() && s.model.game.DiceLockedCount() == 0 {
 				s.model.error = s.model.lang().Get("error", "game", "lock_before_banking")
 				return s.model, nil
 			}
-			if len(s.model.game.DiceHeld) == 0 && len(s.model.game.DiceLocked) > 0 {
+			if s.model.game.DiceHeldCount() == 0 && s.model.game.DiceLockedCount() > 0 {
 				if err := s.model.game.Bank(); err != nil {
 					s.model.error = s.model.lang().Get("error", "game", err.Error())
 					return s.model, nil
@@ -95,14 +94,14 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionTakeAll.TriggeredBy(msg.String()) {
-			if !s.model.game.Rolled {
+			if !s.model.game.Rolled() {
 				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
 				return s.model, nil
 			}
-			if len(s.model.game.DiceHeld) > 0 {
+			if s.model.game.DiceHeldCount() > 0 {
 				s.model.game.UndoAll()
 			}
-			_, all, _ := score.Calculate(s.model.game.DicePool, true)
+			_, all, _ := s.model.game.ScoreDicePool()
 			allCopy := slices.Clone(all)
 			for _, face := range allCopy {
 				s.model.game.HoldDie(face)
@@ -110,49 +109,40 @@ func (s *tableScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 		}
 
 		if keys.ActionUndo.TriggeredBy(msg.String()) {
-			if len(s.model.game.DiceHeld) > 0 {
+			if s.model.game.DiceHeldCount() > 0 {
 				s.model.game.Undo()
 			}
 		}
 
 		if keys.ActionUndoAll.TriggeredBy(msg.String()) {
-			if len(s.model.game.DiceHeld) > 0 {
+			if s.model.game.DiceHeldCount() > 0 {
 				s.model.game.UndoAll()
 			}
 		}
 
 		switch msg.String() {
 		case "1", "2", "3", "4", "5", "6":
-			if !s.model.game.Rolled {
+			if !s.model.game.Rolled() {
 				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
 				return s.model, nil
 			}
 
 			if slices.Contains([]string{"1", "2", "3", "4", "5", "6"}, msg.String()) {
 				face, _ := strconv.Atoi(msg.String())
-				if s.model.game.DicePool.Contains(face) {
+				if s.model.game.DicePoolHasFace(face) {
 					s.model.game.HoldDie(face)
 					return s.model, nil
 				}
 			}
 
 		case "!", "@", "#", "$", "%", "^":
-			if !s.model.game.Rolled {
+			if !s.model.game.Rolled() {
 				s.model.error = s.model.lang().Get("error", "game", "did_not_roll")
 				return s.model, nil
 			}
 
 			faceMap := map[string]int{"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6}
-			face := faceMap[msg.String()]
-			c := 0
-			for _, die := range s.model.game.DicePool {
-				if die == face {
-					c++
-				}
-			}
-			for range c {
-				s.model.game.HoldDie(face)
-			}
+			s.model.game.LockAllOfFace(faceMap[msg.String()])
 		}
 	}
 

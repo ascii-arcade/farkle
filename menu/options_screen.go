@@ -54,7 +54,12 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				}
 			}
 		case keys.MenuStartNewGame.TriggeredBy(msg.String()):
-			game := games.New(s.style)
+			game, err := games.New(s.style)
+			if err != nil {
+				s.model.error = s.model.lang().Get("error", "game", err.Error())
+				return s.model, nil
+			}
+
 			if err := game.AddPlayer(s.model.player, true); err != nil {
 				s.model.error = s.model.lang().Get("error", "game", err.Error())
 				return s.model, nil

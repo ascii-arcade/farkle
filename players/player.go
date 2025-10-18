@@ -25,6 +25,11 @@ type Player struct {
 	ctx          context.Context
 }
 
+func (p *Player) WithContext(ctx context.Context) *Player {
+	p.ctx = ctx
+	return p
+}
+
 func (p *Player) GetDisplayName(style lipgloss.Style) string {
 	return style.Foreground(lipgloss.Color("#1dc42bff")).Render(p.Username + "#" + p.Discriminator)
 }
