@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongo:8.2-ubi8
+    image: mongodb/mongodb-community-server:8.2-ubi8
     container_name: mongodb
     ports:
       - ${MONGO_PORT:-27017}:27017
