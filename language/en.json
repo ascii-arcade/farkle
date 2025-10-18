@@ -49,7 +49,8 @@
         "add_ssh_key": "Add Public SSH Key",
         "manage_ssh_keys": "Manage Public SSH Keys",
         "key_name": "Key Name",
-        "public_key": "Public Key"
+        "public_key": "Public Key",
+        "add_ssh_key_github": "Add Public SSH keys from GitHub"
       }
     },
     "board": {

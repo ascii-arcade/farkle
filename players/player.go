@@ -44,6 +44,7 @@ func (p *Player) IsConnected() bool {
 
 func (p *Player) AddPubKey(name, pKey string) {
 	p.SshPubKeys[name] = pKey
+	_ = p.Save()
 }
 
 func (p *Player) SetSession(sess ssh.Session) {

@@ -2,6 +2,7 @@ package menu
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ascii-arcade/farkle/keys"
@@ -47,16 +48,19 @@ const (
 	modeManageKeys
 	modeMergePlayers
 	modeMergeConfirm
+	modeAddGithubSSHKey
+	modeAddGithubSSHKeyConfirm
 )
 
 type editProfileScreen struct {
 	model *Model
 	style lipgloss.Style
 
-	userNameInput     textinput.Model
-	sshKeyNameInput   textinput.Model
-	sshKeyInput       textinput.Model
-	mergePlayersInput textinput.Model
+	userNameInput       textinput.Model
+	sshKeyNameInput     textinput.Model
+	sshKeyInput         textinput.Model
+	mergePlayersInput   textinput.Model
+	githubUsernameInput textinput.Model
 
 	cursorPos   int
 	currentMode screenMode
@@ -100,9 +104,82 @@ func (m *Model) newEditProfileScreen() *editProfileScreen {
 	mergePlayersInput.Blur()
 	s.mergePlayersInput = mergePlayersInput
 
+	githubUsernameInput := textinput.New()
+	githubUsernameInput.Cursor.Style = m.style.Foreground(lipgloss.Color(cursorColor))
+	githubUsernameInput.Placeholder = "Enter your GitHub username"
+	githubUsernameInput.CharLimit = maxPlayerNameLen
+	githubUsernameInput.Blur()
+	s.githubUsernameInput = githubUsernameInput
+
 	s.initializeSSHKeysTable()
 
 	return s
+}
+
+func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.model.height, s.model.width = msg.Height, msg.Width
+		return s.model, nil
+
+	case cursor.BlinkMsg:
+		return s.model, nil
+
+	case tea.KeyMsg:
+		if keys.PreviousScreen.TriggeredBy(msg.String()) {
+			if s.currentMode == modeEditProfile {
+				if err := s.model.player.Save(); err != nil {
+					s.model.error = err.Error()
+					return s.model, nil
+				}
+
+				return s.model, func() tea.Msg {
+					return messages.SwitchScreenMsg{
+						Screen: s.model.newOptionScreen(),
+					}
+				}
+			}
+
+			s.currentMode = modeEditProfile
+			return s.model, nil
+		}
+	}
+
+	switch s.currentMode {
+	case modeEditPlayerName:
+		return s.handleEditPlayerNameInput(msg)
+	case modeAddSSHKey:
+		return s.handleAddSSHKeyInput(msg)
+	case modeManageKeys:
+		return s.handleManageKeysInput(msg)
+	case modeMergePlayers:
+		return s.handleMergePlayersInput(msg)
+	case modeAddGithubSSHKey:
+		return s.handleAddGithubSSHKeyInput(msg)
+	case modeMergeConfirm, modeAddGithubSSHKeyConfirm:
+		return s.handleConfirmInput(msg)
+	}
+
+	return s.handleNormalInput(msg)
+}
+
+func (s *editProfileScreen) handleEditPlayerNameInput(msg tea.Msg) (any, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if keys.Submit.TriggeredBy(msg.String()) {
+			s.model.player.Username = s.userNameInput.Value()
+			if err := s.model.player.Save(); err != nil {
+				s.model.error = err.Error()
+			}
+			s.userNameInput.SetValue("")
+
+			s.currentMode = modeEditProfile
+		}
+	}
+
+	var cmd tea.Cmd
+	s.userNameInput, cmd = s.userNameInput.Update(msg)
+	return s.model, cmd
 }
 
 func (s *editProfileScreen) WithModel(model any) screen.Screen {
@@ -250,48 +327,6 @@ func (e *ValidationError) Error() string {
 	return e.Message
 }
 
-func (s *editProfileScreen) handleEnterKey() (any, tea.Cmd) {
-	var cmd tea.Cmd
-	switch s.currentMode {
-	case modeMergePlayers:
-		username, discriminator, err := s.parsePlayerName(s.mergePlayersInput.Value())
-		if err != nil {
-			s.model.error = err.Error()
-			return s.model, nil
-		}
-
-		err = s.performPlayerMerge(username, discriminator)
-		if err != nil {
-			s.model.error = err.Error()
-			return s.model, nil
-		}
-
-		s.currentMode = modeEditProfile
-	case modeEditPlayerName:
-		s.userNameInput, cmd = s.userNameInput.Update(tea.KeyMsg{Type: tea.KeyEnter})
-		s.model.player.Username = s.userNameInput.Value()
-		if err := s.model.player.Save(); err != nil {
-			s.model.error = err.Error()
-		}
-		s.userNameInput.SetValue("")
-
-		s.currentMode = modeEditProfile
-	case modeAddSSHKey:
-		err := s.validateAndSaveSSHKey()
-		if err != nil {
-			s.model.error = err.Error()
-			return s.model, nil
-		}
-		s.clearSSHKeyInputs()
-		s.refreshSSHKeysTable()
-
-		s.currentMode = modeEditProfile
-	default:
-	}
-
-	return s.model, cmd
-}
-
 func (s *editProfileScreen) handleDeleteSSHKey() (any, tea.Cmd) {
 	if len(s.model.player.SshPubKeys) <= minSSHKeys {
 		s.model.error = s.model.lang().Get("error", "edit_profile", "min_ssh_keys_required")
@@ -309,60 +344,6 @@ func (s *editProfileScreen) handleDeleteSSHKey() (any, tea.Cmd) {
 	s.refreshSSHKeysTable()
 	_, cmd := s.sshKeysTable.Update(tea.KeyMsg{Type: tea.KeyDelete})
 	return s.model, cmd
-}
-
-func (s *editProfileScreen) Update(msg tea.Msg) (any, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		s.model.height, s.model.width = msg.Height, msg.Width
-		return s.model, nil
-
-	case cursor.BlinkMsg:
-		return s.model, nil
-
-	case tea.KeyMsg:
-		if keys.Submit.TriggeredBy(msg.String()) {
-			return s.handleEnterKey()
-		}
-
-		if keys.PreviousScreen.TriggeredBy(msg.String()) {
-			if s.currentMode == modeEditProfile {
-				if err := s.model.player.Save(); err != nil {
-					s.model.error = err.Error()
-					return s.model, nil
-				}
-
-				return s.model, func() tea.Msg {
-					return messages.SwitchScreenMsg{
-						Screen: s.model.newOptionScreen(),
-					}
-				}
-			}
-
-			s.currentMode = modeEditProfile
-			return s.model, nil
-		}
-	}
-
-	if s.currentMode == modeEditPlayerName {
-		var cmd tea.Cmd
-		s.userNameInput, cmd = s.userNameInput.Update(msg)
-		return s.model, cmd
-	}
-
-	if s.currentMode == modeAddSSHKey {
-		return s.handleAddSSHKeyInput(msg)
-	}
-
-	if s.currentMode == modeManageKeys {
-		return s.handleManageKeysInput(msg)
-	}
-
-	if s.currentMode == modeMergePlayers || s.currentMode == modeMergeConfirm {
-		return s.handleMergePlayersInput(msg)
-	}
-
-	return s.handleNormalInput(msg)
 }
 
 func (s *editProfileScreen) handleManageKeysInput(msg tea.Msg) (any, tea.Cmd) {
@@ -413,10 +394,10 @@ func (s *editProfileScreen) handleAddSSHKeyInput(msg tea.Msg) (any, tea.Cmd) {
 				s.model.error = err.Error()
 				return s.model, nil
 			}
-
 			s.clearSSHKeyInputs()
+			s.refreshSSHKeysTable()
+
 			s.currentMode = modeEditProfile
-			return s.model, cmd
 		}
 	}
 
@@ -430,28 +411,41 @@ func (s *editProfileScreen) handleAddSSHKeyInput(msg tea.Msg) (any, tea.Cmd) {
 	return s.model, cmd
 }
 
-func (s *editProfileScreen) handleNormalInput(msg tea.Msg) (any, tea.Cmd) {
+func (s *editProfileScreen) handleAddGithubSSHKeyInput(msg tea.Msg) (any, tea.Cmd) {
 	var cmd tea.Cmd
 
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if keys.Submit.TriggeredBy(msg.String()) {
+			s.currentMode = modeAddGithubSSHKeyConfirm
+			return s.model, nil
+		}
+	}
+
+	s.githubUsernameInput, cmd = s.githubUsernameInput.Update(msg)
+	return s.model, cmd
+}
+
+func (s *editProfileScreen) handleNormalInput(msg tea.Msg) (any, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "n":
 			s.userNameInput.Focus()
 			s.currentMode = modeEditPlayerName
-			return s.model, nil
 		case "a":
 			s.sshKeyNameInput.Focus()
 			s.currentMode = modeAddSSHKey
-			return s.model, nil
 		case "k":
 			s.currentMode = modeManageKeys
-			return s.model, nil
+		case "g":
+			s.currentMode = modeAddGithubSSHKey
+			s.githubUsernameInput.Focus()
 		}
 	}
 
 	s.model.error = ""
-	return s.model, cmd
+	return s.model, nil
 }
 
 func (s *editProfileScreen) renderEditProfileView() string {
@@ -459,6 +453,7 @@ func (s *editProfileScreen) renderEditProfileView() string {
 
 	content.WriteString("n | " + s.model.lang().Get("menu", "edit_profile", "set_player_name") + "\n")
 	content.WriteString("a | " + s.model.lang().Get("menu", "edit_profile", "add_ssh_key") + "\n")
+	content.WriteString("g | " + s.model.lang().Get("menu", "edit_profile", "add_ssh_key_github") + "\n")
 	content.WriteString("k | " + s.model.lang().Get("menu", "edit_profile", "manage_ssh_keys"))
 
 	style := lipgloss.NewStyle().AlignVertical(lipgloss.Center).AlignHorizontal(lipgloss.Left).Width(lipgloss.Width(content.String()))
@@ -479,6 +474,10 @@ func (s *editProfileScreen) View() string {
 		out = s.renderMergePlayersView()
 	case modeMergeConfirm:
 		out = s.renderMergeConfirmView()
+	case modeAddGithubSSHKey:
+		out = s.renderAddGithubSSHKeyView()
+	case modeAddGithubSSHKeyConfirm:
+		out = s.renderMergeConfirmView()
 	default:
 		out = s.renderEditProfileView()
 	}
@@ -489,6 +488,15 @@ func (s *editProfileScreen) View() string {
 		out += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color(errorColor)).Render(s.model.error)
 	}
 	return out
+}
+
+func (s *editProfileScreen) renderAddGithubSSHKeyView() string {
+	var content strings.Builder
+
+	content.WriteString("Github Username | " + s.githubUsernameInput.View() + "\n")
+
+	style := lipgloss.NewStyle().AlignVertical(lipgloss.Center).AlignHorizontal(lipgloss.Left).Width(lipgloss.Width(content.String()))
+	return style.Render(content.String())
 }
 
 func (s *editProfileScreen) renderAddSSHKeyView() string {
@@ -513,29 +521,52 @@ func (s *editProfileScreen) renderAddSSHKeyView() string {
 	return style.Render(content.String())
 }
 
-func (s *editProfileScreen) handleMergePlayersInput(msg tea.Msg) (any, tea.Cmd) {
+func (s *editProfileScreen) handleConfirmInput(msg tea.Msg) (any, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if s.currentMode == modeMergeConfirm {
-			switch msg.String() {
-			case "y", "Y":
-				username, discriminator, _ := s.parsePlayerName(s.mergePlayersInput.Value())
-				err := s.performPlayerMerge(username, discriminator)
+		if keys.Confirm.TriggeredBy(msg.String()) {
+			switch s.currentMode {
+			case modeMergeConfirm:
+				username, discriminator, err := s.parsePlayerName(s.mergePlayersInput.Value())
 				if err != nil {
-					s.model.error = "error merging players: " + err.Error()
-					s.currentMode = modeMergePlayers
+					s.model.error = err.Error()
+					return s.model, nil
+				}
+
+				err = s.performPlayerMerge(username, discriminator)
+				if err != nil {
+					s.model.error = err.Error()
 					return s.model, nil
 				}
 
 				s.currentMode = modeEditProfile
-				return s.model, nil
-			case "n", "N", "esc":
-				s.currentMode = modeEditProfile
-				return s.model, nil
+			case modeAddGithubSSHKeyConfirm:
+				githubUsername := s.githubUsernameInput.Value()
+
+				publicKeys, err := utils.GetPublicSSHKeys(githubUsername)
+				if err != nil {
+					s.model.error = err.Error()
+					s.currentMode = modeAddGithubSSHKey
+					return s.model, nil
+				}
+
+				for i, key := range publicKeys {
+					s.model.player.AddPubKey("from-github-"+strconv.Itoa(i), key)
+				}
+
+				s.refreshSSHKeysTable()
 			}
 		}
+	}
 
-		if msg.String() == "enter" {
+	s.currentMode = modeEditProfile
+	return s.model, nil
+}
+
+func (s *editProfileScreen) handleMergePlayersInput(msg tea.Msg) (any, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if keys.Submit.TriggeredBy(msg.String()) {
 			s.currentMode = modeMergeConfirm
 			return s.model, nil
 		}
@@ -561,12 +592,17 @@ func (s *editProfileScreen) renderManageKeysView() string {
 }
 
 func (s *editProfileScreen) renderMergeConfirmView() string {
-	style := lipgloss.NewStyle().Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color(borderColor)).Width(50)
+	style := lipgloss.NewStyle().Align(lipgloss.Center).Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color(borderColor)).Width(50)
 	content := strings.Builder{}
 
-	content.WriteString("Are you sure you want to merge the player accounts? This action cannot be undone.\n\n")
-	content.WriteString("Press 'y' to confirm or 'n' to cancel.")
+	switch s.currentMode {
+	case modeAddGithubSSHKeyConfirm:
+		content.WriteString(fmt.Sprintf("Are you sure you want to add all public SSH keys from the GitHub user '%s' to your account?\n\n", s.githubUsernameInput.Value()))
+	case modeMergeConfirm:
+		content.WriteString("Are you sure you want to merge the player accounts? This action cannot be undone.\n\n")
+	}
 
+	content.WriteString("Press 'y' to confirm or 'n' to cancel.")
 	return style.Render(content.String())
 }
 

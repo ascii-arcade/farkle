@@ -29,7 +29,8 @@ var (
 	MenuAddSSHKey    = Keys{"k"}
 	MenuEditProfile  = Keys{"p"}
 
-	Back = Keys{"q"}
+	Back    = Keys{"q"}
+	Confirm = Keys{"y", "Y", "enter"}
 
 	PreviousScreen = Keys{"esc"}
 	Submit         = Keys{"enter"}
