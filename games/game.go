@@ -37,11 +37,13 @@ type Game struct {
 	firstRoll  bool
 	rolled     bool
 	endGame    bool
-	colors     []lipgloss.Color
-	log        []string
-	players    map[*players.Player]*PlayerData
-	style      lipgloss.Style
-	mu         sync.Mutex
+
+	colors  []lipgloss.Color
+	log     []string
+	style   lipgloss.Style
+	players map[*players.Player]*PlayerData
+
+	mu sync.Mutex
 }
 
 func (g *Game) Save() error {
@@ -95,6 +97,15 @@ func (g *Game) withLock(fn func()) {
 		g.mu.Unlock()
 	}()
 	fn()
+}
+
+func (g *Game) Refresh() {
+	for p := range g.players {
+		select {
+		case p.UpdateChan() <- struct{}{}:
+		default:
+		}
+	}
 }
 
 func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
@@ -168,8 +179,80 @@ func (g *Game) GetPlayers() []*players.Player {
 	return players
 }
 
+func (g *Game) GetHost() *players.Player {
+	var player *players.Player
+	g.withLock(func() {
+		for p, pd := range g.players {
+			if pd.IsHost {
+				player = p
+				break
+			}
+		}
+	})
+	return player
+}
+
+func (g *Game) getPlayer(id string) (*players.Player, bool) {
+	for p := range g.players {
+		if p.Id == id {
+			return p, true
+		}
+	}
+	return nil, false
+}
+
+func (g *Game) GetDisconnectedPlayers() []*players.Player {
+	var players []*players.Player
+	g.withLock(func() {
+		for p := range g.players {
+			if !p.IsConnected() {
+				players = append(players, p)
+			}
+		}
+	})
+	return players
+}
+
+func (g *Game) HasPlayer(player *players.Player) bool {
+	_, exists := g.getPlayer(player.Id)
+	return exists
+}
+
+func (g *Game) GetPlayerCount(includeDisconnected bool) int {
+	count := 0
+	for p := range g.players {
+		if includeDisconnected || p.IsConnected() {
+			count++
+		}
+	}
+	return count
+}
+
+func (g *Game) GetPlayerData(player *players.Player) *PlayerData {
+	return g.players[player]
+}
+
+func (g *Game) randomizeTurnOrder() {
+	nums := make([]int, len(g.players))
+	for i := range nums {
+		nums[i] = i
+	}
+	rand.Shuffle(len(nums), func(i, j int) {
+		nums[i], nums[j] = nums[j], nums[i]
+	})
+	i := 0
+	for _, playerData := range g.players {
+		playerData.turnOrder = nums[i]
+		i++
+	}
+}
+
 func (g *Game) Ready() bool {
 	return len(g.players) >= 2 && !g.InProgress
+}
+
+func (g *Game) ValidGame() bool {
+	return len(g.players) >= 2
 }
 
 func (g *Game) GetTurnPlayer() *players.Player {
@@ -179,6 +262,10 @@ func (g *Game) GetTurnPlayer() *players.Player {
 		}
 	}
 	return nil
+}
+
+func (g *Game) IsTurn(p *players.Player) bool {
+	return g.players[g.GetTurnPlayer()].Name == g.players[p].Name
 }
 
 func (g *Game) nextTurn() {
@@ -223,19 +310,6 @@ func (g *Game) nextTurn() {
 	g.firstRoll = false
 }
 
-func (g *Game) GetHost() *players.Player {
-	var player *players.Player
-	g.withLock(func() {
-		for p, pd := range g.players {
-			if pd.IsHost {
-				player = p
-				break
-			}
-		}
-	})
-	return player
-}
-
 func (g *Game) GetWinningPlayer() *players.Player {
 	var winningPlayer *players.Player
 	var winningPlayerData *PlayerData
@@ -272,10 +346,6 @@ func (g *Game) IsGameOver() bool {
 	}
 
 	return true
-}
-
-func (g *Game) IsTurn(p *players.Player) bool {
-	return g.players[g.GetTurnPlayer()].Name == g.players[p].Name
 }
 
 func (g *Game) PlayerScores() string {
@@ -320,129 +390,61 @@ func (g *Game) Busted() bool {
 	return false
 }
 
-func (g *Game) Refresh() {
-	for p := range g.players {
-		select {
-		case p.UpdateChan() <- struct{}{}:
-		default:
-		}
-	}
+func (g *Game) Rolled() bool {
+	return g.rolled
 }
 
-func (s *Game) getPlayer(id string) (*players.Player, bool) {
-	for p := range s.players {
-		if p.Id == id {
-			return p, true
-		}
-	}
-	return nil, false
+func (g *Game) ScoreDiceHeld() (int, []int, error) {
+	return score.Calculate(g.diceHeld, false)
 }
 
-func (s *Game) GetDisconnectedPlayers() []*players.Player {
-	var players []*players.Player
-	s.withLock(func() {
-		for p := range s.players {
-			if !p.IsConnected() {
-				players = append(players, p)
-			}
-		}
-	})
-	return players
+func (g *Game) ScoreDicePool() (int, []int, error) {
+	return score.Calculate(g.dicePool, true)
 }
 
-func (s *Game) HasPlayer(player *players.Player) bool {
-	_, exists := s.getPlayer(player.Id)
-	return exists
+func (g *Game) DiceHeldCount() int {
+	return len(g.diceHeld)
 }
 
-func (s *Game) GetPlayerCount(includeDisconnected bool) int {
-	count := 0
-	for p := range s.players {
-		if includeDisconnected || p.IsConnected() {
-			count++
-		}
-	}
-	return count
+func (g *Game) DiceLockedCount() int {
+	return len(g.diceLocked[len(g.diceLocked)-1])
 }
 
-func (s *Game) GetPlayerData(player *players.Player) *PlayerData {
-	return s.players[player]
+func (g *Game) DicePoolHasFace(face int) bool {
+	return g.dicePool.Contains(face)
 }
 
-func (s *Game) randomizeTurnOrder() {
-	nums := make([]int, len(s.players))
-	for i := range nums {
-		nums[i] = i
-	}
-	rand.Shuffle(len(nums), func(i, j int) {
-		nums[i], nums[j] = nums[j], nums[i]
-	})
-	i := 0
-	for _, playerData := range s.players {
-		playerData.turnOrder = nums[i]
-		i++
-	}
-}
-
-func (s *Game) ValidGame() bool {
-	return len(s.players) >= 2
-}
-
-func (s *Game) Rolled() bool {
-	return s.rolled
-}
-
-func (s *Game) ScoreDiceHeld() (int, []int, error) {
-	return score.Calculate(s.diceHeld, false)
-}
-
-func (s *Game) ScoreDicePool() (int, []int, error) {
-	return score.Calculate(s.dicePool, true)
-}
-
-func (s *Game) DiceHeldCount() int {
-	return len(s.diceHeld)
-}
-
-func (s *Game) DiceLockedCount() int {
-	return len(s.diceLocked[len(s.diceLocked)-1])
-}
-
-func (s *Game) DicePoolHasFace(face int) bool {
-	return s.dicePool.Contains(face)
-}
-
-func (s *Game) LockAllOfFace(face int) {
+func (g *Game) LockAllOfFace(face int) {
 	c := 0
-	for _, die := range s.dicePool {
+	for _, die := range g.dicePool {
 		if die == face {
 			c++
 		}
 	}
 	for range c {
-		s.HoldDie(face)
+		g.HoldDie(face)
 	}
 }
 
-func (s *Game) RenderDicePool(start, end int) string {
-	return s.dicePool.Render(start, end)
+func (g *Game) RenderDicePool(start, end int) string {
+	return g.dicePool.Render(start, end)
 }
 
-func (s *Game) RenderDiceHeld(start, end int) string {
-	return s.diceHeld.Render(start, end)
+func (g *Game) RenderDiceHeld(start, end int) string {
+	return g.diceHeld.Render(start, end)
 }
 
-func (s *Game) RenderBankedDice() string {
+func (g *Game) RenderBankedDice() string {
 	var bankedDie strings.Builder
-	for _, diePool := range s.diceLocked {
+	for _, diePool := range g.diceLocked {
 		bankedDie.WriteString(diePool.RenderCharacters() + "\n")
 	}
 	return bankedDie.String()
 }
 
-func (s *Game) LockedScore() int {
+func (g *Game) LockedScore() int {
 	lockedScore := 0
-	for _, diePool := range s.diceLocked {
+	for _, diePool := range g.diceLocked {
 		ls, _, _ := diePool.Score()
 		lockedScore += ls
 	}
