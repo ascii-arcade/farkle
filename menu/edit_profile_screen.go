@@ -167,12 +167,8 @@ func (s *editProfileScreen) handleEditPlayerNameInput(msg tea.Msg) (any, tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if keys.Submit.TriggeredBy(msg.String()) {
-			s.model.player.Username = s.userNameInput.Value()
-			if err := s.model.player.Save(); err != nil {
-				s.model.error = err.Error()
-			}
+			s.model.player.UpdateUsername(s.userNameInput.Value())
 			s.userNameInput.SetValue("")
-
 			s.currentMode = modeEditProfile
 		}
 	}

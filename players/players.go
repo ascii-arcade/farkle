@@ -24,13 +24,13 @@ func NewPlayer(ctx context.Context, pkn, pk, langPref string) (*Player, error) {
 		onDisconnect: []func(){},
 		ctx:          ctx,
 	}
-	players[player.Id] = player
 	return player, player.Save()
 }
 
 func (p *Player) Connect() {
 	p.updateChan = make(chan struct{})
 	p.connected = true
+	players[p.Id] = p
 
 	go func() {
 		for {
@@ -41,6 +41,7 @@ func (p *Player) Connect() {
 			}
 
 			p.LastConnectedAt = utils.ToPointer(time.Now())
+			p.connected = true
 			_ = p.Save()
 			time.Sleep(5 * time.Second)
 		}

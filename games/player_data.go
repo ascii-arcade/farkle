@@ -7,6 +7,7 @@ type PlayerData struct {
 	Score          int
 	Color          lipgloss.Color
 	PlayedLastTurn bool
+	InGame         bool
 
 	IsHost bool
 

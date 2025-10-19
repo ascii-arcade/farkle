@@ -1,7 +1,6 @@
 package games
 
 import (
-	"encoding/json"
 	"log/slog"
 	"math/rand/v2"
 	"sort"
@@ -67,12 +66,12 @@ func (g *Game) toJson() (map[string]any, error) {
 	}
 
 	var gameMap map[string]any
-	bytes, err := json.Marshal(g)
+	bytes, err := bson.Marshal(g)
 	if err != nil {
 		slog.Error("error marshalling game to json", "error", err)
 		return nil, err
 	}
-	if err := json.Unmarshal(bytes, &gameMap); err != nil {
+	if err := bson.Unmarshal(bytes, &gameMap); err != nil {
 		slog.Error("error unmarshalling game to map", "error", err)
 		return nil, err
 	}
@@ -108,7 +107,7 @@ func (g *Game) Refresh() {
 	}
 }
 
-func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
+func (g *Game) AddPlayer(player *players.Player) error {
 	return g.withErrLock(func() error {
 		if _, ok := g.getPlayer(player.Id); ok {
 			return nil
@@ -123,9 +122,10 @@ func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
 			Score:     0,
 			Color:     g.colors[len(g.players)%len(g.colors)],
 			turnOrder: len(g.players),
+			InGame:    true,
 		}
 
-		if isHost {
+		if len(g.players) == 0 {
 			playerData.IsHost = true
 		}
 
@@ -136,7 +136,7 @@ func (g *Game) AddPlayer(player *players.Player, isHost bool) error {
 		})
 
 		g.players[player] = playerData
-		return nil
+		return g.Save()
 	})
 }
 
@@ -164,7 +164,7 @@ func (g *Game) RemovePlayer(player *players.Player) {
 			return
 		}
 
-		delete(g.players, player)
+		g.players[player].InGame = false
 	})
 }
 

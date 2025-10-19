@@ -1,14 +1,17 @@
 package games
 
 import (
+	"context"
 	"math/rand/v2"
 	"time"
 
+	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/dice"
 	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/utils"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var games = make(map[string]*Game)
@@ -56,11 +59,21 @@ func Get(code string) (*Game, bool) {
 }
 
 func GetAll() []*Game {
-	gamesList := make([]*Game, 0, len(games))
-	for _, game := range games {
-		gamesList = append(gamesList, game)
+	games := make([]*Game, 0, len(games))
+	cursor, err := database.GetDB().Collection(database.CollectionGames).Find(context.TODO(), bson.D{})
+	if err != nil {
+		return games
 	}
-	return gamesList
+	defer cursor.Close(context.TODO())
+
+	for cursor.Next(context.TODO()) {
+		var game Game
+		if err := cursor.Decode(&game); err == nil {
+			games = append(games, &game)
+		}
+	}
+
+	return games
 }
 
 func GetOpenGame(code string) (*Game, error) {

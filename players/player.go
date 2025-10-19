@@ -53,13 +53,16 @@ func (p *Player) SetSession(sess ssh.Session) {
 	p.sess = sess
 }
 
+func (p *Player) UpdateUsername(username string) {
+	if _, exists := GetByName(username, p.Discriminator); exists {
+		p.Discriminator = utils.GenerateDescriminator()
+	}
+	_ = p.Save()
+}
+
 func (p *Player) Save() error {
 	if len(p.SshPubKeys) == 0 {
 		return nil
-	}
-
-	if _, exists := GetByName(p.Username, p.Discriminator); exists {
-		p.Discriminator = utils.GenerateDescriminator()
 	}
 
 	opts := options.Replace().SetUpsert(true)

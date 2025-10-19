@@ -60,7 +60,7 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 				return s.model, nil
 			}
 
-			if err := game.AddPlayer(s.model.player, true); err != nil {
+			if err := game.AddPlayer(s.model.player); err != nil {
 				s.model.error = s.model.lang().Get("error", "game", err.Error())
 				return s.model, nil
 			}

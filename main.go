@@ -14,6 +14,7 @@ import (
 	"github.com/ascii-arcade/farkle/app"
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/database"
+	"github.com/ascii-arcade/farkle/games"
 	"github.com/ascii-arcade/farkle/players"
 	"github.com/ascii-arcade/farkle/web"
 	"github.com/charmbracelet/ssh"
@@ -54,6 +55,10 @@ func main() {
 		logger.Error("Could not connect to database", "error", err)
 		os.Exit(1)
 	}
+
+	stopCleanup := make(chan struct{}, 1)
+	defer close(stopCleanup)
+	go games.StartCleanup(stopCleanup)
 
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(config.GetServerHost(), config.GetServerPortSSH())),

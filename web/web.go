@@ -37,11 +37,18 @@ func Run() error {
 		// TODO: Eventually implement admin only information
 		// params := r.URL.Query()
 		// if params.Get("admin_key") == config.GetWebAdminKey() {}
-		totalGames := len(games.GetAll())
-		totalStartedGames := 0
+		total := len(games.GetAll())
+		totalStarted := 0
 		for _, game := range games.GetAll() {
 			if game.InProgress {
-				totalStartedGames++
+				totalStarted++
+			}
+		}
+
+		totalAbandoned := 0
+		for _, game := range games.GetAll() {
+			if game.WinnerID == "" && !game.InProgress {
+				totalAbandoned++
 			}
 		}
 
@@ -54,11 +61,13 @@ func Run() error {
 		if err = t.Execute(w, struct {
 			TotalGames            int
 			TotalStartedGames     int
+			TotalAbandonedGames   int
 			TotalPlayers          int
 			TotalConnectedPlayers int
 		}{
-			TotalGames:            totalGames,
-			TotalStartedGames:     totalStartedGames,
+			TotalGames:            total,
+			TotalStartedGames:     totalStarted,
+			TotalAbandonedGames:   totalAbandoned,
 			TotalPlayers:          players.GetPlayerCount(),
 			TotalConnectedPlayers: players.GetConnectedPlayerCount(),
 		}); err != nil {
