@@ -64,12 +64,14 @@ func Run() error {
 			TotalAbandonedGames   int
 			TotalPlayers          int
 			TotalConnectedPlayers int
+			ActiveGames           map[string]*games.Game
 		}{
 			TotalGames:            total,
 			TotalStartedGames:     totalStarted,
 			TotalAbandonedGames:   totalAbandoned,
 			TotalPlayers:          players.GetUniquePlayerCount(),
 			TotalConnectedPlayers: players.GetConnectedPlayerCount(),
+			ActiveGames:           games.GetAllActive(),
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

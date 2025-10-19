@@ -36,6 +36,7 @@ type Game struct {
 	firstRoll  bool
 	rolled     bool
 	endGame    bool
+	status     GameStatus
 
 	colors  []lipgloss.Color
 	log     []string
@@ -245,6 +246,10 @@ func (g *Game) randomizeTurnOrder() {
 		playerData.turnOrder = nums[i]
 		i++
 	}
+}
+
+func (g *Game) GetStatus() GameStatus {
+	return g.status
 }
 
 func (g *Game) Ready() bool {

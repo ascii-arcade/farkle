@@ -40,6 +40,7 @@ func New(style lipgloss.Style) (*Game, error) {
 		style:     style,
 		colors:    colors,
 		players:   make(map[*players.Player]*PlayerData),
+		status:    StatusWaitingForPlayers,
 		CreatedAt: utils.ToPointer(time.Now()),
 	}
 	game.Restart()
@@ -73,6 +74,10 @@ func GetAll() []*Game {
 		}
 	}
 
+	return games
+}
+
+func GetAllActive() map[string]*Game {
 	return games
 }
 

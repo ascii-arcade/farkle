@@ -67,6 +67,7 @@ func (g *Game) Start() error {
 		g.randomizeTurnOrder()
 		g.InProgress = true
 		g.saveAction(ActionTypeStart)
+		g.status = StatusInProgress
 		return nil
 	})
 }
