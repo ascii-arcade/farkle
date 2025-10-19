@@ -29,8 +29,10 @@ func NewPlayer(ctx context.Context, pkn, pk, langPref string) (*Player, error) {
 
 func (p *Player) Connect() {
 	p.updateChan = make(chan struct{})
-	p.connected = true
 	players[p.Id] = p
+	p.OnDisconnect(func() {
+		RemovePlayer(p)
+	})
 
 	go func() {
 		for {
@@ -41,7 +43,6 @@ func (p *Player) Connect() {
 			}
 
 			p.LastConnectedAt = utils.ToPointer(time.Now())
-			p.connected = true
 			_ = p.Save()
 			time.Sleep(5 * time.Second)
 		}
@@ -49,7 +50,6 @@ func (p *Player) Connect() {
 
 	go func() {
 		<-p.ctx.Done()
-		p.connected = false
 		for _, fn := range p.onDisconnect {
 			fn()
 		}
@@ -128,18 +128,16 @@ func RemovePlayer(player *Player) {
 	}
 }
 
-func GetPlayerCount() int {
-	return len(players)
+func GetUniquePlayerCount() int {
+	count, err := database.GetDB().Collection(database.CollectionPlayers).EstimatedDocumentCount(context.Background())
+	if err != nil {
+		return 0
+	}
+	return int(count)
 }
 
 func GetConnectedPlayerCount() int {
-	count := 0
-	for _, player := range players {
-		if player.connected {
-			count++
-		}
-	}
-	return count
+	return len(players)
 }
 
 func DeletePlayer(player *Player) error {

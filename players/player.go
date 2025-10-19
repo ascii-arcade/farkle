@@ -23,7 +23,6 @@ type Player struct {
 	sess         ssh.Session
 	updateChan   chan struct{}
 	onDisconnect []func()
-	connected    bool
 	ctx          context.Context
 }
 
@@ -41,7 +40,8 @@ func (p *Player) OnDisconnect(fn func()) {
 }
 
 func (p *Player) IsConnected() bool {
-	return p.connected
+	_, ok := players[p.Id]
+	return ok
 }
 
 func (p *Player) AddPubKey(name, pKey string) {

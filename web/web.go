@@ -68,7 +68,7 @@ func Run() error {
 			TotalGames:            total,
 			TotalStartedGames:     totalStarted,
 			TotalAbandonedGames:   totalAbandoned,
-			TotalPlayers:          players.GetPlayerCount(),
+			TotalPlayers:          players.GetUniquePlayerCount(),
 			TotalConnectedPlayers: players.GetConnectedPlayerCount(),
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
