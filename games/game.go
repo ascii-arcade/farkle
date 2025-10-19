@@ -101,16 +101,22 @@ func (g *Game) withLock(fn func()) {
 
 func (g *Game) Refresh() {
 	for p := range g.players {
-		select {
-		case p.UpdateChan() <- struct{}{}:
-		default:
+		if p.IsConnected() && g.players[p].InGame {
+			select {
+			case p.UpdateChan() <- struct{}{}:
+			default:
+			}
 		}
 	}
 }
 
 func (g *Game) AddPlayer(player *players.Player) error {
 	return g.withErrLock(func() error {
-		if _, ok := g.getPlayer(player.Id); ok {
+		if p, ok := g.getPlayer(player.Id); ok {
+			pd := *g.players[p]
+			pd.InGame = true
+			g.players[player] = &pd
+			delete(g.players, p)
 			return nil
 		}
 
@@ -144,6 +150,7 @@ func (g *Game) AddPlayer(player *players.Player) error {
 func (g *Game) RemovePlayer(player *players.Player) {
 	g.withLock(func() {
 		if len(g.players) > 0 && g.players[player].IsHost {
+			g.players[player].IsHost = false
 			for _, pd := range g.players {
 				if !pd.IsHost {
 					pd.IsHost = true
@@ -166,6 +173,7 @@ func (g *Game) RemovePlayer(player *players.Player) {
 		}
 
 		g.players[player].InGame = false
+		g.Refresh()
 	})
 }
 

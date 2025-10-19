@@ -161,6 +161,10 @@ func (s *tableScreen) showLobby(playerData *games.PlayerData, style lipgloss.Sty
 	playerNames := []string{}
 	for _, player := range s.model.game.GetPlayers() {
 		pd := s.model.game.GetPlayerData(player)
+		if !pd.InGame {
+			continue
+		}
+
 		n := pd.StyledPlayerName(s.model.style)
 		if pd.IsHost {
 			n += fmt.Sprintf(" (%s)", s.model.lang().Get("board", "player_list_host"))

@@ -11,12 +11,13 @@
         href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Press+Start+2P&family=Roboto&family=VT323&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/nes.css@latest/css/nes.min.css">
+    <link rel="stylesheet" href="assets/layout.css">
     <link rel="stylesheet" href="assets/style.css">
 </head>
 
 <body>
-    <main>
-        <div class="nes-container is-dark with-title statistics">
+    <main class="grid grid-cols-1 xl:grid-cols-6 lg:grid-cols-3 md:grid-cols-1 gap-4">
+        <div class="nes-container is-dark with-title statistics lg:col-start-2 md:col-start-1">
             <p class="title">Game Statistics (totals)</p>
             <p>Games: <span>{{ .TotalGames }}</span></p>
             <p>Started Games: <span>{{ .TotalStartedGames }}</span></p>
@@ -24,8 +25,7 @@
             <p>Unique Players: <span>{{ .TotalPlayers }}</span></p>
             <p>Connected Players: <span>{{ .TotalConnectedPlayers }}</span></p>
         </div>
-        <br />
-        <div class="nes-container is-dark with-title active-games">
+        <div class="nes-container is-dark with-title lg:col-start-2 md:col-start-1 lg:col-span-2">
             <p class="title">Active Games</p>
             <div class="lists is-dark">
                 <ul class="nes-list is-dark is-circle">

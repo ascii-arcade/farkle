@@ -12,18 +12,6 @@ body {
     padding: 20px;
 }
 
-main {
-    display: grid;
-    grid-template-columns: 1fr repeat(3, 4fr) 1fr;
-    /* grid-template-rows: repeat(5, auto); */
-    grid-column-gap: 10px;
-    grid-row-gap: 10px;
-}
-
-main>.statistics {
-    grid-column-start: 2;
-}
-
 main>.statistics p:not(:first-child) {
     display: flex;
     justify-content: space-between;
@@ -34,15 +22,7 @@ main>.statistics span {
     justify-self: right;
 }
 
-main>.active-games {
-    grid-column-start: 2;
-    /* grid-column-end: 5; */
-}
-
-.nes-list.is-disc li::before {
-    color: #fff
-}
-
+.nes-list.is-disc li::before,
 .nes-list.is-circle li::before {
     color: #fff
 }
