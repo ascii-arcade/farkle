@@ -19,5 +19,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-X github.com/ascii-arcade/farkl
 FROM alpine:latest
 WORKDIR /app
 COPY --from=go-builder /app/bin/server /app/server
-COPY --from=webpack-builder /app/web/dist /app/dist
+COPY --from=webpack-builder /app/web/dist /app/web/dist
 CMD [ "./server" ]
