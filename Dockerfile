@@ -1,6 +1,8 @@
 # Webpack build stage
 FROM node:22-alpine AS webpack-builder
 WORKDIR /app/web
+ARG WS_PROTOCOL=ws
+ENV WS_PROTOCOL=${WS_PROTOCOL}
 COPY web/package.json ./
 RUN npm install
 COPY web/ ./

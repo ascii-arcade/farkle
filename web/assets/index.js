@@ -108,8 +108,9 @@ window.onload = function () {
 
         window.addEventListener('resize', fitTerminal);
 
-        console.log('Creating WebSocket connection to:', `ws://${window.location.host}/ws`);
-        ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const wsProtocol = process.env.WS_PROTOCOL;
+        console.log('Creating WebSocket connection to:', `${wsProtocol}://${window.location.host}/ws`);
+        ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
 
         ws.onopen = function () {
             console.log('WebSocket connected');

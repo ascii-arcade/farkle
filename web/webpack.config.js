@@ -2,6 +2,7 @@ const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
 
 module.exports = {
     entry: './assets/index.js',
@@ -19,6 +20,9 @@ module.exports = {
         ],
     },
     plugins: [
+        new webpack.DefinePlugin({
+            'process.env.WS_PROTOCOL': JSON.stringify(process.env.WS_PROTOCOL || 'ws')
+        }),
         new MiniCssExtractPlugin({
             filename: 'styles.css',
         }),

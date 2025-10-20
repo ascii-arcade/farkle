@@ -13,6 +13,7 @@ services:
       context: .
       args:
         - GIT_TAG=${GIT_TAG:-dev}
+        - WS_PROTOCOL=${WS_PROTOCOL:-ws}
     image: ascii-arcade/farkle:${GIT_TAG:-dev}
     ports:
       - ${SSH_PORT:-2222}:${ASCII_ARCADE_SSH_PORT:-2222}
@@ -20,6 +21,7 @@ services:
     environment:
       - ASCII_ARCADE_DB=farkle
       - ASCII_ARCADE_DB_URI=mongodb://mongodb:27017
+      - ASCII_ARCADE_WEB_ALLOWED_ORIGINS=${FARKLE_WEB_ALLOWED_ORIGINS:-2222}
     env_file:
       - .env
     restart: always
