@@ -40,7 +40,7 @@ body {
     display: none;
 }
 
-.nes-container.with-tabs>.content:target {
+.nes-container.with-tabs>.content.active {
     display: block;
 }
 

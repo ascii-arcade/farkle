@@ -19,6 +19,7 @@ type Player struct {
 	SshPubKeys         map[string]string `bson:"ssh_pub_keys"`
 	LanguagePreference string            `bson:"language_preference"`
 	LastConnectedAt    *time.Time        `bson:"last_connected_at,omitempty"`
+	Visitor            bool              `bson:"visitor"`
 
 	sess         ssh.Session
 	updateChan   chan struct{}
@@ -29,6 +30,11 @@ type Player struct {
 func (p *Player) WithContext(ctx context.Context) *Player {
 	p.ctx = ctx
 	return p
+}
+
+func (p *Player) MakeVisitor() {
+	p.Visitor = true
+	_ = p.Save()
 }
 
 func (p *Player) GetDisplayName(style lipgloss.Style) string {
@@ -80,4 +86,13 @@ func (p *Player) UpdateChan() chan struct{} {
 		p.updateChan = make(chan struct{}, 1)
 	}
 	return p.updateChan
+}
+
+func (p *Player) SignalActivity() {
+	if p.updateChan != nil {
+		select {
+		case p.updateChan <- struct{}{}:
+		default:
+		}
+	}
 }

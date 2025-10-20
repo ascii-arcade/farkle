@@ -5,10 +5,59 @@ import "nes.css/css/nes.min.css";
 import './layout.css';
 import './style.css';
 
+function saveActiveTab(tabHash, expirationHours = 24) {
+    const expirationTime = Date.now() + (expirationHours * 60 * 60 * 1000);
+    const tabData = {
+        tab: tabHash,
+        expires: expirationTime
+    };
+    localStorage.setItem('activeTab', JSON.stringify(tabData));
+}
+
+function getActiveTab() {
+    try {
+        const saved = localStorage.getItem('activeTab');
+        if (!saved) return null;
+
+        const tabData = JSON.parse(saved);
+
+        if (Date.now() > tabData.expires) {
+            localStorage.removeItem('activeTab');
+            return null;
+        }
+
+        return tabData.tab;
+    } catch (error) {
+        localStorage.removeItem('activeTab');
+        return null;
+    }
+}
+
 function active(e) {
     const currentActive = document.querySelector(".nes-container.with-tabs .tab.active");
     currentActive?.classList.remove("active");
     e.classList.add("active");
+
+    const currentContent = document.querySelector(".nes-container.with-tabs .content.active");
+    currentContent?.classList.remove("active");
+
+    const link = e.querySelector('a');
+    if (link) {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+            const targetContent = document.querySelector(href);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+
+            saveActiveTab(href, 1);
+
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            history.replaceState(null, null, href);
+            window.scrollTo(scrollLeft, scrollTop);
+        }
+    }
 }
 
 window.onload = function () {
@@ -37,7 +86,6 @@ window.onload = function () {
             cursorBlink: true
         });
 
-        // Create and load the fit addon
         fitAddon = new FitAddon();
         term.loadAddon(fitAddon);
 
@@ -52,38 +100,31 @@ window.onload = function () {
                 return;
             }
 
-            // Force a reflow to get accurate dimensions
             container.style.display = 'block';
-            container.offsetHeight; // Force reflow
+            container.offsetHeight;
 
-            // Get the actual container dimensions after reflow
             const containerRect = container.getBoundingClientRect();
             const availableWidth = Math.max(containerRect.width - 20, 800); // Account for padding, minimum width
             const availableHeight = Math.max(containerRect.height - 20, 400); // Account for padding, minimum height
 
             console.log(`Container dimensions: ${availableWidth}x${availableHeight}`);
 
-            // Use more accurate character dimensions based on xterm's defaults
             const charWidth = 8.4; // More accurate for monospace fonts
             const lineHeight = 17; // Standard line height for terminals
 
-            // Calculate terminal dimensions with proper minimums
             const cols = Math.max(120, Math.floor(availableWidth / charWidth));
             const rows = Math.max(33, Math.floor(availableHeight / lineHeight));
 
             console.log(`Calculated terminal size: ${cols}x${rows}`);
 
-            // Only resize if dimensions have changed significantly
             if (Math.abs(term.cols - cols) > 1 || Math.abs(term.rows - rows) > 1) {
                 console.log(`Resizing terminal from ${term.cols}x${term.rows} to ${cols}x${rows}`);
                 term.resize(cols, rows);
 
-                // Fit the terminal to the exact container size
                 if (fitAddon) {
                     setTimeout(() => fitAddon.fit(), 100);
                 }
 
-                // Notify backend of the new size
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     const resizeMessage = JSON.stringify({
                         type: 'resize',
@@ -171,25 +212,39 @@ window.onload = function () {
         });
     }
 
-    // if the url doesn't have a # fragment, add #rules
     let url = window.location.href;
-    if (url.indexOf('#') === -1) {
-        url += '#rules';
-        window.location.href = url;
-        let e = document.querySelector(".nes-container.with-tabs .tabs .tab:first-child");
-        if (e) active(e);
+    let targetHash = null;
+
+    if (url.indexOf('#') !== -1) {
+        targetHash = url.substring(url.indexOf('#'));
     } else {
-        const hash = url.substring(url.indexOf('#'));
-        let e = document.querySelector(`.nes-container.with-tabs .tabs .tab a[href="${hash}"]`);
-        if (e) active(e.parentElement);
-        if (hash === '#term') {
-            initializeTerminal();
+        const savedTab = getActiveTab();
+        if (savedTab) {
+            targetHash = savedTab;
         }
+    }
+
+    if (targetHash) {
+        let e = document.querySelector(`.nes-container.with-tabs .tabs .tab a[href="${targetHash}"]`);
+        if (e) {
+            active(e.parentElement);
+            if (targetHash === '#term') {
+                initializeTerminal();
+            }
+        } else {
+            let firstTab = document.querySelector(".nes-container.with-tabs .tabs .tab:first-child");
+            if (firstTab) active(firstTab);
+        }
+    } else {
+        let firstTab = document.querySelector(".nes-container.with-tabs .tabs .tab:first-child");
+        if (firstTab) active(firstTab);
     }
 
     let tabs = document.querySelectorAll(".nes-container.with-tabs > .tabs > .tab");
     for (let i = 0; i < tabs.length; i++) {
-        tabs[i].onclick = function () {
+        tabs[i].onclick = function (event) {
+            event.preventDefault();
+
             active(tabs[i]);
 
             const link = tabs[i].querySelector('a');

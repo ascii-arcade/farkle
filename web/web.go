@@ -274,6 +274,7 @@ func Run() error {
 			TotalStartedGames     int
 			TotalAbandonedGames   int
 			TotalPlayers          int
+			TotalVisitors         int
 			TotalConnectedPlayers int
 			ActiveGames           map[string]*games.Game
 		}{
@@ -281,6 +282,7 @@ func Run() error {
 			TotalStartedGames:     totalStarted,
 			TotalAbandonedGames:   totalAbandoned,
 			TotalPlayers:          players.GetUniquePlayerCount(),
+			TotalVisitors:         players.GetVisitorPlayerCount(),
 			TotalConnectedPlayers: players.GetConnectedPlayerCount(),
 			ActiveGames:           games.GetAllActive(),
 		}); err != nil {

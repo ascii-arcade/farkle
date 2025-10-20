@@ -54,6 +54,9 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Signal activity for any key press
+		m.player.SignalActivity()
+
 		if keys.ExitApplication.TriggeredBy(msg.String()) {
 			m.game.RemovePlayer(m.player)
 			return m, tea.Quit

@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+	"time"
+)
 
 const (
 	MinimumHeight = 33
@@ -19,6 +23,8 @@ var (
 
 	database    string = "farkle"
 	databaseURI string = "mongodb://localhost:27017"
+
+	playerTimeoutMinutes int = 30 // Default 30 minute timeout
 
 	Version string = "dev"
 )
@@ -60,6 +66,13 @@ func Setup() {
 	if dbURI != "" {
 		databaseURI = dbURI
 	}
+
+	timeoutStr := os.Getenv("ASCII_ARCADE_PLAYER_TIMEOUT_MINUTES")
+	if timeoutStr != "" {
+		if timeout, err := strconv.Atoi(timeoutStr); err == nil && timeout > 0 {
+			playerTimeoutMinutes = timeout
+		}
+	}
 }
 
 func GetDebug() bool {
@@ -88,4 +101,8 @@ func GetDatabaseURI() string {
 }
 func GetWebAllowedOrigins() string {
 	return webAllowedOrigins
+}
+
+func GetPlayerTimeoutDuration() time.Duration {
+	return time.Duration(playerTimeoutMinutes) * time.Minute
 }

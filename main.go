@@ -71,6 +71,11 @@ func main() {
 					return false
 				}
 				slog.Debug("created new player", "user", ctx.User())
+
+				if ctx.User() == "web-client" {
+					slog.Info("web-client ssh authentication successful", "user", ctx.User(), "player_id", player.Id)
+					player.MakeVisitor()
+				}
 			}
 			player.WithContext(ctx).Connect()
 

@@ -5,10 +5,12 @@ import (
 	"maps"
 	"time"
 
+	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/database"
 	"github.com/ascii-arcade/farkle/language"
 	"github.com/ascii-arcade/farkle/utils"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var players = make(map[string]*Player)
@@ -34,22 +36,40 @@ func (p *Player) Connect() {
 		RemovePlayer(p)
 	})
 
+	activityTicker := time.NewTicker(5 * time.Second)
+	timeoutDuration := config.GetPlayerTimeoutDuration()
+	lastActivity := time.Now()
+
+	timeoutCtx, timeoutCancel := context.WithCancel(p.ctx)
+
 	go func() {
+		defer activityTicker.Stop()
+		defer timeoutCancel()
+
 		for {
 			select {
-			case <-p.ctx.Done():
+			case <-timeoutCtx.Done():
 				return
-			default:
-			}
+			case <-activityTicker.C:
+				now := time.Now()
 
-			p.LastConnectedAt = utils.ToPointer(time.Now())
-			_ = p.Save()
-			time.Sleep(5 * time.Second)
+				if now.Sub(lastActivity) > timeoutDuration {
+					if p.sess != nil {
+						p.sess.Close()
+					}
+					return
+				}
+
+				p.LastConnectedAt = utils.ToPointer(now)
+				_ = p.Save()
+			case <-p.updateChan:
+				lastActivity = time.Now()
+			}
 		}
 	}()
 
 	go func() {
-		<-p.ctx.Done()
+		<-timeoutCtx.Done()
 		for _, fn := range p.onDisconnect {
 			fn()
 		}
@@ -91,6 +111,29 @@ func Get(sshPubKey string) (*Player, bool) {
 	return nil, false
 }
 
+func GetAll() []*Player {
+	all := make([]*Player, 0)
+
+	cursor, err := database.GetDB().Collection(database.CollectionPlayers).Find(context.Background(), bson.D{
+		{
+			Key: "visitor", Value: bson.D{{Key: "$ne", Value: true}},
+		},
+	})
+	if err != nil {
+		return all
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var player Player
+		if err := cursor.Decode(&player); err == nil {
+			all = append(all, &player)
+		}
+	}
+
+	return all
+}
+
 func GetByName(username, discriminator string) (*Player, bool) {
 	for _, player := range players {
 		if player.Username == username && player.Discriminator == discriminator {
@@ -129,7 +172,23 @@ func RemovePlayer(player *Player) {
 }
 
 func GetUniquePlayerCount() int {
-	count, err := database.GetDB().Collection(database.CollectionPlayers).EstimatedDocumentCount(context.Background())
+	count, err := database.GetDB().Collection(database.CollectionPlayers).CountDocuments(context.Background(), bson.D{
+		{
+			Key: "visitor", Value: bson.D{{Key: "$ne", Value: true}},
+		},
+	})
+	if err != nil {
+		return 0
+	}
+	return int(count)
+}
+
+func GetVisitorPlayerCount() int {
+	count, err := database.GetDB().Collection(database.CollectionPlayers).CountDocuments(context.Background(), bson.D{
+		{
+			Key: "visitor", Value: true,
+		},
+	})
 	if err != nil {
 		return 0
 	}
