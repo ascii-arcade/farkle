@@ -7,18 +7,11 @@ import './style.css';
 
 function active(e) {
     const currentActive = document.querySelector(".nes-container.with-tabs .tab.active");
-    currentActive.classList.remove("active");
+    currentActive?.classList.remove("active");
     e.classList.add("active");
 }
 
 window.onload = function () {
-    let url = window.location.href;
-    if (url.indexOf('#') !== -1) {
-        url = url.substring(0, url.indexOf('#'));
-    }
-    url += '#c01';
-    window.location.href = url;
-
     let terminalInitialized = false;
     let term = null;
     let fitAddon = null;
@@ -50,7 +43,6 @@ window.onload = function () {
 
         term.open(document.getElementById('xterm-container'));
 
-        const container = document.getElementById('xterm-container');
         function fitTerminal() {
             console.log('Fitting terminal to container size...');
 
@@ -179,14 +171,29 @@ window.onload = function () {
         });
     }
 
-    let tabs = document.querySelectorAll(".nes-container.with-tabs > .tabs > .tab");
+    // if the url doesn't have a # fragment, add #rules
+    let url = window.location.href;
+    if (url.indexOf('#') === -1) {
+        url += '#rules';
+        window.location.href = url;
+        let e = document.querySelector(".nes-container.with-tabs .tabs .tab:first-child");
+        if (e) active(e);
+    } else {
+        const hash = url.substring(url.indexOf('#'));
+        let e = document.querySelector(`.nes-container.with-tabs .tabs .tab a[href="${hash}"]`);
+        if (e) active(e.parentElement);
+        if (hash === '#term') {
+            initializeTerminal();
+        }
+    }
 
+    let tabs = document.querySelectorAll(".nes-container.with-tabs > .tabs > .tab");
     for (let i = 0; i < tabs.length; i++) {
         tabs[i].onclick = function () {
             active(tabs[i]);
 
             const link = tabs[i].querySelector('a');
-            if (link && link.getAttribute('href') === '#c02') {
+            if (link && link.getAttribute('href') === '#term') {
                 initializeTerminal();
             }
         };
