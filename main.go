@@ -25,10 +25,6 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
-var (
-	logger *slog.Logger
-)
-
 func init() {
 	config.Setup()
 
@@ -46,13 +42,13 @@ func init() {
 		handler = slog.NewTextHandler(os.Stdout, handlerOpts)
 	}
 
-	logger = slog.New(handler).With("app", "farkle", "version", config.Version)
+	slog.SetDefault(slog.New(handler).With("app", "farkle", "version", config.Version))
 }
 
 func main() {
 	ctx := context.Background()
 	if err := database.Setup(ctx, config.GetDatabaseURI(), config.GetDatabase()); err != nil {
-		logger.Error("Could not connect to database", "error", err)
+		slog.Error("could not connect to database", "error", err)
 		os.Exit(1)
 	}
 
@@ -65,13 +61,16 @@ func main() {
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
 			decodedKey := string(bytes.TrimSuffix(gossh.MarshalAuthorizedKey(key), []byte{'\n'}))
+			slog.Debug("ssh authentication attempt", "user", ctx.User())
+
 			player, found := players.Get(decodedKey)
 			if !found {
 				var err error
 				if player, err = players.NewPlayer(ctx, "default", decodedKey, "en"); err != nil {
-					slog.Error("Could not create player", "error", err)
+					slog.Error("could not create player", "error", err)
 					return false
 				}
+				slog.Debug("created new player", "user", ctx.User())
 			}
 			player.WithContext(ctx).Connect()
 
@@ -87,27 +86,32 @@ func main() {
 		),
 	)
 	if err != nil {
-		logger.Error("Could not start server", "error", err)
+		slog.Error("Could not start server", "error", err)
 	}
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	logger.Info("Starting SSH server", "host", config.GetServerHost(), "port", config.GetServerPortSSH())
+	slog.Info("Starting SSH server", "host", config.GetServerHost(), "port", config.GetServerPortSSH())
 
 	go func() {
 		if err = s.ListenAndServe(); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
-			logger.Error("Could not start server", "error", err)
+			slog.Error("Could not start server", "error", err)
 			done <- nil
 		}
 	}()
 
-	go web.Run()
+	go func() {
+		if err := web.Run(); err != nil {
+			slog.Error("Could not start web server", "error", err)
+			done <- nil
+		}
+	}()
 
 	<-done
-	logger.Info("Stopping SSH server")
+	slog.Info("Stopping SSH server")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
-		logger.Error("Could not stop server", "error", err)
+		slog.Error("Could not stop server", "error", err)
 	}
 }

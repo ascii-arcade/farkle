@@ -10,33 +10,46 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Press+Start+2P&family=Roboto&family=VT323&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/nes.css@latest/css/nes.min.css">
-    <link rel="stylesheet" href="assets/layout.css">
-    <link rel="stylesheet" href="assets/style.css">
 </head>
 
 <body>
-    <main class="grid grid-cols-1 xl:grid-cols-6 lg:grid-cols-3 md:grid-cols-1 gap-4">
-        <div class="nes-container is-dark with-title statistics lg:col-start-2 md:col-start-1">
-            <p class="title">Game Statistics (totals)</p>
-            <p>Games: <span>{{ .TotalGames }}</span></p>
-            <p>Started Games: <span>{{ .TotalStartedGames }}</span></p>
-            <p>Abandoned Games: <span>{{ .TotalAbandonedGames }}</span></p>
-            <p>Unique Players: <span>{{ .TotalPlayers }}</span></p>
-            <p>Connected Players: <span>{{ .TotalConnectedPlayers }}</span></p>
-        </div>
-        <div class="nes-container is-dark with-title lg:col-start-2 md:col-start-1 lg:col-span-2">
-            <p class="title">Active Games</p>
-            <div class="lists is-dark">
-                <ul class="nes-list is-dark is-circle">
-                    {{ if eq (len .ActiveGames) 0 }}
-                    <p>No active games</p>
-                    {{ else }}
-                    {{ range $_, $game := .ActiveGames }}
-                    <li>{{ $game.GetStatus.String }} - {{ $game.GetPlayerCount true }} player(s)</li>
-                    {{ end }}
-                    {{ end }}
-                </ul>
+    <main class="grid grid-cols-1 xl:grid-cols-6 lg:grid-cols-4 md:grid-cols-1 gap-4">
+        <div
+            class="nes-container is-dark with-tabs col-start-2 col-end-6 lg:col-span-2 lg:col-start-2 lg:col-span-4 md:col-span-full">
+            <div class="tabs">
+                <div class="tab active">
+                    <a href="#c01" class="title">Stats</a>
+                </div>
+                <div class="tab">
+                    <a href="#c02" class="title">Terminal</a>
+                </div>
+            </div>
+            <div id="c01" class="content grid lg:grid-cols-4 md:grid-cols-1 gap-4">
+                <div class="nes-container is-dark with-title statistics lg:col-start-2 md:col-start-1">
+                    <p class="title">Game Statistics (totals)</p>
+                    <p>Games: <span>{{ .TotalGames }}</span></p>
+                    <p>Started Games: <span>{{ .TotalStartedGames }}</span></p>
+                    <p>Abandoned Games: <span>{{ .TotalAbandonedGames }}</span></p>
+                    <p>Unique Players: <span>{{ .TotalPlayers }}</span></p>
+                    <p>Connected Players: <span>{{ .TotalConnectedPlayers }}</span></p>
+                </div>
+                <div class="nes-container is-dark with-title lg:col-start-2 md:col-start-1 lg:col-span-2">
+                    <p class="title">Active Games</p>
+                    <div class="lists is-dark">
+                        <ul class="nes-list is-dark is-circle">
+                            {{ if eq (len .ActiveGames) 0 }}
+                            <p>No active games</p>
+                            {{ else }}
+                            {{ range $_, $game := .ActiveGames }}
+                            <li>{{ $game.GetStatus.String }} - {{ $game.GetPlayerCount true }} player(s)</li>
+                            {{ end }}
+                            {{ end }}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="c02" class="content">
+                <div id="xterm-container"></div>
             </div>
         </div>
     </main>

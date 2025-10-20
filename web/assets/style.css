@@ -12,17 +12,89 @@ body {
     padding: 20px;
 }
 
-main>.statistics p:not(:first-child) {
+.statistics p:not(:first-child) {
     display: flex;
     justify-content: space-between;
     border-bottom-style: dashed;
 }
 
-main>.statistics span {
+.statistics span {
     justify-self: right;
 }
 
 .nes-list.is-disc li::before,
 .nes-list.is-circle li::before {
     color: #fff
+}
+
+.nes-container.with-tabs {
+    margin-top: 1.5rem;
+}
+
+.nes-container.with-tabs>.tabs>.tab {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.nes-container.with-tabs>.content {
+    display: none;
+}
+
+.nes-container.with-tabs>.content:target {
+    display: block;
+}
+
+.nes-container.with-tabs>.tabs>.tab+.tab {
+    margin-left: -1px;
+}
+
+.nes-container.with-tabs>.tabs>.tab>.title {
+    display: table;
+    padding: 0 .5rem;
+    margin: -3.8rem 0 3rem;
+    font-size: 1rem;
+    background-color: #fff;
+    border-top: solid;
+    border-left: solid;
+    border-right: solid;
+    border-width: 4px;
+    cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAzElEQVRYR+2X0Q6AIAhF5f8/2jYXZkwEjNSVvVUjDpcrGgT7FUkI2D9xRfQETwNIiWO85wfINfQUEyxBG2ArsLwC0jioGt5zFcwF4OYDPi/mBYKm4t0U8ATgRm3ThFoAqkhNgWkA0jJLvaOVSs7j3qMnSgXWBMiWPXe94QqMBMBc1VZIvaTu5u5pQewq0EqNZvIEMCmxAawK0DNkay9QmfFNAJUXfgGgUkLaE7j/h8fnASkxHTz0DGIBMCnBeeM7AArpUd3mz2x3C7wADglA8BcWMZhZAAAAAElFTkSuQmCC) 14 0, pointer;
+}
+
+.nes-container.is-dark.with-tabs>.tabs>.tab>.title {
+    color: #fff;
+    background-color: #212529;
+}
+
+.nes-container.with-tabs>.tabs>.tab.active>.title {
+    margin: -4.3rem 0 3rem;
+    padding-bottom: 0.5rem
+}
+
+/* Terminal Container Styles */
+#xterm-container {
+    width: 100%;
+    /* height: 100%; */
+    height: 60vh;
+    min-height: 500px;
+    background-color: #212529;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid #333;
+    border-radius: 4px;
+}
+
+.nes-container.with-tabs>.content {
+    height: auto;
+    min-height: 60vh;
+}
+
+#xterm-container .xterm {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#xterm-container .xterm-viewport {
+    width: 100% !important;
 }

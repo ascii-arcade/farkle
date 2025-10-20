@@ -11,10 +11,11 @@ var (
 	debug  bool = false
 	logCli bool = false
 
-	serverHost    string = "localhost"
-	serverPortSSH string = "2222"
-	serverPortWeb string = "8080"
-	webAdminKey   string
+	serverHost        string = "localhost"
+	serverPortSSH     string = "2222"
+	serverPortWeb     string = "8080"
+	webAdminKey       string
+	webAllowedOrigins string = ""
 
 	database    string = "farkle"
 	databaseURI string = "mongodb://localhost:27017"
@@ -49,6 +50,7 @@ func Setup() {
 	if webAdminKey == "" {
 		webAdminKey = "supersecretkey"
 	}
+	webAllowedOrigins = os.Getenv("ASCII_ARCADE_WEB_ALLOWED_ORIGINS")
 
 	dbStr := os.Getenv("ASCII_ARCADE_DB")
 	if dbStr != "" {
@@ -83,4 +85,7 @@ func GetDatabase() string {
 }
 func GetDatabaseURI() string {
 	return databaseURI
+}
+func GetWebAllowedOrigins() string {
+	return webAllowedOrigins
 }
