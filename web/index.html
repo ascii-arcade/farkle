@@ -33,7 +33,6 @@
                     After the end game starts, the rest of the players get one last turn.
                     The player with the most points at the end of the game wins.</p>
 
-
                 <h3>Rules</h3>
                 <ul>
                     <li>Players take turns rolling six dice.</li>
@@ -91,8 +90,12 @@
                 </div>
             </div>
             <div id="term" class="nes-container is-dark with-title lg:col-start-2 md:col-start-1 lg:col-span-2 content">
-                <p>If you see "Window too narrow...", just refresh until it goes away</p>
-                <div id="xterm-container"></div>
+                <button class="start-button nes-btn">Start!</button>
+                <!-- <button class="reconnect-button nes-btn is-error" hidden="true"
+                    onclick="reconnectTerminal()">Reconnect</button> -->
+                <button class="resize-button nes-btn is-warning" hidden="true" onclick="forceTerminalResize()">Force
+                    Resize</button>
+                <div id="xterm-container" hidden="true" style="margin-top: 1rem; overflow: hidden;"></div>
             </div>
         </div>
     </main>

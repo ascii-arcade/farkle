@@ -5,6 +5,15 @@ import "nes.css/css/nes.min.css";
 import './layout.css';
 import './style.css';
 
+let terminalInitialized = false;
+let term = null;
+let fitAddon = null;
+let ws = null;
+let currentInput = '';
+let sshConnected = false;
+let narrowWindowRetryCount = 0;
+const MAX_NARROW_WINDOW_RETRIES = 5;
+
 function saveActiveTab(tabHash, expirationHours = 24) {
     const expirationTime = Date.now() + (expirationHours * 60 * 60 * 1000);
     const tabData = {
@@ -60,158 +69,345 @@ function active(e) {
     }
 }
 
-window.onload = function () {
-    let terminalInitialized = false;
-    let term = null;
-    let fitAddon = null;
-    let ws = null;
-    let currentInput = '';
-    let sshConnected = false;
+function initializeTerminal() {
+    if (terminalInitialized) return;
 
-    function initializeTerminal() {
-        if (terminalInitialized) return;
+    console.log('Initializing terminal...');
+    terminalInitialized = true;
 
-        console.log('Initializing terminal...');
-        terminalInitialized = true;
+    term = new Terminal({
+        cols: 120,
+        rows: 33,
+        fontSize: 12,
+        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+        theme: {
+            background: '#212529',
+            foreground: '#ffffff'
+        },
+        cursorBlink: true
+    });
 
-        term = new Terminal({
-            cols: 120,
-            rows: 33,
-            fontSize: 12,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            theme: {
-                background: '#212529',
-                foreground: '#ffffff'
-            },
-            cursorBlink: true
-        });
+    fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
 
-        fitAddon = new FitAddon();
-        term.loadAddon(fitAddon);
+    term.open(document.getElementById('xterm-container'));
 
-        term.open(document.getElementById('xterm-container'));
+    function fitTerminal() {
+        console.log('Fitting terminal to container size...');
 
-        function fitTerminal() {
-            console.log('Fitting terminal to container size...');
-
-            const container = document.getElementById('xterm-container');
-            if (!container || !term) {
-                console.log('Container or terminal not available for fitting');
-                return;
-            }
-
-            container.style.display = 'block';
-            container.offsetHeight;
-
-            const containerRect = container.getBoundingClientRect();
-            const availableWidth = Math.max(containerRect.width - 20, 800); // Account for padding, minimum width
-            const availableHeight = Math.max(containerRect.height - 20, 400); // Account for padding, minimum height
-
-            console.log(`Container dimensions: ${availableWidth}x${availableHeight}`);
-
-            const charWidth = 8.4; // More accurate for monospace fonts
-            const lineHeight = 17; // Standard line height for terminals
-
-            const cols = Math.max(120, Math.floor(availableWidth / charWidth));
-            const rows = Math.max(33, Math.floor(availableHeight / lineHeight));
-
-            console.log(`Calculated terminal size: ${cols}x${rows}`);
-
-            if (Math.abs(term.cols - cols) > 1 || Math.abs(term.rows - rows) > 1) {
-                console.log(`Resizing terminal from ${term.cols}x${term.rows} to ${cols}x${rows}`);
-                term.resize(cols, rows);
-
-                if (fitAddon) {
-                    setTimeout(() => fitAddon.fit(), 100);
-                }
-
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    const resizeMessage = JSON.stringify({
-                        type: 'resize',
-                        cols: cols,
-                        rows: rows
-                    });
-                    console.log('Sending resize message to backend:', resizeMessage);
-                    socket.send(resizeMessage);
-                }
-            }
+        const container = document.getElementById('xterm-container');
+        if (!container || !term) {
+            console.log('Container or terminal not available for fitting');
+            return;
         }
 
-        setTimeout(fitTerminal, 100);
+        container.style.display = 'block';
+        container.offsetHeight;
 
-        window.addEventListener('resize', fitTerminal);
+        const containerRect = container.getBoundingClientRect();
+        const availableWidth = Math.max(containerRect.width - 20, 800); // Account for padding, minimum width
+        const availableHeight = Math.max(containerRect.height - 20, 400); // Account for padding, minimum height
 
+        console.log(`Container dimensions: ${availableWidth}x${availableHeight}`);
+
+        const charWidth = 8.4; // More accurate for monospace fonts
+        const lineHeight = 17; // Standard line height for terminals
+
+        const cols = Math.max(120, Math.floor(availableWidth / charWidth));
+        const rows = Math.max(33, Math.floor(availableHeight / lineHeight));
+
+        console.log(`Calculated terminal size: ${cols}x${rows}`);
+
+        if (Math.abs(term.cols - cols) > 1 || Math.abs(term.rows - rows) > 1) {
+            console.log(`Resizing terminal from ${term.cols}x${term.rows} to ${cols}x${rows}`);
+            term.resize(cols, rows);
+
+            if (fitAddon) {
+                setTimeout(() => fitAddon.fit(), 100);
+            }
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const resizeMessage = JSON.stringify({
+                    type: 'resize',
+                    cols: cols,
+                    rows: rows
+                });
+                console.log('Sending resize message to backend:', resizeMessage);
+                socket.send(resizeMessage);
+            }
+        }
+    }
+
+    setTimeout(fitTerminal, 100);
+
+    window.addEventListener('resize', fitTerminal);
+
+    const wsProtocol = process.env.WS_PROTOCOL;
+    console.log('Creating WebSocket connection to:', `${wsProtocol}://${window.location.host}/ws`);
+    ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
+
+    ws.onopen = function () {
+        console.log('WebSocket connected');
+        term.write('Connecting to SSH server...\r\n');
+
+        const cols = term.cols;
+        const rows = term.rows;
+        ws.send(`RESIZE:${cols},${rows}`);
+        console.log(`Sent initial size: ${cols}x${rows}`);
+    };
+
+    ws.onmessage = function (event) {
+        sshConnected = true;
+
+        let data;
+        let dataString = '';
+
+        if (event.data instanceof Blob) {
+            const reader = new FileReader();
+            reader.onload = function () {
+                const arrayBuffer = reader.result;
+                const uint8Array = new Uint8Array(arrayBuffer);
+                data = uint8Array;
+                
+                // Convert to string to check for "Window too narrow" message
+                dataString = new TextDecoder().decode(uint8Array);
+                
+                handleTerminalData(data, dataString);
+            };
+            reader.readAsArrayBuffer(event.data);
+        } else {
+            data = event.data;
+            dataString = event.data;
+            handleTerminalData(data, dataString);
+        }
+    };
+
+    function handleTerminalData(data, dataString) {
+        // Check for various "Window too narrow" or size-related error messages
+        const narrowPatterns = [
+            'window too narrow',
+            'terminal too narrow', 
+            'screen too narrow',
+            'terminal too small',
+            'window too small',
+            'insufficient screen width',
+            'insufficient terminal width'
+        ];
+        
+        const containsNarrowError = narrowPatterns.some(pattern => 
+            dataString.toLowerCase().includes(pattern)
+        );
+        
+        if (containsNarrowError) {
+            console.log('Detected narrow window error message:', dataString.trim());
+            
+            if (narrowWindowRetryCount < MAX_NARROW_WINDOW_RETRIES) {
+                narrowWindowRetryCount++;
+                
+                // Increase terminal size more aggressively each retry
+                const extraCols = narrowWindowRetryCount * 15;
+                const extraRows = narrowWindowRetryCount * 8;
+                const newCols = Math.max(term.cols + extraCols, 150);
+                const newRows = Math.max(term.rows + extraRows, 45);
+                
+                console.log(`Auto-resize attempt ${narrowWindowRetryCount}/${MAX_NARROW_WINDOW_RETRIES}: ${term.cols}x${term.rows} -> ${newCols}x${newRows}`);
+                
+                term.resize(newCols, newRows);
+                
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    const resizeMessage = `RESIZE:${newCols},${newRows}`;
+                    console.log('Sending resize message:', resizeMessage);
+                    ws.send(resizeMessage);
+                }
+                
+                // Retry the fitAddon after a short delay
+                setTimeout(() => {
+                    if (fitAddon) {
+                        fitAddon.fit();
+                    }
+                }, 150);
+                
+                // Show user feedback
+                term.write(`\r\n🔄 Auto-resizing terminal (attempt ${narrowWindowRetryCount}/${MAX_NARROW_WINDOW_RETRIES})...\r\n`);
+                
+                return; // Don't write the original error message
+            } else {
+                console.warn('Max auto-resize attempts reached for narrow window issue');
+                term.write('\r\n⚠️  Auto-resize failed. Try the "Force Resize" button or manually resize your browser window.\r\n');
+            }
+        } else {
+            // Reset retry count on successful data that doesn't contain errors
+            if (narrowWindowRetryCount > 0 && dataString.trim().length > 10 && 
+                !dataString.includes('Auto-resizing') && 
+                !dataString.includes('🔄') &&
+                !containsNarrowError) {
+                console.log('Terminal appears to be working normally, resetting retry count');
+                narrowWindowRetryCount = 0;
+            }
+        }
+        
+        // Write data to terminal
+        if (data instanceof Uint8Array) {
+            term.write(data);
+        } else {
+            term.write(data);
+        }
+    }
+
+    ws.onclose = function () {
+        console.log('WebSocket disconnected');
+        if (term) {
+            term.write('\r\nConnection closed\r\n');
+        }
+    };
+
+    ws.onerror = function (error) {
+        console.error('WebSocket error:', error);
+        if (term) {
+            term.write('\r\nConnection error\r\n');
+        }
+    };
+
+    term.onData(data => {
+        if (sshConnected) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(data);
+            }
+        } else {
+            const code = data.charCodeAt(0);
+
+            if (code === 13) { // Enter key
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(currentInput + '\n');
+                }
+                term.write('\r\n');
+                currentInput = '';
+            } else if (code === 127 || code === 8) { // Backspace or Delete
+                if (currentInput.length > 0) {
+                    currentInput = currentInput.slice(0, -1);
+                    term.write('\b \b');
+                }
+            } else if (code >= 32) { // Printable characters
+                currentInput += data;
+                term.write(data);
+            }
+        }
+    });
+
+    const container = document.getElementById('xterm-container');
+    container.hidden = false;
+
+    const reconnectButton = document.querySelector('.reconnect-button');
+    if (reconnectButton) {
+        reconnectButton.hidden = false;
+    }
+
+    const resizeButton = document.querySelector('.resize-button');
+    if (resizeButton) {
+        resizeButton.hidden = false;
+    }
+
+    const startButton = document.querySelector('.start-button');
+    if (startButton) {
+        startButton.hidden = true;
+    }
+}
+
+function forceTerminalResize(extraCols = 0, extraRows = 0) {
+    if (!term) {
+        console.error('Terminal not initialized');
+        return;
+    }
+    
+    const newCols = term.cols + extraCols;
+    const newRows = term.rows + extraRows;
+    
+    console.log(`Manual resize: ${term.cols}x${term.rows} -> ${newCols}x${newRows}`);
+    
+    term.resize(newCols, newRows);
+    
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const resizeMessage = `RESIZE:${newCols},${newRows}`;
+        ws.send(resizeMessage);
+    }
+    
+    if (fitAddon) {
+        setTimeout(() => fitAddon.fit(), 100);
+    }
+    
+    term.write(`\r\n🔧 Manual resize applied: ${newCols}x${newRows}\r\n`);
+}
+
+function reconnectTerminal() {
+    if (ws) {
+        ws.close();
+    }
+    
+    // Reset retry count
+    narrowWindowRetryCount = 0;
+    
+    term.clear();
+    term.write('🔄 Reconnecting...\r\n');
+    
+    // Reinitialize the WebSocket connection
+    setTimeout(() => {
         const wsProtocol = process.env.WS_PROTOCOL;
-        console.log('Creating WebSocket connection to:', `${wsProtocol}://${window.location.host}/ws`);
         ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
-
+        
+        // Reuse the same onopen, onmessage, etc. handlers from initializeTerminal
+        // This is a simplified version - you might want to extract this logic
         ws.onopen = function () {
-            console.log('WebSocket connected');
-            term.write('Connecting to SSH server...\r\n');
-
+            console.log('WebSocket reconnected');
+            term.write('Reconnected to SSH server...\r\n');
             const cols = term.cols;
             const rows = term.rows;
             ws.send(`RESIZE:${cols},${rows}`);
-            console.log(`Sent initial size: ${cols}x${rows}`);
         };
-
+        
         ws.onmessage = function (event) {
             sshConnected = true;
+            let data;
+            let dataString = '';
 
             if (event.data instanceof Blob) {
                 const reader = new FileReader();
                 reader.onload = function () {
                     const arrayBuffer = reader.result;
                     const uint8Array = new Uint8Array(arrayBuffer);
-                    term.write(uint8Array);
+                    data = uint8Array;
+                    dataString = new TextDecoder().decode(uint8Array);
+                    handleTerminalData(data, dataString);
                 };
                 reader.readAsArrayBuffer(event.data);
             } else {
-                term.write(event.data);
+                data = event.data;
+                dataString = event.data;
+                handleTerminalData(data, dataString);
             }
         };
-
+        
         ws.onclose = function () {
             console.log('WebSocket disconnected');
             if (term) {
                 term.write('\r\nConnection closed\r\n');
             }
         };
-
+        
         ws.onerror = function (error) {
             console.error('WebSocket error:', error);
             if (term) {
                 term.write('\r\nConnection error\r\n');
             }
         };
+    }, 1000);
+}
 
-        term.onData(data => {
-            if (sshConnected) {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(data);
-                }
-            } else {
-                const code = data.charCodeAt(0);
+// Make functions available globally for debugging and HTML onclick
+window.initializeTerminal = initializeTerminal;
+window.forceTerminalResize = forceTerminalResize;
+window.reconnectTerminal = reconnectTerminal;
 
-                if (code === 13) { // Enter key
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(currentInput + '\n');
-                    }
-                    term.write('\r\n');
-                    currentInput = '';
-                } else if (code === 127 || code === 8) { // Backspace or Delete
-                    if (currentInput.length > 0) {
-                        currentInput = currentInput.slice(0, -1);
-                        term.write('\b \b');
-                    }
-                } else if (code >= 32) { // Printable characters
-                    currentInput += data;
-                    term.write(data);
-                }
-            }
-        });
-    }
-
+window.onload = function () {
     let url = window.location.href;
     let targetHash = null;
 
@@ -228,9 +424,6 @@ window.onload = function () {
         let e = document.querySelector(`.nes-container.with-tabs .tabs .tab a[href="${targetHash}"]`);
         if (e) {
             active(e.parentElement);
-            if (targetHash === '#term') {
-                initializeTerminal();
-            }
         } else {
             let firstTab = document.querySelector(".nes-container.with-tabs .tabs .tab:first-child");
             if (firstTab) active(firstTab);
@@ -246,11 +439,22 @@ window.onload = function () {
             event.preventDefault();
 
             active(tabs[i]);
-
-            const link = tabs[i].querySelector('a');
-            if (link && link.getAttribute('href') === '#term') {
-                initializeTerminal();
-            }
         };
+    }
+
+    // Add event listeners for terminal buttons
+    const startButton = document.querySelector('.start-button');
+    if (startButton) {
+        startButton.addEventListener('click', initializeTerminal);
+    }
+    
+    const reconnectButton = document.querySelector('.reconnect-button');
+    if (reconnectButton) {
+        reconnectButton.addEventListener('click', reconnectTerminal);
+    }
+    
+    const resizeButton = document.querySelector('.resize-button');
+    if (resizeButton) {
+        resizeButton.addEventListener('click', () => forceTerminalResize());
     }
 }

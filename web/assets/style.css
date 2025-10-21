@@ -97,4 +97,5 @@ body {
 
 #xterm-container .xterm-viewport {
     width: 100% !important;
+    overflow: hidden !important;
 }
