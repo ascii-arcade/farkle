@@ -91,11 +91,14 @@
             </div>
             <div id="term" class="nes-container is-dark with-title lg:col-start-2 md:col-start-1 lg:col-span-2 content">
                 <button class="start-button nes-btn">Start!</button>
+                <div id="xterm-container" hidden="true" style="margin-bottom: 1rem; overflow: hidden;"></div>
                 <!-- <button class="reconnect-button nes-btn is-error" hidden="true"
                     onclick="reconnectTerminal()">Reconnect</button> -->
                 <button class="resize-button nes-btn is-warning" hidden="true" onclick="forceTerminalResize()">Force
                     Resize</button>
-                <div id="xterm-container" hidden="true" style="margin-top: 1rem; overflow: hidden;"></div>
+                <!-- <button class="clear-cache-button nes-btn is-error" hidden="true" onclick="clearSSHKeyCache()">Clear SSH
+                    Cache</button> -->
+                <p id="ssh-key-status" class="nes-text is-success" hidden="true">🔑 SSH Key Status: Loading...</p>
             </div>
         </div>
     </main>

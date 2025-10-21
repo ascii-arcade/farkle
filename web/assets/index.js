@@ -13,6 +13,7 @@ let currentInput = '';
 let sshConnected = false;
 let narrowWindowRetryCount = 0;
 const MAX_NARROW_WINDOW_RETRIES = 5;
+let clientSessionId = null;
 
 function saveActiveTab(tabHash, expirationHours = 24) {
     const expirationTime = Date.now() + (expirationHours * 60 * 60 * 1000);
@@ -39,6 +40,63 @@ function getActiveTab() {
     } catch (error) {
         localStorage.removeItem('activeTab');
         return null;
+    }
+}
+
+function saveClientSessionId(sessionId, expirationHours = 24) {
+    const expirationTime = Date.now() + (expirationHours * 60 * 60 * 1000);
+    const sessionData = {
+        sessionId: sessionId,
+        expires: expirationTime,
+        created: Date.now()
+    };
+    localStorage.setItem('sshClientSession', JSON.stringify(sessionData));
+    console.log('SSH session cached until:', new Date(expirationTime).toLocaleString());
+}
+
+function getClientSessionId() {
+    try {
+        const saved = localStorage.getItem('sshClientSession');
+        if (!saved) return null;
+
+        const sessionData = JSON.parse(saved);
+
+        if (Date.now() > sessionData.expires) {
+            localStorage.removeItem('sshClientSession');
+            console.log('SSH session expired, will generate new key pair');
+            return null;
+        }
+
+        const hoursLeft = Math.round((sessionData.expires - Date.now()) / (1000 * 60 * 60));
+        console.log(`Reusing SSH session (${hoursLeft}h remaining):`, sessionData.sessionId);
+        return sessionData.sessionId;
+    } catch (error) {
+        localStorage.removeItem('sshClientSession');
+        console.log('Error retrieving SSH session, will generate new key pair');
+        return null;
+    }
+}
+
+function generateClientSessionId() {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function updateSSHKeyStatus(message, isNew = false) {
+    const statusElement = document.getElementById('ssh-key-status');
+    if (statusElement) {
+        statusElement.textContent = `🔑 ${message}`;
+        statusElement.className = isNew ? 'nes-text is-warning' : 'nes-text is-success';
+        statusElement.hidden = false;
+        
+        if (message.includes('Generated') || message.includes('cached')) {
+            setTimeout(() => {
+                if (statusElement.textContent.includes(message.split(':')[0])) {
+                    statusElement.hidden = true;
+                }
+            }, 5000);
+        }
     }
 }
 
@@ -142,6 +200,21 @@ function initializeTerminal() {
 
     window.addEventListener('resize', fitTerminal);
 
+    clientSessionId = getClientSessionId();
+    if (!clientSessionId) {
+        clientSessionId = generateClientSessionId();
+        saveClientSessionId(clientSessionId);
+        console.log('Generated new SSH session ID:', clientSessionId);
+        updateSSHKeyStatus('Generated new SSH key (24h cache)', true);
+    } else {
+        const saved = localStorage.getItem('sshClientSession');
+        if (saved) {
+            const sessionData = JSON.parse(saved);
+            const hoursLeft = Math.round((sessionData.expires - Date.now()) / (1000 * 60 * 60));
+            updateSSHKeyStatus(`Using cached SSH key (${hoursLeft}h remaining)`, false);
+        }
+    }
+
     const wsProtocol = process.env.WS_PROTOCOL;
     console.log('Creating WebSocket connection to:', `${wsProtocol}://${window.location.host}/ws`);
     ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
@@ -149,6 +222,13 @@ function initializeTerminal() {
     ws.onopen = function () {
         console.log('WebSocket connected');
         term.write('Connecting to SSH server...\r\n');
+
+        const sessionMessage = JSON.stringify({
+            type: 'session',
+            sessionId: clientSessionId
+        });
+        ws.send(sessionMessage);
+        console.log('Sent session ID for SSH key caching');
 
         const cols = term.cols;
         const rows = term.rows;
@@ -307,6 +387,11 @@ function initializeTerminal() {
         resizeButton.hidden = false;
     }
 
+    const clearCacheButton = document.querySelector('.clear-cache-button');
+    if (clearCacheButton) {
+        clearCacheButton.hidden = false;
+    }
+
     const startButton = document.querySelector('.start-button');
     if (startButton) {
         startButton.hidden = true;
@@ -354,11 +439,19 @@ function reconnectTerminal() {
         const wsProtocol = process.env.WS_PROTOCOL;
         ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
         
-        // Reuse the same onopen, onmessage, etc. handlers from initializeTerminal
-        // This is a simplified version - you might want to extract this logic
         ws.onopen = function () {
             console.log('WebSocket reconnected');
             term.write('Reconnected to SSH server...\r\n');
+            
+            if (clientSessionId) {
+                const sessionMessage = JSON.stringify({
+                    type: 'session',
+                    sessionId: clientSessionId
+                });
+                ws.send(sessionMessage);
+                console.log('Sent cached session ID for SSH key reuse');
+            }
+            
             const cols = term.cols;
             const rows = term.rows;
             ws.send(`RESIZE:${cols},${rows}`);
@@ -402,10 +495,21 @@ function reconnectTerminal() {
     }, 1000);
 }
 
-// Make functions available globally for debugging and HTML onclick
+function clearSSHKeyCache() {
+    localStorage.removeItem('sshClientSession');
+    clientSessionId = null;
+    console.log('SSH key cache cleared');
+    updateSSHKeyStatus('SSH key cache cleared - will generate new key on next connection', true);
+    
+    if (term) {
+        term.write('\r\n🗑️  SSH key cache cleared. Reconnect to generate a new key.\r\n');
+    }
+}
+
 window.initializeTerminal = initializeTerminal;
 window.forceTerminalResize = forceTerminalResize;
 window.reconnectTerminal = reconnectTerminal;
+window.clearSSHKeyCache = clearSSHKeyCache;
 
 window.onload = function () {
     let url = window.location.href;
@@ -456,5 +560,10 @@ window.onload = function () {
     const resizeButton = document.querySelector('.resize-button');
     if (resizeButton) {
         resizeButton.addEventListener('click', () => forceTerminalResize());
+    }
+    
+    const clearCacheButton = document.querySelector('.clear-cache-button');
+    if (clearCacheButton) {
+        clearCacheButton.addEventListener('click', clearSSHKeyCache);
     }
 }

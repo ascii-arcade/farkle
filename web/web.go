@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"html/template"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ascii-arcade/farkle/config"
 	"github.com/ascii-arcade/farkle/games"
@@ -22,6 +24,19 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh"
 )
+
+type sshKeyCache struct {
+	signer    ssh.Signer
+	createdAt time.Time
+}
+
+type sessionMessage struct {
+	Type      string `json:"type"`
+	SessionID string `json:"sessionId"`
+}
+
+var sshKeyCacheMap = make(map[string]*sshKeyCache)
+var sshKeyCacheMutex sync.RWMutex
 
 func generateSSHKeyPair() (ssh.Signer, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -43,6 +58,52 @@ func generateSSHKeyPair() (ssh.Signer, error) {
 	return signer, nil
 }
 
+func getOrCreateSSHKey(sessionID string) (ssh.Signer, error) {
+	sshKeyCacheMutex.Lock()
+	defer sshKeyCacheMutex.Unlock()
+
+	if cached, exists := sshKeyCacheMap[sessionID]; exists {
+		if time.Since(cached.createdAt) < 24*time.Hour {
+			slog.Info("reusing cached ssh key", "sessionId", sessionID, "age", time.Since(cached.createdAt).String())
+			return cached.signer, nil
+		}
+
+		delete(sshKeyCacheMap, sessionID)
+		slog.Info("ssh key expired, generating new one", "sessionId", sessionID)
+	}
+
+	signer, err := generateSSHKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	sshKeyCacheMap[sessionID] = &sshKeyCache{
+		signer:    signer,
+		createdAt: time.Now(),
+	}
+
+	slog.Info("generated and cached new ssh key", "sessionId", sessionID)
+	return signer, nil
+}
+
+func cleanupExpiredKeys() {
+	sshKeyCacheMutex.Lock()
+	defer sshKeyCacheMutex.Unlock()
+
+	now := time.Now()
+	cleaned := 0
+	for sessionID, cached := range sshKeyCacheMap {
+		if now.Sub(cached.createdAt) > 24*time.Hour {
+			delete(sshKeyCacheMap, sessionID)
+			cleaned++
+		}
+	}
+
+	if cleaned > 0 {
+		slog.Info("cleaned up expired ssh keys", "count", cleaned, "remaining", len(sshKeyCacheMap))
+	}
+}
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		if config.GetWebAllowedOrigins() != "" {
@@ -57,7 +118,6 @@ var upgrader = websocket.Upgrader{
 			return false
 		}
 
-		// Allow connections from any origin if no restrictions are set
 		return true
 	},
 }
@@ -74,9 +134,31 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("websocket connection established successfully", "address", r.RemoteAddr)
 
-	signer, err := generateSSHKeyPair()
+	var sessionID string
+	var signer ssh.Signer
+
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+	messageType, message, err := conn.ReadMessage()
 	if err != nil {
-		slog.Error("ssh key generation failed", "error", err)
+		slog.Error("error reading initial message", "error", err)
+		return
+	}
+
+	sessionID = "fallback-" + strings.ReplaceAll(r.RemoteAddr, ":", "-")
+	if messageType == websocket.TextMessage {
+		var sessionMsg sessionMessage
+		if err := json.Unmarshal(message, &sessionMsg); err == nil && sessionMsg.Type == "session" {
+			sessionID = sessionMsg.SessionID
+			slog.Info("received session id", "sessionId", sessionID)
+		}
+	}
+
+	conn.SetReadDeadline(time.Time{})
+
+	signer, err = getOrCreateSSHKey(sessionID)
+	if err != nil {
+		slog.Error("ssh key generation/retrieval failed", "error", err)
 		_ = conn.WriteMessage(websocket.TextMessage, []byte("SSH key generation failed: "+err.Error()))
 		return
 	}
@@ -138,7 +220,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start the shell
 	err = session.Shell()
 	if err != nil {
 		slog.Error("ssh shell start failed", "error", err)
@@ -289,6 +370,14 @@ func Run() error {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			cleanupExpiredKeys()
+		}
+	}()
 
 	webPort := config.GetServerPortWeb()
 	slog.Info("Starting web server", "port", webPort)
