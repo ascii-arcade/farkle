@@ -48,6 +48,9 @@ func (s *optionScreen) Update(msg tea.Msg) (any, tea.Cmd) {
 			s.model.player.SetLanguage("es")
 			return s.model, nil
 		case keys.MenuEditProfile.TriggeredBy(msg.String()):
+			if s.model.player.Visitor {
+				return s.model, nil
+			}
 			return s.model, func() tea.Msg {
 				return messages.SwitchScreenMsg{
 					Screen: s.model.newEditProfileScreen(),
@@ -87,7 +90,9 @@ func (s *optionScreen) View() string {
 	content.WriteString(s.model.player.GetDisplayName(s.style) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_create"), keys.MenuStartNewGame.String(s.style)) + "\n")
 	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_join"), keys.MenuJoinGame.String(s.style)) + "\n")
-	content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_edit_profile"), keys.MenuEditProfile.String(s.style)) + "\n")
+	if !s.model.player.Visitor {
+		content.WriteString(fmt.Sprintf(s.model.lang().Get("menu", "press_to_edit_profile"), keys.MenuEditProfile.String(s.style)) + "\n")
+	}
 	content.WriteString("\n\n")
 
 	switch s.model.lang() {
