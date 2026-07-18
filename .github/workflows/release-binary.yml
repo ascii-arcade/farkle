@@ -64,8 +64,8 @@ jobs:
       - name: Publish release files
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, '-rc') }}
-          make_latest: ${{ !contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+          make_latest: ${{ !contains(github.ref_name, '-rc') && !contains(github.ref_name, '-beta') }}
           files: |
             dist/farkle-linux-amd64
             dist/farkle-linux-amd64.sha256
