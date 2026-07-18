@@ -33,7 +33,7 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
             go build \
-            -ldflags "-X main.version=${GITHUB_REF_NAME} -X main.hash=${GITHUB_SHA::7}" \
+            -ldflags "-X github.com/ascii-arcade/farkle/config.Version=${GITHUB_REF_NAME}" \
             -o ${{ matrix.artifact }} \
             .
 
